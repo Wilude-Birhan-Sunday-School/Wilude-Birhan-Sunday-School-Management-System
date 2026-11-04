@@ -495,7 +495,7 @@ class TeacherGradesScreenState extends State<TeacherGradesScreen> {
     final gradesEntered = a['grades_entered'] ?? 0;
     final isLocked = PacketLock.isLocked('${a['submission_status'] ?? ''}', flagged: a['locked'] == true);
     final termLocked = a['term_locked'] == true;
-    final typeColors = {'test': AppTheme.primary, 'quiz': AppTheme.info, 'midterm': AppTheme.warning, 'final': AppTheme.danger, 'assignment': AppTheme.accent};
+    final typeColors = {'test': AppTheme.primary, 'quiz': AppTheme.info, 'midterm': AppTheme.warning, 'final': AppTheme.danger, 'assignment': AppTheme.accentOnLight};
     final color = typeColors[type] ?? AppTheme.primary;
 
     String statusText;

@@ -376,7 +376,7 @@ class _TeacherTimetableScreenState extends State<TeacherTimetableScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // One continuous maroon block: title row + greeting/date share a single
+    // One continuous branded block: title row + greeting/date share a single
     // gradient (no AppBar seam), rounded at the bottom so the view switcher
     // card sits on the page like the teacher home. Works both pushed from
     // the Home card (back arrow) and as the "Timetable" bottom-nav tab.
@@ -708,7 +708,7 @@ class _TeacherTimetableScreenState extends State<TeacherTimetableScreen> {
           border: Border.all(
             color: on
                 ? AppTheme.primary
-                : (isToday ? AppTheme.accent : AppTheme.borderLight),
+                : (isToday ? AppTheme.accentOnLight : AppTheme.borderLight),
             width: isToday && !on ? 1.6 : 1,
           ),
         ),
@@ -918,7 +918,7 @@ class _TeacherTimetableScreenState extends State<TeacherTimetableScreen> {
         decoration: BoxDecoration(
           color: on ? AppTheme.primary : Colors.transparent,
           shape: BoxShape.circle,
-          border: isToday && !on ? Border.all(color: AppTheme.accent, width: 1.5) : null,
+          border: isToday && !on ? Border.all(color: AppTheme.accentOnLight, width: 1.5) : null,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

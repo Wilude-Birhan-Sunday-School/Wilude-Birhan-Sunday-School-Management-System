@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
 
 /// Single configuration for the mobile application's brand colors.
-/// Use 24-bit RGB hex values, e.g. 0x5A1212. Rebuild after editing.
+/// Use 24-bit RGB hex values, e.g. 0x004820. Rebuild after editing.
 abstract final class BrandPalette {
   // Change these two values to update the principal brand and its gradients.
-  static const int primaryRgb = 0x5A1212;
-  static const int secondaryRgb = 0xD4AF37;
+  static const int primaryRgb = 0x004820;
+  static const int secondaryRgb = 0xF0B818;
 
   static const Color primary = Color(0xFF000000 | primaryRgb);
   static const Color secondary = Color(0xFF000000 | secondaryRgb);
 
-  // Preserve the original maroon gradient exactly; computed at compile time
-  // so all existing const widgets continue to work after a palette change.
+  // Darker gold for text and icons on light surfaces; bright logo gold is
+  // reserved for dark backgrounds and filled accents where it is readable.
+  static const Color secondaryInk = Color(0xFF000000 |
+      (((secondaryRgb >> 16 & 0xFF) * 55 ~/ 100) << 16) |
+      (((secondaryRgb >> 8 & 0xFF) * 55 ~/ 100) << 8) |
+      ((secondaryRgb & 0xFF) * 55 ~/ 100));
+
+  // Derive shades at compile time so const widgets respond to palette changes.
   static const int _r = (primaryRgb >> 16) & 0xFF;
   static const int _g = (primaryRgb >> 8) & 0xFF;
   static const int _b = primaryRgb & 0xFF;

@@ -150,7 +150,7 @@ class AdminHomeScreenState extends State<AdminHomeScreen> {
         const SizedBox(width: 10),
         Expanded(child: StatCard(label: 'Male', value: '${members['male'] ?? 0}', icon: Icons.male, color: AppTheme.info)),
         const SizedBox(width: 10),
-        Expanded(child: StatCard(label: 'Female', value: '${members['female'] ?? 0}', icon: Icons.female, color: AppTheme.accent)),
+        Expanded(child: StatCard(label: 'Female', value: '${members['female'] ?? 0}', icon: Icons.female, color: AppTheme.accentOnLight)),
       ]),
       const SizedBox(height: 20),
 

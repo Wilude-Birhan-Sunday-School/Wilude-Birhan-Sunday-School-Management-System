@@ -11,8 +11,12 @@ void main() {
     expect(BrandPalette.secondaryRgb, inInclusiveRange(0, 0xFFFFFF));
     expect(AppTheme.primary, BrandPalette.primary);
     expect(AppTheme.accent, BrandPalette.secondary);
+    expect(AppTheme.accentOnLight, BrandPalette.secondaryInk);
     expect(AppTheme.lightTheme.colorScheme.primary, BrandPalette.primary);
     expect(AppTheme.lightTheme.colorScheme.secondary, BrandPalette.secondary);
+    expect(AppTheme.lightTheme.colorScheme.onPrimary, Colors.white);
+    expect(
+        AppTheme.lightTheme.colorScheme.onSecondary, BrandPalette.primaryDark);
     expect(BrandPalette.headerGradient.colors, [
       BrandPalette.primaryDark,
       BrandPalette.primary,
@@ -25,11 +29,10 @@ void main() {
     expect(Parchment.gold, BrandPalette.secondary);
   });
 
-  test('the original primary shades remain unchanged for the original brand',
-      () {
-    if (BrandPalette.primaryRgb == 0x5A1212) {
-      expect(BrandPalette.primaryLight, const Color(0xFF7A1E1E));
-      expect(BrandPalette.primaryDark, const Color(0xFF2E0A0A));
+  test('the logo green derives the expected header shades', () {
+    if (BrandPalette.primaryRgb == 0x004820) {
+      expect(BrandPalette.primaryLight, const Color(0xFF07632F));
+      expect(BrandPalette.primaryDark, const Color(0xFF012511));
     }
   });
 
@@ -60,6 +63,31 @@ void main() {
           reason:
               'White header text must remain readable on each gradient stop');
     }
+    for (final stop in BrandPalette.headerGradient.colors) {
+      final badge = Color.alphaBlend(
+          BrandPalette.secondary.withValues(alpha: 0.15), stop);
+      expect(contrast(Colors.white, badge), greaterThanOrEqualTo(4.5),
+          reason:
+              'White badge labels must remain readable on the tinted header');
+      expect(contrast(BrandPalette.secondary, badge), greaterThanOrEqualTo(3),
+          reason: 'Gold badge icons must remain visible on the tinted header');
+      final calendarButton = Color.alphaBlend(
+          BrandPalette.secondary.withValues(alpha: 0.18), stop);
+      expect(contrast(BrandPalette.secondary, calendarButton),
+          greaterThanOrEqualTo(3),
+          reason: 'The calendar icon must remain visible on its tinted header');
+    }
+    final lightAccentSurface = Color.alphaBlend(
+        BrandPalette.secondaryInk.withValues(alpha: 0.12), Colors.white);
+    expect(contrast(BrandPalette.secondaryInk, lightAccentSurface),
+        greaterThanOrEqualTo(4.5),
+        reason: 'Gold labels and icons on light surfaces need a darker ink');
+    expect(contrast(BrandPalette.primary, BrandPalette.secondary),
+        greaterThanOrEqualTo(4.5),
+        reason: 'Gold labels on the primary green must remain readable');
+    expect(contrast(Parchment.buttonInk, Parchment.gold),
+        greaterThanOrEqualTo(4.5),
+        reason: 'Parchment controls must remain readable on gold');
     expect(contrast(BrandPalette.primaryDark, BrandPalette.secondary),
         greaterThanOrEqualTo(4.5),
         reason:

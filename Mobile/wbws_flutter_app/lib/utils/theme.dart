@@ -7,6 +7,7 @@ class AppTheme {
   static const Color primaryLight = BrandPalette.primaryLight;
   static const Color primaryDark = BrandPalette.primaryDark;
   static const Color accent = BrandPalette.secondary;
+  static const Color accentOnLight = BrandPalette.secondaryInk;
 
   // Status colors
   static const Color success = Color(0xFF059669); // Green
@@ -33,7 +34,9 @@ class AppTheme {
       splashFactory: InkRipple.splashFactory,
       colorScheme: const ColorScheme.light(
         primary: primary,
+        onPrimary: Colors.white,
         secondary: accent,
+        onSecondary: primaryDark,
         surface: surfaceLight,
         error: danger,
       ),

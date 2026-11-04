@@ -119,7 +119,7 @@ class EduHomeScreenState extends State<EduHomeScreen> {
       'subjects': FeatureTile(label: 'Subjects', icon: Icons.book_rounded, color: AppTheme.info, onTap: () => _open(const EduSubjectsScreen())),
       'enrollment': FeatureTile(label: 'Enrollment', icon: Icons.person_add_rounded, color: AppTheme.success, onTap: () => _open(const EduEnrollmentScreen())),
       'grades': FeatureTile(label: 'Grades', icon: Icons.grading_rounded, color: AppTheme.warning, onTap: () => _open(const TeacherGradesScreen())),
-      'attendance': FeatureTile(label: 'Attendance', icon: Icons.fact_check_rounded, color: AppTheme.accent, onTap: () => _open(const AttendanceScreen())),
+      'attendance': FeatureTile(label: 'Attendance', icon: Icons.fact_check_rounded, color: AppTheme.accentOnLight, onTap: () => _open(const AttendanceScreen())),
       'reviews': FeatureTile(label: 'Reviews', icon: Icons.inbox_rounded, color: const Color(0xFF0F766E), onTap: () => _open(const ReviewInboxScreen(dept: 'edu'))),
       'warnings': FeatureTile(label: 'Warnings', icon: Icons.warning_amber_rounded, color: AppTheme.warning, onTap: () => _open(const AttendanceWarningsScreen(department: 'edu'))),
     };

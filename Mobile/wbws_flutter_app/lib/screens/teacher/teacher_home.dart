@@ -369,7 +369,7 @@ class TeacherHomeScreenState extends State<TeacherHomeScreen> {
           const SizedBox(width: 5),
           Text(text,
               style: TextStyle(
-                  fontSize: 12, color: color, fontWeight: FontWeight.w600)),
+                  fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600)),
         ],
       ),
     );
