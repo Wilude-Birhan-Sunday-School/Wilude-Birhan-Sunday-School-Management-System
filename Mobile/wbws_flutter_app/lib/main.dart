@@ -21,6 +21,8 @@ import 'services/crash_log_service.dart';
 import 'services/app_navigator.dart';
 import 'services/mezmur_download_manager.dart';
 import 'services/lyrics_reader_settings.dart';
+import 'utils/config.dart';
+import 'utils/school_brand.dart';
 import 'utils/scrolling.dart';
 import 'utils/theme.dart';
 import 'screens/auth/login_screen.dart';
@@ -33,13 +35,23 @@ import 'screens/profile/sync_center_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Load before audio initialization, bootstrap, or any branded widget.
+  try {
+    await SchoolBrand.load();
+  } catch (_) {
+    runApp(const MaterialApp(home: Scaffold(body: Center(
+      child: Text('App configuration could not be loaded. Contact the app administrator.'),
+    ))));
+    return;
+  }
+
   // P0 background mezmur playback: register the single auto-managed
   // player channel BEFORE runApp so audio_service can connect. Kept
   // tolerant — on a platform without the plugin the app still starts.
   try {
     await JustAudioBackground.init(
       androidNotificationChannelId: 'com.arkeonethiopia.fkss.channel.audio',
-      androidNotificationChannelName: 'መዝሙር · FKSS Mezmur',
+      androidNotificationChannelName: 'መዝሙር · ${AppConfig.appName} Mezmur',
       androidNotificationOngoing: true,
     );
   } catch (_) {}
@@ -171,7 +183,7 @@ class _OfflineDataProtectionFailureAppState
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'FKSS',
+      title: AppConfig.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       scrollBehavior: const SmoothScrollBehavior(),
@@ -347,7 +359,7 @@ class _FKSSAppState extends State<FKSSApp> {
     }
 
     return MaterialApp(
-      title: 'FKSS',
+      title: AppConfig.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

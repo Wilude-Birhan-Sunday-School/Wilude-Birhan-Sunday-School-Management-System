@@ -1,3 +1,4 @@
+import 'package:fkss_app/utils/school_brand.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -33,6 +34,8 @@ Map<String, dynamic> metadata({
     };
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(SchoolBrand.load);
   TestWidgetsFlutterBinding.ensureInitialized();
   late Directory directory;
   late List<String> nativeCalls;

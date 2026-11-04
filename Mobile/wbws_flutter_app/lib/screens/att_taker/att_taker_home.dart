@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/config.dart';
 import '../../services/api_service.dart';
 import '../../services/catalog_service.dart';
 import '../../services/connectivity_service.dart';
@@ -93,7 +94,7 @@ class AttTakerHomeScreenState extends State<AttTakerHomeScreen> {
           slivers: [
             SliverAppBar(floating: true, automaticallyImplyLeading: false,
               title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('FKSS', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                Text(AppConfig.appName, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                 Text('ቅጥረት ያዥ • Attendance Taker', style: TextStyle(fontSize: 11, color: Colors.white70)),
               ]),
               actions: [

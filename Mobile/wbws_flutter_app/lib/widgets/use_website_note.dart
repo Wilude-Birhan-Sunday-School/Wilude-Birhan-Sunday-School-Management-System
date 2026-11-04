@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
+import '../utils/config.dart';
 import '../utils/theme.dart';
 
 /// Shown for work that stays on the website (create teacher, finance, etc.).
 class UseWebsiteNote extends StatelessWidget {
   final String title;
-  final String body;
+  final String? body;
 
   const UseWebsiteNote({
     super.key,
     this.title = 'Use the website for this',
-    this.body =
-        'This job stays on the FKSS website so student records stay in one place.',
+    this.body,
   });
 
   @override
@@ -31,7 +31,7 @@ class UseWebsiteNote extends StatelessWidget {
                       style: const TextStyle(
                           fontSize: 14, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 4),
-                  Text(body,
+                  Text(body ?? 'This job stays on the ${AppConfig.appName} website so student records stay in one place.',
                       style: TextStyle(
                           fontSize: 12,
                           color: AppTheme.textSecondary,

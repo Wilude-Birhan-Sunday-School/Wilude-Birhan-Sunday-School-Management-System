@@ -68,7 +68,7 @@ class AdminHomeScreenState extends State<AdminHomeScreen> {
           slivers: [
             SliverAppBar(floating: true, automaticallyImplyLeading: false,
               title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('FKSS', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                Text(AppConfig.appName, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                 Text('${UserRoles.displayNameAmharic(_api.userRole)} • ${UserRoles.displayName(_api.userRole)}',
                     style: TextStyle(fontSize: 11, color: Colors.white70)),
               ]),

@@ -1,3 +1,4 @@
+import '../utils/config.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -267,7 +268,7 @@ class CrashLogService {
     required String crashLogTail,
   }) {
     final b = StringBuffer();
-    b.writeln('FKSS diagnostic report');
+    b.writeln('${AppConfig.appName} diagnostic report');
     b.writeln('App: $appVersion ($appBuild)');
     b.writeln('Server: $server');
     if (device != null) {

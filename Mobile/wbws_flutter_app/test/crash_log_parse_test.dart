@@ -1,3 +1,4 @@
+import 'package:fkss_app/utils/school_brand.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fkss_app/services/crash_log_service.dart';
 import 'package:fkss_app/services/device_tier_service.dart';
@@ -11,6 +12,8 @@ import 'package:fkss_app/services/device_tier_service.dart';
 /// Diagnostics screen and the "app closed itself recently" banner are
 /// only as good as this parse.
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(SchoolBrand.load);
   group('parseCrashLog', () {
     test('parses a native crash section with epoch timestamp', () {
       final entries = parseCrashLog(

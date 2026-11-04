@@ -1,3 +1,4 @@
+import 'package:fkss_app/utils/school_brand.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -13,6 +14,8 @@ import 'package:fkss_app/utils/config.dart';
 import 'package:fkss_app/utils/theme.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(SchoolBrand.load);
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   Map<String, dynamic> config(
@@ -49,7 +52,7 @@ void main() {
     await tester.tap(find.byTooltip('Dismiss update reminder'));
     await tester.pumpAndSettle();
     expect(find.byType(UpdateBanner), findsOneWidget);
-    expect(find.textContaining('New FKSS version'), findsNothing);
+    expect(find.textContaining('New ${AppConfig.appName} version'), findsNothing);
     expect(find.text('App updates'), findsOneWidget);
     expect(find.text('Version 9.0.0 available'), findsOneWidget);
     final context = tester.element(find.byType(AppUpdatesTile));
@@ -89,7 +92,7 @@ void main() {
         ? ApiResponse(success: false)
         : ApiResponse(success: true, data: config(current: true)));
     await tester.pumpWidget(MaterialApp(home: UpdateScreen(service: svc)));
-    expect(find.text('Check for FKSS updates'), findsOneWidget);
+    expect(find.text('Check for ${AppConfig.appName} updates'), findsOneWidget);
     expect(find.text('You’re up to date'), findsNothing);
     await svc.check();
     await tester.pump();

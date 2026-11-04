@@ -1,8 +1,11 @@
+import 'package:fkss_app/utils/school_brand.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:fkss_app/main.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(SchoolBrand.load);
   testWidgets(
       'migration hold explains preservation without destructive actions',
       (tester) async {

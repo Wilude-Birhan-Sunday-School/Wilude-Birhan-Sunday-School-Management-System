@@ -1,9 +1,12 @@
+import 'package:fkss_app/utils/school_brand.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fkss_app/screens/auth/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:fkss_app/utils/theme.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(SchoolBrand.load);
   testWidgets('Login screen shows sign-in controls', (WidgetTester tester) async {
     await tester.pumpWidget(MaterialApp(
       theme: AppTheme.lightTheme,

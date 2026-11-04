@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/config.dart';
 import '../../services/app_update_service.dart';
 import '../../utils/theme.dart';
 import 'update_screen.dart';
@@ -69,7 +70,7 @@ class _UpdateBannerState extends State<UpdateBanner> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'New FKSS version ${cfg.latestVersion} is available',
+                      'New ${AppConfig.appName} version ${cfg.latestVersion} is available',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(

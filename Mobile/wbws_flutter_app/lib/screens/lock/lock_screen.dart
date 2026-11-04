@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import '../../utils/config.dart';
 import 'package:flutter/services.dart';
 
 import '../../services/app_lock_service.dart';
@@ -211,7 +212,7 @@ class _LockScreenState extends State<LockScreen>
                 Icon(Icons.lock_outline_rounded,
                     size: 44, color: isThrottled ? Colors.red : AppTheme.primary),
                 const SizedBox(height: 14),
-                const Text('Felege Kidusan is locked',
+                Text('${AppConfig.schoolShortNameEnglish} is locked',
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 4),
                 Text('Enter your passcode to continue',

@@ -5,7 +5,7 @@
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>
-		<string>FKSS</string>
+		<string>$(SCHOOL_APP_NAME)</string>
 		<key>CFBundleExecutable</key>
 		<string>$(EXECUTABLE_NAME)</string>
 		<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 		<key>CFBundleInfoDictionaryVersion</key>
 		<string>6.0</string>
 		<key>CFBundleName</key>
-		<string>FKSS</string>
+		<string>$(SCHOOL_APP_NAME)</string>
 		<key>CFBundlePackageType</key>
 		<string>APPL</string>
 		<key>CFBundleShortVersionString</key>
@@ -53,7 +53,7 @@
 		<key>UIStatusBarHidden</key>
 		<false/>
 		<key>NSFaceIDUsageDescription</key>
-		<string>Unlock the FKSS app with Face ID instead of your passcode.</string>
+		<string>Unlock the $(SCHOOL_APP_NAME) app with Face ID instead of your passcode.</string>
 		<key>NSCameraUsageDescription</key>
 		<string>Scan member QR codes to take attendance. Codes are decoded on the device and no images leave the phone.</string>
 		<key>NSPhotoLibraryUsageDescription</key>

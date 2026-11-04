@@ -1,3 +1,5 @@
+import 'school_brand.dart';
+
 import 'package:flutter/material.dart';
 
 /// FKSS App — Configuration Constants
@@ -11,8 +13,10 @@ class AppConfig {
   static String get siteOrigin =>
       apiBaseUrl.replaceFirst(RegExp(r'/api/v1$'), '');
 
-  static const String appName = 'FKSS';
-  static const String appNameAmharic = 'ፈለገ ቅዱሳን ሰንበት ት/ቤት';
+  static String get appName => SchoolBrand.appName;
+  static String get appNameAmharic => SchoolBrand.nameAmharic;
+  static String get schoolNameEnglish => SchoolBrand.fullNameEnglish;
+  static String get schoolShortNameEnglish => SchoolBrand.shortNameEnglish;
   // ⚠ SINGLE SOURCE OF TRUTH for the update system: the app compares
   // THESE values against the server's .fkss_app_release.php — pubspec.yaml's
   // version only feeds the Android package version. They MUST stay in sync

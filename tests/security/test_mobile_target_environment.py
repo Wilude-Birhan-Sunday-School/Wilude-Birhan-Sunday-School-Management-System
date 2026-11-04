@@ -2,7 +2,8 @@
 Mobile target-environment guard.
 
 `main` (production for BOTH remotes) must always build the PRODUCTION app:
-felegekidusan.com API, package com.arkeonethiopia.fkss, label "FKSS".
+felegekidusan.com API and package com.arkeonethiopia.fkss.
+Display names are configurable, but must not use beta branding.
 The FKSS Beta build lives ONLY on the `dev` branch of suraman21/SSMS
 (owner rule 2026-10-20: beta settings must never sync to the production
 repo). If a dev-branch commit is ever merged into main, this test fails
@@ -26,14 +27,19 @@ class MobileTargetEnvironmentGuard(unittest.TestCase):
     def test_production_api_and_identity(self):
         config = read("lib/utils/config.dart")
         self.assertIn(f"static const String apiBaseUrl = '{PROD_API}';", config)
-        self.assertIn("static const String appName = 'FKSS';", config)
+        self.assertIn("static String get appName => SchoolBrand.appName;", config)
+        names = read("ios/Flutter/SchoolNames.xcconfig")
+        self.assertIn("SCHOOL_APP_NAME = ", names)
+        self.assertNotIn("beta", names.lower())
         self.assertNotIn("arkeonethiopia.com/api", config)
         self.assertNotIn("isBeta", config)
         gradle = read("android/app/build.gradle")
         self.assertIn(f'applicationId = "{PROD_PACKAGE}"', gradle)
         self.assertNotIn(".fkss.beta", gradle)
         manifest = read("android/app/src/main/AndroidManifest.xml")
-        self.assertIn('android:label="FKSS"', manifest)
+        self.assertIn('android:label="${schoolAppName}"', manifest)
+        self.assertIn('manifestPlaceholders.schoolAppName = schoolNames["SCHOOL_APP_NAME"]', gradle)
+        self.assertIn('../ios/Flutter/SchoolNames.xcconfig', gradle)
         self.assertNotIn("Beta", manifest)
         self.assertNotIn("isBeta", read("lib/screens/auth/login_screen.dart"))
 

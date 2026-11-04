@@ -104,6 +104,7 @@ flutter:
   
   assets:
     - assets/
+    - ios/Flutter/SchoolNames.xcconfig
 
   fonts:
     - family: NotoSansEthiopic

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/config.dart';
 import '../../widgets/use_website_note.dart';
 import '../../widgets/notification_bell_button.dart';
 
@@ -18,7 +19,7 @@ class MaterialHomeScreenState extends State<MaterialHomeScreen> {
         slivers: [
           SliverAppBar(floating: true, automaticallyImplyLeading: false, actions: [const NotificationBellButton(color: Colors.white),],
             title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('FKSS', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              Text(AppConfig.appName, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
               Text('የቁሳቁስ ክፍል • Material Dept', style: TextStyle(fontSize: 11, color: Colors.white70)),
             ]),
           ),
