@@ -93,9 +93,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // Title
                 Text(
-                  AppConfig.appNameAmharic,
+                  AppConfig.appFullNameAmharic,
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                      fontSize: 22,
+                      fontSize: 18,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.primary,
                       fontFamily: 'NotoSansEthiopic'),

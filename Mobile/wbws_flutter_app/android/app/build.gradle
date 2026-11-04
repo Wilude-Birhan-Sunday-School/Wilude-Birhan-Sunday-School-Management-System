@@ -7,7 +7,7 @@ plugins {
 
 // Use the same UTF-8 name configuration as Flutter and Xcode.
 def schoolNamesFile = rootProject.file("../ios/Flutter/SchoolNames.xcconfig")
-def requiredSchoolNames = ['SCHOOL_APP_NAME', 'SCHOOL_FULL_NAME_EN', 'SCHOOL_SHORT_NAME_EN', 'SCHOOL_NAME_AM']
+def requiredSchoolNames = ['SCHOOL_APP_NAME', 'SCHOOL_FULL_NAME_EN', 'SCHOOL_SHORT_NAME_EN', 'SCHOOL_NAME_AM', 'SCHOOL_FULL_NAME_AM']
 def schoolNames = [:]
 if (!schoolNamesFile.isFile()) throw new GradleException("Missing SchoolNames.xcconfig")
 schoolNamesFile.readLines("UTF-8").each { rawLine ->
@@ -28,7 +28,7 @@ schoolNamesFile.readLines("UTF-8").each { rawLine ->
     schoolNames[key] = value
 }
 if (schoolNames.keySet() != requiredSchoolNames.toSet()) {
-    throw new GradleException("SchoolNames.xcconfig must contain exactly the four documented names")
+    throw new GradleException("SchoolNames.xcconfig must contain exactly the five documented names")
 }
 
 android {

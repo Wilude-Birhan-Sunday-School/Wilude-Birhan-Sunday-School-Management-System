@@ -1,7 +1,7 @@
 {
-    "name": "WBWS — ውሉደ ብርሃን Sunday School",
-    "short_name": "WBWS",
-    "description": "ውሉደ ብርሃን የሰንበት ት/ቤት Management System — Attendance, Members, Reports",
+    "name": "Wilude Birhan Sunday School",
+    "short_name": "WBSS",
+    "description": "ውሉደ ብርሃን ሰንበት ትምህርት ቤት — Attendance, Members, Reports",
     "start_url": "/app/",
     "scope": "/",
     "display": "standalone",

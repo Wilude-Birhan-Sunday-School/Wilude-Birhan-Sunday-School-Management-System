@@ -1,11 +1,11 @@
 {
-    "name": "wbws_flutter_app",
-    "short_name": "wbws_flutter_app",
+    "name": "Wilude Birhan Sunday School",
+    "short_name": "WBSS",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Wilude Birhan Sunday School",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

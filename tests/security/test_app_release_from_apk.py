@@ -283,7 +283,7 @@ class ReleaseFromApkTests(unittest.TestCase):
         newer = write_apk(self.tmp / "newer.apk", version_code=42)
         junk = self.tmp / "junk.apk"
         junk.write_bytes(b"junk" * 1000)
-        for path, word in ((other, "not an FKSS app"), (beta, "delete the current APK first"),
+        for path, word in ((other, "not a recognized school app"), (beta, "delete the current APK first"),
                            (older, "older than"), (junk, "not a readable Android app")):
             res = self.inspect(path)
             self.assertFalse(res["ok"], path.name)

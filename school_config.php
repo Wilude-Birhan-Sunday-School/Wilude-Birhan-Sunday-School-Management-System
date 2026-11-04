@@ -27,19 +27,19 @@ define('ACTIVE_THEME', 'fkss');
 // └─────────────────────────────────────────────────────────────┘
 
 // Full system name (shown in page titles, API responses)
-define('SCHOOL_NAME', 'FKSS School Management System');
+define('SCHOOL_NAME', 'Wilude Birhan Sunday School');
 
 // Short code (shown in headers, nav bars, mobile app)
-define('SCHOOL_NAME_SHORT', 'FKSS');
+define('SCHOOL_NAME_SHORT', 'WBSS');
 
 // Full Amharic name (shown in landing page, reports, ID cards)
-define('SCHOOL_NAME_AMHARIC', 'ፈለገ ቅዱሳን ሰንበት ትምህርት ቤት');
+define('SCHOOL_NAME_AMHARIC', 'ውሉደ ብርሃን ሰንበት ትምህርት ቤት');
 
 // Short Amharic name (shown in sidebar subtitles, compact labels)
-define('SCHOOL_NAME_SHORT_AM', 'ፈለገ ቅዱሳን');
+define('SCHOOL_NAME_SHORT_AM', 'ውሉደ ብርሃን');
 
-// English translation of school name (Felege Kidusan = "Spring of Saints")
-define('SCHOOL_TRANSLATION_EN', 'Spring of Saints');
+// English school-name stem; existing consumers add SCHOOL_TYPE when needed.
+define('SCHOOL_TRANSLATION_EN', 'Wilude Birhan');
 
 // Tagline — English and Amharic
 define('SCHOOL_TAGLINE', 'Sunday School Management System');
@@ -56,8 +56,10 @@ define('SCHOOL_TYPE_AM', 'ሰንበት ት/ቤት');
 // └─────────────────────────────────────────────────────────────┘
 
 // Parish/church full name — Amharic and English
-define('PARISH_NAME_AM', 'የቦሌ ቡልቡላ ፍ/ሕ ቅድስት ድንግል ማርያም እና መ/መ/ ቅ/ዮሐንስ ቤ/ክ');
-define('PARISH_NAME_EN', 'Bole Bulbula St. Mary & St. John Holy Church');
+define('PARISH_NAME_AM', 'የገላን ጉራ ፈለገ ግዮን ቅዱስ ገብርኤል ቤተክርስቲያን');
+define('SCHOOL_NAME_FULL_AM', PARISH_NAME_AM . ' ' . SCHOOL_NAME_AMHARIC);
+// English transliteration is provisional until the church confirms its preferred spelling.
+define('PARISH_NAME_EN', 'Gelan Gura Felege Giyon St. Gabriel Church');
 
 // Denomination — the broader religious organization
 define('DENOMINATION_AM', 'የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን');
@@ -242,17 +244,19 @@ define('SCHOOL_SEAL_PATH_LEGACY', '/admin/id_cards/assets/seals/school_seal.png'
 // │  Prefix for downloads, backups, cache keys                  │
 // └─────────────────────────────────────────────────────────────┘
 
-// Prefix for export filenames (CSV, PDF, DOCX, XLSX downloads)
-define('EXPORT_PREFIX', strtolower(SCHOOL_NAME_SHORT));
+// Preserve the historical token-secret fallback and any internal consumers.
+// Use the separate display prefix for newly downloaded files.
+define('EXPORT_PREFIX', 'fkss');
+define('EXPORT_PREFIX_DISPLAY', strtolower(SCHOOL_NAME_SHORT));
 
 // Backup SQL header comment
 define('BACKUP_HEADER', SCHOOL_NAME_SHORT . ' Automated Backup');
 
 // PWA cache name
-define('PWA_CACHE_NAME', strtolower(SCHOOL_NAME_SHORT) . '-v5');
+define('PWA_CACHE_NAME', 'fkss-v5');
 
 // PWA cache prefix
-define('PWA_CACHE_PREFIX', strtolower(SCHOOL_NAME_SHORT) . '_');
+define('PWA_CACHE_PREFIX', 'fkss_');
 
 
 // ┌─────────────────────────────────────────────────────────────┐
@@ -260,9 +264,9 @@ define('PWA_CACHE_PREFIX', strtolower(SCHOOL_NAME_SHORT) . '_');
 // │  Progressive Web App manifest values                        │
 // └─────────────────────────────────────────────────────────────┘
 
-define('PWA_NAME', SCHOOL_NAME_SHORT . ' — ' . SCHOOL_NAME_SHORT_AM . ' ' . SCHOOL_TYPE);
+define('PWA_NAME', SCHOOL_NAME);
 define('PWA_SHORT_NAME', SCHOOL_NAME_SHORT);
-define('PWA_DESCRIPTION', SCHOOL_NAME_SHORT_AM . ' የ' . SCHOOL_TYPE_AM . ' ' . SCHOOL_TAGLINE);
+define('PWA_DESCRIPTION', SCHOOL_NAME_AMHARIC . ' ' . SCHOOL_TAGLINE);
 
 
 // ┌─────────────────────────────────────────────────────────────┐
@@ -284,7 +288,8 @@ define('COPYRIGHT_TEXT', SCHOOL_NAME_AMHARIC . ' - ' . SCHOOL_TRANSLATION_EN . '
 // │  Error monitor and uptime check branding                    │
 // └─────────────────────────────────────────────────────────────┘
 
-define('MONITOR_PROJECT_NAME', SCHOOL_NAME_SHORT . ' ' . SCHOOL_TYPE);
+// Historical operational key used to group and query existing monitor records.
+define('MONITOR_PROJECT_NAME', 'FKSS Sunday School');
 define('MONITOR_PAGE_TITLE', SCHOOL_NAME_SHORT . ' Monitor');
 
 
@@ -335,19 +340,7 @@ define('GROUP_UNDER_SS_LABEL_AM', 'በ' . SCHOOL_TYPE_AM . ' ስር');
 // └─────────────────────────────────────────────────────────────┘
 
 define('LEAK_DETECT_KEYWORDS', serialize([
-    'WBWS',
-    'wbws',
-    'Wulde Birhan',
-    'Wulud Birhan',
-    'Wlude Brhan',
-    'ውሉደ ብርሃን',
-    'ውሉደ',
-    'Children of Light',
-    'Gelana Gura',
-    'ገላን ጉራ',
-    'ፈለገግዮን',
-    'ቅዱስ ገብርኤል',
-    'wbws.pro.et',
-    'wbwsprvr',
-    'Wolaita Bethel',
+    'Felege Kidusan',
+    'Spring of Saints',
+    'ፈለገ ቅዱሳን',
 ]));

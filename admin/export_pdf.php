@@ -86,7 +86,7 @@ try {
     $rows = $report->openRows($format);
     $now = new DateTime('now', new DateTimeZone('Africa/Addis_Ababa'));
     $generatedAt = ethio_date_format($now, 'F j, Y') . ' ' . $now->format('g:i A');
-    $baseFilename = EXPORT_PREFIX . '_member_report_' . date('Y-m-d');
+    $baseFilename = EXPORT_PREFIX_DISPLAY . '_member_report_' . date('Y-m-d');
 
     if ($format === 'csv') {
         // Editable membership-type labels (Super Admin → Identity & Codes).

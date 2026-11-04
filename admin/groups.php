@@ -436,7 +436,7 @@ async function generatePdf(){
 }
 
 // ===== EXCEL =====
-async function exportAllGroups(){toast('Preparing...','info');const r=await api('export_all_groups');if(r.success&&r.data&&r.data.length>0){const data=r.data.map(g=>({'Group Name':g.group_name,'English':g.group_name_en||'','Category':g.is_under_sunday_school==1?'SS':'Parish','Est.':g.established_year||'','Male':g.current_male||0,'Female':g.current_female||0,'Leaders':g.leader_count||0,'Members':g.member_count||0}));const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Groups');XLSX.writeFile(wb,<?= json_encode(strtoupper(EXPORT_PREFIX) . '_Groups_') ?>+new Date().toISOString().split('T')[0]+'.xlsx');toast('Exported!')}else toast('No data','error')}
+async function exportAllGroups(){toast('Preparing...','info');const r=await api('export_all_groups');if(r.success&&r.data&&r.data.length>0){const data=r.data.map(g=>({'Group Name':g.group_name,'English':g.group_name_en||'','Category':g.is_under_sunday_school==1?'SS':'Parish','Est.':g.established_year||'','Male':g.current_male||0,'Female':g.current_female||0,'Leaders':g.leader_count||0,'Members':g.member_count||0}));const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Groups');XLSX.writeFile(wb,<?= json_encode(strtoupper(EXPORT_PREFIX_DISPLAY) . '_Groups_') ?>+new Date().toISOString().split('T')[0]+'.xlsx');toast('Exported!')}else toast('No data','error')}
 
 // Export option click
 document.querySelectorAll('.export-option').forEach(o=>{o.onclick=function(e){if(e.target.type!=='checkbox'){const cb=this.querySelector('input[type="checkbox"]');cb.checked=!cb.checked;this.classList.toggle('selected',cb.checked)}}});

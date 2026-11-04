@@ -2858,7 +2858,7 @@
             var ws = XLSX.utils.aoa_to_sheet([head].concat(rows));
             var wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Submissions');
-            XLSX.writeFile(wb, 'FKSS_Mezmur_Submissions.xlsx');
+            XLSX.writeFile(wb, 'Mezmur_Submissions.xlsx');
         } else {
             var csv = '\ufeff' + head.join(',') + '\n' + rows.map(function (r) {
                 return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(',');

@@ -5,7 +5,7 @@ header('Cache-Control: no-store');
 echo json_encode([
     'name' => SCHOOL_NAME_SHORT,
     'short_name' => SCHOOL_NAME_SHORT,
-    'description' => 'Use the website or the FKSS app.',
+    'description' => 'Use the website or the ' . SCHOOL_NAME_SHORT . ' app.',
     'start_url' => '/admin/',
     'scope' => '/admin/',
     'display' => 'browser',

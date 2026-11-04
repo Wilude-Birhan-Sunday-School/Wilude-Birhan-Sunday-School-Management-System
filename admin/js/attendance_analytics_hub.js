@@ -271,7 +271,7 @@ const AttendanceHub = (function () {
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([cmpHead].concat(cmpRows)), 'Comparison');
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([grpHead].concat(grpRows)), 'Groups ' + source);
-            XLSX.writeFile(wb, 'FKSS_Analytics_' + (windowFrom || 'window') + '_' + (windowTo || 'now') + '.xlsx');
+            XLSX.writeFile(wb, 'Attendance_Analytics_' + (windowFrom || 'window') + '_' + (windowTo || 'now') + '.xlsx');
         } else {
             const csv = '\ufeff' + cmpHead.join(',') + '\n' + cmpRows.map(r =>
                 r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');

@@ -31,7 +31,7 @@ if (file_exists($_cmsConfigPath)) {
 <link rel="icon" href="<?= SCHOOL_LOGO_PATH ?>">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= SCHOOL_NAME_AMHARIC . ' - ' . SCHOOL_TRANSLATION_EN . ' ' . SCHOOL_TYPE; ?></title>
+    <title><?= htmlspecialchars(SCHOOL_NAME_FULL_AM . ' - ' . SCHOOL_NAME, ENT_QUOTES, 'UTF-8'); ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous">
     <style>
@@ -186,6 +186,7 @@ if (file_exists($_cmsConfigPath)) {
     <section id="home" class="hero-pattern pt-32 pb-20 text-white">
         <div class="container mx-auto px-4">
             <div class="text-center max-w-4xl mx-auto">
+                <p class="text-lg md:text-2xl mb-4 amharic-text"><?= htmlspecialchars(PARISH_NAME_AM, ENT_QUOTES, 'UTF-8') ?></p>
                 <h1 class="text-5xl md:text-7xl font-bold mb-6 amharic-text"><?= SCHOOL_NAME_AMHARIC ?></h1>
                 <h2 class="text-3xl md:text-4xl mb-4"><?= SCHOOL_TRANSLATION_EN ?> <?= SCHOOL_TYPE ?></h2>
                 <p class="text-xl md:text-2xl mb-4 amharic-text"><?= DENOMINATION_AM ?> <?= SCHOOL_TYPE_AM ?></p>

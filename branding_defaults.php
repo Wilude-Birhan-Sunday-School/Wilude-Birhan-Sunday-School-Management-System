@@ -39,6 +39,7 @@ if (!defined('SCHOOL_TYPE_AM'))         define('SCHOOL_TYPE_AM', 'ሰንበት �
 // ── Parish / religious texts ──────────────────────────────────
 if (!defined('PARISH_NAME_AM'))         define('PARISH_NAME_AM', SCHOOL_NAME_AMHARIC);
 if (!defined('PARISH_NAME_EN'))         define('PARISH_NAME_EN', SCHOOL_TRANSLATION_EN);
+if (!defined('SCHOOL_NAME_FULL_AM'))    define('SCHOOL_NAME_FULL_AM', SCHOOL_NAME_AMHARIC);
 if (!defined('DENOMINATION_AM'))        define('DENOMINATION_AM', '');
 if (!defined('DENOMINATION_EN'))        define('DENOMINATION_EN', '');
 if (!defined('RELIGIOUS_INVOCATION'))   define('RELIGIOUS_INVOCATION', '');
@@ -106,6 +107,7 @@ if (!defined('SCHOOL_SEAL_PATH_LEGACY')) define('SCHOOL_SEAL_PATH_LEGACY', SCHOO
 
 // ── Exports / backups / PWA / landing / misc ──────────────────
 if (!defined('EXPORT_PREFIX'))          define('EXPORT_PREFIX', 'ssms');
+if (!defined('EXPORT_PREFIX_DISPLAY'))  define('EXPORT_PREFIX_DISPLAY', strtolower(SCHOOL_NAME_SHORT));
 if (!defined('BACKUP_HEADER'))          define('BACKUP_HEADER', 'SSMS BACKUP');
 if (!defined('PWA_CACHE_NAME'))         define('PWA_CACHE_NAME', 'ssms-cache');
 if (!defined('PWA_CACHE_PREFIX'))       define('PWA_CACHE_PREFIX', 'ssms');

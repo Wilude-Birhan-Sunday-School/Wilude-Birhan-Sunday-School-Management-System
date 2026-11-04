@@ -49,11 +49,7 @@ if (file_exists($configPath)) {
 $keywords = defined('LEAK_DETECT_KEYWORDS') 
     ? unserialize(LEAK_DETECT_KEYWORDS) 
     : [
-        // ADD YOUR OLD SCHOOL KEYWORDS HERE
-        'WBWS', 'wbws', 'Wulde Birhan', 'Wulud Birhan', 'Wlude Brhan',
-        'ውሉደ ብርሃን', 'ውሉደ', 'Children of Light',
-        'Gelana Gura', 'ገላን ጉራ', 'ፈለገግዮን', 'ቅዱስ ገብርኤል',
-        'wbws.pro.et', 'wbwsprvr', 'Wolaita Bethel',
+        'Felege Kidusan', 'Spring of Saints', 'ፈለገ ቅዱሳን',
     ];
 
 // Directories to scan (relative to public_html)

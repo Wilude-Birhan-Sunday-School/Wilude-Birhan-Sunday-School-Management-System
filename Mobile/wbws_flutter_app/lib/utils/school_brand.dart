@@ -5,7 +5,7 @@ class SchoolBrand {
   static const assetPath = 'ios/Flutter/SchoolNames.xcconfig';
   static const keys = {
     'SCHOOL_APP_NAME', 'SCHOOL_FULL_NAME_EN',
-    'SCHOOL_SHORT_NAME_EN', 'SCHOOL_NAME_AM',
+    'SCHOOL_SHORT_NAME_EN', 'SCHOOL_NAME_AM', 'SCHOOL_FULL_NAME_AM',
   };
   static Map<String, String>? _names;
 
@@ -51,4 +51,5 @@ class SchoolBrand {
   static String get fullNameEnglish => _get('SCHOOL_FULL_NAME_EN');
   static String get shortNameEnglish => _get('SCHOOL_SHORT_NAME_EN');
   static String get nameAmharic => _get('SCHOOL_NAME_AM');
+  static String get fullNameAmharic => _get('SCHOOL_FULL_NAME_AM');
 }

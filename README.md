@@ -1,6 +1,6 @@
-# FKSS — Sunday School Management System
+# WBSS — Sunday School Management System
 
-FKSS is the management system of the Felege Kidusan Sunday School. It replaces spreadsheets and paper records for member registration, education (classes, assessments, report cards, timetable, attendance), the Mezmur (hymn) ministry, communications and reporting. Staff use a PHP web application; teachers and department staff also use an Android app built with Flutter that works offline and synchronises with the server.
+WBSS is the management system of Wilude Birhan Sunday School. It replaces spreadsheets and paper records for member registration, education (classes, assessments, report cards, timetable, attendance), the Mezmur (hymn) ministry, communications and reporting. Staff use a PHP web application; teachers and department staff also use an Android app built with Flutter that works offline and synchronises with the server.
 
 > **Source baseline (reviewed 2026-10-28):** development main `7209278`. All eight baseline checks passed; the earlier 79-skip failure is resolved. A later change needs its own checks. See [Testing and CI](docs/DEVELOPMENT_AND_TESTING.md#3-current-ci-status).
 > - Delivery is development main → development-server update → owner acceptance → separately authorized production promotion. A merge does not prove deployment. See [Operations](docs/OPERATIONS.md).
@@ -145,14 +145,11 @@ Each item is VERIFIED unless marked otherwise. Detail and evidence: [OPERATIONS.
 
 The full working agreement (workflow, coding standards, database rules, tests, definition of done) is in **[CONTRIBUTING.md](CONTRIBUTING.md)**.
 
-- **Repositories:**
-  - Development happens in `suraman21/fkss-sunday-school-platform`.
-  - `Felege-Kidusan/felegekidusan` is the private production repository.
-  - Development integration and production promotion are separate. Do not assume their `main` branches or deployed files are identical.
-- **Beta branch:** `dev` builds the beta mobile app. It is **never** merged into `main`. See [BRANCHING.md](BRANCHING.md).
+- **Repository:** This school maintains `Wilude-Birhan-Sunday-School/Wilude-Birhan-Sunday-School-Management-System` independently. Changes from the original upstream can be reviewed and adapted manually before integration.
+- **Inherited guidance:** Branch and operations documents may describe the original school's repositories and beta process. Review and update them for this school before relying on them for a release or deployment.
 - **Changes:** use a feature or documentation branch and a pull request against `main`. Changes to application logic, schema, migrations, deployment or production configuration need explicit approval from the maintainers.
 - **Migrations:** applied to production manually by a maintainer with production access.
-- **Delivery:** merge checked changes to development main; verify the development-server update and obtain owner acceptance. Production promotion and hosting changes need separate explicit authorization. Historical SFTP safeguards remain in [docs/OPERATIONS.md](docs/OPERATIONS.md).
+- **Delivery:** review and test changes before integrating them into this school’s main branch. Hosting, backend and production changes need separate explicit authorization.
 - **Security issues:** do **not** report them in public issues or pull requests. Report them privately to the maintainers. See [docs/SECURITY.md](docs/SECURITY.md).
 
 No licence file is present in this repository.

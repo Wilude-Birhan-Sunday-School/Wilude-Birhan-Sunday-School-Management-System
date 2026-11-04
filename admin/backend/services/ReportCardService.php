@@ -1796,7 +1796,7 @@ class ReportCardService
 
         $spreadsheet->setActiveSheetIndex(0);
         $safeClass = preg_replace('/[^\p{L}\p{N}_-]+/u', '_', $className) ?: 'class';
-        $prefix = defined('EXPORT_PREFIX') ? EXPORT_PREFIX : 'fkss';
+        $prefix = defined('EXPORT_PREFIX_DISPLAY') ? EXPORT_PREFIX_DISPLAY : 'school';
         $filename = $prefix . '_' . $safeClass . '_report.xlsx';
 
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -2240,7 +2240,7 @@ class ReportCardService
         ];
 
         // Format Title & Banner
-        $sheet->setCellValue('A1', ($brand['school_am'] ?? 'FKSS') . ' — ' . ($brand['school_en'] ?? ''));
+        $sheet->setCellValue('A1', ($brand['school_am'] ?? 'School') . ' — ' . ($brand['school_en'] ?? ''));
         $sheet->setCellValue('A2', 'Filtered Student Performance & Attendance Report');
         $sheet->setCellValue('A3', 'Total Students: ' . ($stats['total'] ?? 0) . ' | Avg Grade: ' . ($stats['avg_grade'] ?? 0) . '% | Avg Attendance (recorded): ' . ($stats['avg_attendance'] ?? 0) . '% | Exported: ' . (function_exists('ethio_export_datetime') ? ethio_export_datetime('now') : date('Y-m-d H:i')));
 
@@ -2317,10 +2317,10 @@ class ReportCardService
     public static function brand(): array
     {
         return [
-            'school_am' => defined('SCHOOL_NAME_AMHARIC') ? SCHOOL_NAME_AMHARIC : 'ፈለገ ቅዱሳን ሰንበት ትምህርት ቤት',
-            'school_en' => trim((defined('SCHOOL_TRANSLATION_EN') ? SCHOOL_TRANSLATION_EN : 'Spring of Saints') . ' ' . (defined('SCHOOL_TYPE') ? SCHOOL_TYPE : 'Sunday School')),
-            'school_short_am' => defined('SCHOOL_NAME_SHORT_AM') ? SCHOOL_NAME_SHORT_AM : 'ፈለገ ቅዱሳን',
-            'school_short' => defined('SCHOOL_NAME_SHORT') ? SCHOOL_NAME_SHORT : 'FKSS',
+            'school_am' => defined('SCHOOL_NAME_AMHARIC') ? SCHOOL_NAME_AMHARIC : '',
+            'school_en' => trim((defined('SCHOOL_TRANSLATION_EN') ? SCHOOL_TRANSLATION_EN : '') . ' ' . (defined('SCHOOL_TYPE') ? SCHOOL_TYPE : 'Sunday School')),
+            'school_short_am' => defined('SCHOOL_NAME_SHORT_AM') ? SCHOOL_NAME_SHORT_AM : '',
+            'school_short' => defined('SCHOOL_NAME_SHORT') ? SCHOOL_NAME_SHORT : 'School',
             'parish_am' => defined('PARISH_NAME_AM') ? PARISH_NAME_AM : '',
             'parish_en' => defined('PARISH_NAME_EN') ? PARISH_NAME_EN : '',
             'invocation' => defined('RELIGIOUS_INVOCATION') ? RELIGIOUS_INVOCATION : '',

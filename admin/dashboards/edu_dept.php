@@ -1221,8 +1221,8 @@ Classes with low curriculum recorded percentages indicate pending exam score sub
 <!-- ═══ REPORT CARDS ═══ -->
 <div id="sec-reportcards" class="sec">
 <div class="rc-print-banner" id="rcPrintBanner">
-<div class="am">ፈለገ ቅዱሳን ሰንበት ትምህርት ቤት</div>
-<div class="en">Felege Kidusan Sunday School · Class report</div>
+<div class="am"><?= e(SCHOOL_NAME_AMHARIC) ?></div>
+<div class="en"><?= e(SCHOOL_NAME) ?> · Class report</div>
 <div class="en" id="rcPrintBannerMeta"></div>
 </div>
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
@@ -3654,7 +3654,7 @@ function exportSubmissions(){
         const dr=_subAnalytics.days.map(d=>[fD(d.date),d.present,d.absent,d.late,d.excused,d.recorded,d.rate]);
         XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([dh,...dr]),'14-day attendance');
     }
-    XLSX.writeFile(wb,'FKSS_Submissions.xlsx');
+    XLSX.writeFile(wb,'Class_Submissions.xlsx');
 }
 async function loadSubInsights(){
     const box=document.getElementById('subInsights');

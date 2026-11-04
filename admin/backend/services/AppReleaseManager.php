@@ -619,7 +619,7 @@ final class AppReleaseManager
             throw new InvalidArgumentException('This file is not a readable Android app: its version could not be read. Upload the APK from the release build.');
         }
         if (!isset(self::KNOWN_PACKAGES[$app['package']])) {
-            throw new InvalidArgumentException('This APK is "' . $app['package'] . '", not an FKSS app. Nothing was published.');
+            throw new InvalidArgumentException('This APK is "' . $app['package'] . '", not a recognized school app. Nothing was published.');
         }
         // Metadata alone cannot identify a universal or per-device APK.
         // This is an ELF identity gate, not a signature/installability verdict.
@@ -646,8 +646,10 @@ final class AppReleaseManager
         $info = self::getReleaseInfo($projectRoot);
         $curFile = $info['_apk_file'] ?? null;
         $cur = ($curFile && is_file($curFile)) ? fkssApkManifest($curFile) : null;
-        $label = static fn (array $a): string => (self::KNOWN_PACKAGES[$a['package']] ?? $a['package'])
-            . ' ' . $a['version_name'] . ' (build ' . $a['version_code'] . ')';
+        $label = static fn (array $a): string => (isset(self::KNOWN_PACKAGES[$a['package']])
+            ? ((defined('SCHOOL_NAME_SHORT') ? SCHOOL_NAME_SHORT : 'School app')
+                . ($a['package'] === 'com.arkeonethiopia.fkss.beta' ? ' Beta' : ''))
+            : $a['package']) . ' ' . $a['version_name'] . ' (build ' . $a['version_code'] . ')';
 
         if ($targetAbi === 'arm64-v8a' || $targetAbi === 'armeabi-v7a') {
             if ($cur === null) {

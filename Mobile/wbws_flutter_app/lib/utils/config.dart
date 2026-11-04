@@ -15,6 +15,7 @@ class AppConfig {
 
   static String get appName => SchoolBrand.appName;
   static String get appNameAmharic => SchoolBrand.nameAmharic;
+  static String get appFullNameAmharic => SchoolBrand.fullNameAmharic;
   static String get schoolNameEnglish => SchoolBrand.fullNameEnglish;
   static String get schoolShortNameEnglish => SchoolBrand.shortNameEnglish;
   // ⚠ SINGLE SOURCE OF TRUTH for the update system: the app compares

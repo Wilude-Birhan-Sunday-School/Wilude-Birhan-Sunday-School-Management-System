@@ -1,0 +1,7 @@
+# School logo assets
+
+The logo supplied by the school is used as artwork, not recreated or text-edited. The transparent master used by the app is `assets/logo_school.png`; its copies are the website's `themes/fkss/assets/logos/school_logo.png`, legacy ID-card `admin/id_cards/assets/logos/school_logo.png`, and the generator input `Mobile/splash_logo.png`. Paths are relative to the repository root except for `assets/logo_school.png`, which is relative to this Flutter project. Website-managed branding or stored templates can override these files and require separate review.
+
+`Mobile/app_icon.png` places the logo on white with a margin for launcher masks; `Mobile/splash_logo_android12.png` has additional transparent padding for Android 12's circular splash-icon crop. Website PWA/Flutter web icons use the same artwork with appropriate safe margins. A logo is not necessarily an official seal: seal assets have not been replaced.
+
+After replacing generator inputs, from this Flutter project run `flutter pub get --enforce-lockfile`, `dart run flutter_launcher_icons`, and `dart run flutter_native_splash:create`. These tools also rewrite platform metadata, so review their entire diff before committing. Build and inspect Android (including adaptive icons and Android 12+ splash), iOS, and relevant web/PWA variants on devices. Existing browser/OS icon caches can retain old artwork. No application IDs, signing, backend configuration, colors or stored data are changed by this asset update.
