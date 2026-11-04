@@ -5,6 +5,7 @@ import '../../services/local_db.dart';
 import '../../services/app_update_service.dart';
 import '../../utils/config.dart';
 import '../../utils/theme.dart';
+import '../../utils/brand_palette.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/app_error.dart';
 import '../../widgets/loading_skeleton.dart';
@@ -121,10 +122,7 @@ class AdminHomeScreenState extends State<AdminHomeScreen> {
       Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppTheme.primaryDark, AppTheme.primary, AppTheme.primaryLight],
-            begin: Alignment.topLeft, end: Alignment.bottomRight,
-          ),
+          gradient: BrandPalette.headerGradient,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

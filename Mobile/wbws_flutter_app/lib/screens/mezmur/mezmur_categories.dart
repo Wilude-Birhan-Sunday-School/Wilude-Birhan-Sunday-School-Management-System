@@ -6,6 +6,7 @@ import '../../services/hymn_store.dart';
 import '../../utils/config.dart';
 import '../../utils/cover_palette.dart';
 import '../../utils/theme.dart';
+import '../../utils/brand_palette.dart';
 import '../../widgets/empty_state.dart';
 
 /// Category management — two-level, offline-first like the rest of the
@@ -44,14 +45,7 @@ class _MezmurCategoriesState extends State<MezmurCategoriesScreen> {
   bool _loading = true;
   int _uploadingId = 0;
 
-  static const _palettes = [
-    [Color(0xFF5A1212), Color(0xFFD4AF37)],
-    [Color(0xFF4f46e5), Color(0xFF7c3aed)],
-    [Color(0xFF0ea5e9), Color(0xFF2563eb)],
-    [Color(0xFF059669), Color(0xFF0d9488)],
-    [Color(0xFFd97706), Color(0xFFdc2626)],
-    [Color(0xFFdb2777), Color(0xFF9333ea)],
-  ];
+  static const _palettes = BrandPalette.coverPalettes;
 
   List<Color> _gradientFor(String name) {
     var h = 0;
@@ -318,14 +312,7 @@ class _MezmurCategoriesState extends State<MezmurCategoriesScreen> {
   /// automatic name-hashed palette — with a live preview. Saves
   /// offline-first like every other category edit.
   Future<void> _pickColors(Map<String, dynamic> c) async {
-    const presets = [
-      ['0xFF5A1212', '0xFFD4AF37'],
-      ['0xFF4f46e5', '0xFF7c3aed'],
-      ['0xFF0ea5e9', '0xFF2563eb'],
-      ['0xFF059669', '0xFF0d9488'],
-      ['0xFFd97706', '0xFFdc2626'],
-      ['0xFFdb2777', '0xFF9333ea'],
-    ];
+    const presets = BrandPalette.coverPalettes;
     var start = (c['gradient_start'] ?? '').toString();
     var end = (c['gradient_end'] ?? '').toString();
     var auto = start.isEmpty && end.isEmpty;
@@ -437,8 +424,8 @@ class _MezmurCategoriesState extends State<MezmurCategoriesScreen> {
                       borderRadius: BorderRadius.circular(8),
                       onTap: () => setSheet(() {
                         auto = false;
-                        startCtrl.text = '#${p[0].substring(2)}';
-                        endCtrl.text = '#${p[1].substring(2)}';
+                        startCtrl.text = _hexOf(p[0]);
+                        endCtrl.text = _hexOf(p[1]);
                       }),
                       child: Container(
                         width: 48,
@@ -449,15 +436,15 @@ class _MezmurCategoriesState extends State<MezmurCategoriesScreen> {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              Color(int.parse(p[0])),
-                              Color(int.parse(p[1]))
+                              p[0],
+                              p[1]
                             ],
                           ),
                           border: !auto &&
                                   startCtrl.text.toLowerCase() ==
-                                      '#${p[0].substring(2).toLowerCase()}' &&
+                                      _hexOf(p[0]).toLowerCase() &&
                                   endCtrl.text.toLowerCase() ==
-                                      '#${p[1].substring(2).toLowerCase()}'
+                                      _hexOf(p[1]).toLowerCase()
                               ? Border.all(color: AppTheme.primary, width: 2)
                               : null,
                         ),

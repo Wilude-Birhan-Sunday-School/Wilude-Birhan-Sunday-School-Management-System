@@ -29,7 +29,7 @@ class MezmurMiniPlayer extends StatelessWidget {
         return Material(
           // Opaque: a translucent fill let the page behind bleed through
           // and win hit-tests in some stacking contexts.
-          color: const Color(0xFFF3E4C4),
+          color: Parchment.surface,
           elevation: 6,
           shadowColor: const Color(0x66000000),
           borderRadius: BorderRadius.circular(16),

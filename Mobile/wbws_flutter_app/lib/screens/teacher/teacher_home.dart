@@ -9,6 +9,7 @@ import '../../services/local_db.dart';
 import '../../utils/config.dart';
 import '../../utils/ethiopian_calendar.dart';
 import '../../utils/theme.dart';
+import '../../utils/brand_palette.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/app_error.dart';
 import '../../widgets/empty_state.dart';
@@ -303,11 +304,7 @@ class TeacherHomeScreenState extends State<TeacherHomeScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppTheme.primaryDark, AppTheme.primary, AppTheme.primaryLight],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: BrandPalette.headerGradient,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(

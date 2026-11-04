@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'brand_palette.dart';
 
 /// Cover colors for a category/sub-category (P32).
 ///
 /// Priority: an admin-pinned gradient (two strict hex colors) wins;
-/// otherwise the automatic name-hashed palette — the same palette and
-/// hash the web manager uses, so a category looks identical on every
-/// screen.
+/// otherwise the automatic name-hashed palette — the configured mobile palette and web-compatible hash. The default
+/// palette matches the web manager; changing it requires a separate web update
+/// to keep their automatic cover colors identical.
 List<Color> coverColors(Map<String, dynamic>? item, String name) {
   final start = _hex(item?['gradient_start']);
   final end = _hex(item?['gradient_end']);
@@ -43,14 +44,7 @@ List<Color> hymnCoverColors(Map<String, dynamic>? hymn, String name) {
 /// step with & 0x7fffffff, which produces a different bucket for most
 /// non-trivial names — the bug behind "same category, different
 /// gradient on the phone than the web console".
-const _palettes = [
-  [Color(0xFF5A1212), Color(0xFFD4AF37)],
-  [Color(0xFF4f46e5), Color(0xFF7c3aed)],
-  [Color(0xFF0ea5e9), Color(0xFF2563eb)],
-  [Color(0xFF059669), Color(0xFF0d9488)],
-  [Color(0xFFd97706), Color(0xFFdc2626)],
-  [Color(0xFFdb2777), Color(0xFF9333ea)],
-];
+const _palettes = BrandPalette.coverPalettes;
 
 List<Color> _autoPalette(String name) {
   var h = 0;

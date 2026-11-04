@@ -16,6 +16,7 @@ import '../../widgets/loading_skeleton.dart';
 import 'mezmur_hymn_editor.dart';
 import 'mezmur_hymns.dart';
 import 'mezmur_player_screen.dart';
+import 'parchment_style.dart';
 
 /// Single hymn reader — LOCAL-FIRST: opens instantly from the on-device
 /// copy; when the lyrics blob has not been downloaded yet it streams it
@@ -542,7 +543,7 @@ class _PlayTile extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.play_arrow_rounded,
-                    color: Color(0xFF4A2C0C), size: 28),
+                    color: Parchment.buttonInk, size: 28),
               ),
               const SizedBox(width: 12),
               Expanded(

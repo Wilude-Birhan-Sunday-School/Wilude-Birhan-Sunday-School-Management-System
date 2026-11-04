@@ -115,8 +115,12 @@ class TimetableMobileStaticGuards(unittest.TestCase):
         self.assertIn("AppTheme.primary", s)
         self.assertIn("AppTheme.accent", s)
         theme = read(FLUTTER / "lib/utils/theme.dart")
-        self.assertIn("Color(0xFF5A1212)", theme)
-        self.assertIn("Color(0xFFD4AF37)", theme)
+        self.assertIn("static const Color primary = BrandPalette.primary;", theme)
+        self.assertIn("static const Color accent = BrandPalette.secondary;", theme)
+        self.assertIn("BrandPalette.headerGradient", s)
+        palette = read(FLUTTER / "lib/utils/brand_palette.dart")
+        self.assertIn("static const int primaryRgb", palette)
+        self.assertIn("static const int secondaryRgb", palette)
 
     def test_offline_cache_is_per_user_and_wiped_on_sign_out(self):
         c = read(CACHE)

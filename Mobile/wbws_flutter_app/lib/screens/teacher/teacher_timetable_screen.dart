@@ -8,6 +8,7 @@ import '../../services/connectivity_service.dart';
 import '../../services/timetable_cache.dart';
 import '../../utils/ethiopian_calendar.dart';
 import '../../utils/theme.dart';
+import '../../utils/brand_palette.dart';
 
 /// ============================================================
 /// Teacher — My Timetable (read-only)
@@ -401,11 +402,7 @@ class _TeacherTimetableScreenState extends State<TeacherTimetableScreen> {
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppTheme.primaryDark, AppTheme.primary, AppTheme.primaryLight],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: BrandPalette.headerGradient,
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(22)),
       ),
       child: SafeArea(

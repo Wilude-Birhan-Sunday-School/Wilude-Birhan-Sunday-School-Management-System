@@ -5,6 +5,7 @@ import '../../services/app_update_service.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/local_db.dart';
 import '../../utils/theme.dart';
+import '../../utils/brand_palette.dart';
 import '../../utils/transitions.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/app_error.dart';
@@ -139,7 +140,7 @@ class EduHomeScreenState extends State<EduHomeScreen> {
       Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [AppTheme.primaryDark, AppTheme.primary, AppTheme.primaryLight], begin: Alignment.topLeft, end: Alignment.bottomRight),
+          gradient: BrandPalette.headerGradient,
           borderRadius: BorderRadius.circular(16)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('የትምህርት ክፍል', style: TextStyle(fontSize: 13, color: Colors.grey.shade300, fontFamily: 'NotoSansEthiopic')),

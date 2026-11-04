@@ -8,6 +8,7 @@ import '../../services/connectivity_service.dart';
 import '../../services/local_db.dart';
 import '../../utils/scrolling.dart';
 import '../../utils/theme.dart';
+import '../../utils/brand_palette.dart';
 import '../../widgets/fast_list.dart';
 import '../../widgets/paged_list_footer.dart';
 import 'member_detail_screen.dart';
@@ -508,7 +509,7 @@ class _MemberListScreenState extends State<MemberListScreen>
                             interactive: true,
                             thickness: 5,
                             radius: const Radius.circular(3),
-                            thumbColor: const Color(0x595A1212),
+                            thumbColor: BrandPalette.primaryScrollbar,
                             child: RefreshIndicator(
                               onRefresh: () => _loadMembers(),
                               // Phase 3: fixed-extent rows (fast) + a
@@ -582,7 +583,7 @@ class _MemberListScreenState extends State<MemberListScreen>
 
   // Precomputed tint colors — withOpacity() allocates a new Color on every
   // row build; during a fast fling that is thousands of avoidable allocations.
-  static const Color _avatarBg = Color(0x265A1212);
+  static const Color _avatarBg = BrandPalette.primaryAvatar;
   static const Map<String, Color> _chipBg = {
     'active': Color(0x26059669),
     'warning': Color(0x26D97706),

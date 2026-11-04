@@ -280,9 +280,9 @@ class _MezmurLyricsSyncScreenState extends State<MezmurLyricsSyncScreen> {
         // Parchment family (P61): the same cream the player's sheets and
         // the mini player use — this screen is pushed from inside the
         // parchment player and must not feel like a different app.
-        backgroundColor: const Color(0xFFF3E4C4),
+        backgroundColor: Parchment.surface,
         appBar: AppBar(
-          backgroundColor: const Color(0xFFF3E4C4),
+          backgroundColor: Parchment.surface,
           elevation: 0,
           scrolledUnderElevation: 0,
           title: const Text(
@@ -479,7 +479,7 @@ class _TransportState extends State<_Transport> {
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 6, 12, 8),
       decoration: const BoxDecoration(
-        color: Color(0xFFEAD8B2),
+        color: Parchment.toolbar,
         border: Border(
           bottom: BorderSide(color: Parchment.bronzeSoft, width: 0.5),
         ),
@@ -502,7 +502,7 @@ class _TransportState extends State<_Transport> {
                   backgroundColor:
                       WidgetStatePropertyAll(Parchment.bronze),
                   foregroundColor:
-                      WidgetStatePropertyAll(Color(0xFFF8EBCB)),
+                      WidgetStatePropertyAll(Parchment.creamBright),
                 ),
                 tooltip: playing ? 'Pause' : 'Play',
               ),
@@ -758,7 +758,7 @@ class _StampBar extends StatelessWidget {
                     // Gold + dark ink: the player's play-button vocabulary,
                     // not the app-wide maroon (P61 style unification).
                     backgroundColor: Parchment.gold,
-                    foregroundColor: const Color(0xFF4A2C0C),
+                    foregroundColor: Parchment.buttonInk,
                     disabledBackgroundColor:
                         Parchment.bronzeSoft.withValues(alpha: 0.35),
                     disabledForegroundColor:

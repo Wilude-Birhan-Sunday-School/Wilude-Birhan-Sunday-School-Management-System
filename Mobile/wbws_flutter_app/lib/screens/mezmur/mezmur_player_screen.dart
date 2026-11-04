@@ -206,7 +206,7 @@ class _MezmurPlayerScreenState extends State<MezmurPlayerScreen> {
   void _showSettings() {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFFF3E4C4),
+      backgroundColor: Parchment.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
@@ -296,7 +296,7 @@ class _MezmurPlayerScreenState extends State<MezmurPlayerScreen> {
     final rs = LyricsReaderSettings.instance;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFFF3E4C4),
+      backgroundColor: Parchment.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
@@ -431,7 +431,7 @@ class _MezmurPlayerScreenState extends State<MezmurPlayerScreen> {
     if (q.isEmpty) return;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFFF3E4C4),
+      backgroundColor: Parchment.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
@@ -480,7 +480,7 @@ class _MezmurPlayerScreenState extends State<MezmurPlayerScreen> {
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.dark,
       statusBarBrightness: Brightness.light,
-      systemNavigationBarColor: Color(0xE62A150A),
+      systemNavigationBarColor: Parchment.navigationBar,
       systemNavigationBarIconBrightness: Brightness.light,
     );
 
@@ -881,7 +881,7 @@ class _ArtBackdrop extends StatelessWidget {
                 decoration: BoxDecoration(
                   // Same cream the _GlassPanel floats on (60% over
                   // arbitrary content) — the readability guarantee.
-                  color: const Color(0x99F6E7C8),
+                  color: Parchment.panelOverlay,
                 ),
               ),
             ),
@@ -910,7 +910,7 @@ class _GlassPanel extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: const Color(0x99F6E7C8),
+            color: Parchment.panelOverlay,
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
               color: Parchment.bronze.withValues(alpha: 0.34),
@@ -936,13 +936,13 @@ class _ChipIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xF5F8EBCB),
+      color: Parchment.controlSurface,
       shape: const CircleBorder(),
       elevation: 2,
       shadowColor: const Color(0x66000000),
       child: IconButton(
         tooltip: tooltip,
-        icon: Icon(icon, color: const Color(0xFF1A0C06), size: 24),
+        icon: Icon(icon, color: Parchment.controlInk, size: 24),
         iconSize: 24,
         onPressed: onTap,
       ),
@@ -1003,12 +1003,12 @@ class _PlayButton extends StatelessWidget {
                   padding: EdgeInsets.all(17),
                   child: CircularProgressIndicator(
                     strokeWidth: 2.2,
-                    color: Color(0xFF5A3A12),
+                    color: Parchment.accentShadow,
                   ),
                 )
               : Icon(
                   playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                  color: const Color(0xFF4A2C0C),
+                  color: Parchment.buttonInk,
                   size: 36,
                 ),
         ),

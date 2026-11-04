@@ -2917,8 +2917,11 @@ class MezmurMobilePlayerChromeTests(unittest.TestCase):
         self.assertNotIn("more_horiz", header)
         self.assertIn("Icons.tune_rounded", header)
         self.assertIn("Playback settings", self.player)
-        self.assertIn("0xFF1A0C06", self.player)
-        self.assertIn("0xF5F8EBCB", self.player)
+        self.assertIn("Parchment.controlInk", self.player)
+        self.assertIn("Parchment.controlSurface", self.player)
+        self.assertIn("BrandPalette.parchmentControlInk", self.style)
+        self.assertIn("BrandPalette.parchmentControlSurface", self.style)
+        # Contrast for configurable colors is checked in brand_palette_test.dart.
 
     def test_lyrics_paint_before_audio_opens(self):
         # Lyrics box is never gated on _opening / currentTrack.

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:fkss_app/utils/cover_palette.dart';
+import 'package:fkss_app/utils/brand_palette.dart';
 import 'package:fkss_app/services/mezmur_audio_player.dart';
 
 /// P66 hymn art — cover color contract tests.
@@ -45,15 +46,8 @@ void main() {
     'Hymn 3': 1,
   };
 
-  // The palette itself, mirrored from mezmur.js PICK_GRADIENTS.
-  const palettes = [
-    [Color(0xFF5A1212), Color(0xFFD4AF37)],
-    [Color(0xFF4f46e5), Color(0xFF7c3aed)],
-    [Color(0xFF0ea5e9), Color(0xFF2563eb)],
-    [Color(0xFF059669), Color(0xFF0d9488)],
-    [Color(0xFFd97706), Color(0xFFdc2626)],
-    [Color(0xFFdb2777), Color(0xFF9333ea)],
-  ];
+  // The configured palette; defaults mirror mezmur.js PICK_GRADIENTS.
+  const palettes = BrandPalette.coverPalettes;
 
   test('hymn cover gradient matches the web (JS hashCode) bucket', () {
     for (final e in jsCases.entries) {
@@ -61,7 +55,7 @@ void main() {
       expect(got, palettes[e.value],
           reason:
               "'${e.key}' must use palette #${e.value} (JS hash bucket) — "
-              'web and mobile must never disagree');
+              'the configured palette must use the JS-compatible hash bucket');
     }
   });
 

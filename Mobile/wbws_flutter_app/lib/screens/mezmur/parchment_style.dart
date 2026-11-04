@@ -15,27 +15,37 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../services/mezmur_audio_player.dart';
+import '../../utils/brand_palette.dart';
 
 class Parchment {
   // Ink family — text on the bright parchment panel (safe contrast).
-  static const Color ink = Color(0xFF3B2417); // very dark sepia
-  static const Color inkStrong = Color(0xFF2A150A); // headings
-  static const Color inkFaint = Color(0xFF7A4E12); // bronze secondary
+  static const Color ink = BrandPalette.parchmentInk; // very dark sepia
+  static const Color inkStrong = BrandPalette.parchmentInkStrong; // headings
+  static const Color inkFaint = BrandPalette.parchmentInkFaint; // bronze secondary
 
   // Metals / ornament.
-  static const Color bronze = Color(0xFF8A5A1B);
-  static const Color bronzeSoft = Color(0xFFA9783A);
-  static const Color gold = Color(0xFFD4AF37);
-  static const Color honey = Color(0xFFD8C078);
+  static const Color bronze = BrandPalette.parchmentBronze;
+  static const Color bronzeSoft = BrandPalette.parchmentBronzeSoft;
+  static const Color gold = BrandPalette.parchmentGold;
+  static const Color honey = BrandPalette.parchmentHoney;
 
   // Cream that is safe to draw as TEXT over dark ornament regions.
-  static const Color cream = Color(0xFFF1DFAE);
-  static const Color creamBright = Color(0xFFF8EBCB);
+  static const Color cream = BrandPalette.parchmentCream;
+  static const Color creamBright = BrandPalette.parchmentCreamBright;
+
+  static const Color surface = BrandPalette.parchmentSurface;
+  static const Color toolbar = BrandPalette.parchmentToolbar;
+  static const Color buttonInk = BrandPalette.parchmentButtonInk;
+  static const Color navigationBar = BrandPalette.parchmentNavigationBar;
+  static const Color panelOverlay = BrandPalette.parchmentPanelOverlay;
+  static const Color controlSurface = BrandPalette.parchmentControlSurface;
+  static const Color controlInk = BrandPalette.parchmentControlInk;
+  static const Color accentShadow = BrandPalette.parchmentAccentShadow;
 
   // Translucent dark-leather chip: control clusters that float over the
   // gold frame / bottom ornament sit on this (≈ rgba(62,35,12,0.72)).
-  static const Color leather = Color(0xB83E230C);
-  static const Color leatherSoft = Color(0x993E230C);
+  static const Color leather = BrandPalette.parchmentLeather;
+  static const Color leatherSoft = BrandPalette.parchmentLeatherSoft;
 
   static const TextStyle inkStyle = TextStyle(
     color: ink,

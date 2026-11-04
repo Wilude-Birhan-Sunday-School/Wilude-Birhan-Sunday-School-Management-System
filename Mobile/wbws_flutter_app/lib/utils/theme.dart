@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'brand_palette.dart';
 
 class AppTheme {
-  // FKSS Brand Colors
-  static const Color primary = Color(0xFF5A1212); // Deep Maroon
-  static const Color primaryLight = Color(0xFF7A1E1E);
-  static const Color primaryDark = Color(0xFF2E0A0A);
-  static const Color accent = Color(0xFFD4AF37); // Gold
+  // Brand values are configured in brand_palette.dart.
+  static const Color primary = BrandPalette.primary;
+  static const Color primaryLight = BrandPalette.primaryLight;
+  static const Color primaryDark = BrandPalette.primaryDark;
+  static const Color accent = BrandPalette.secondary;
 
   // Status colors
   static const Color success = Color(0xFF059669); // Green
