@@ -71,7 +71,7 @@ class BrowserPageRouteTests(unittest.TestCase):
             self.assertIn('%{REQUEST_FILENAME} !-d', source)
             self.assertNotIn('$1.php', source)
         bootstrap = (ROOT / 'config.php').read_text()
-        self.assertLess(bootstrap.index('BrowserPageRoutes::navigationRedirect'), bootstrap.index('$_envFileNames'))
+        self.assertLess(bootstrap.index('BrowserPageRoutes::navigationRedirect'), bootstrap.index('$_envPaths'))
         self.assertIn("header('Cache-Control: no-store')", bootstrap)
         self.assertIn("header('Location: ' . $browserPageLocation, true, 302)", bootstrap)
 

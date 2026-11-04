@@ -39,16 +39,16 @@ jobs:
           set -e
           M=Mobile/wbws_flutter_app
           fail=0
-          for needle in "arkeonethiopia.com/api" "fkss.beta" "FKSS Beta" "isBeta"; do
+          for needle in "arkeonethiopia.com/api" "fkss.beta" "wbss.beta" "FKSS Beta" "isBeta"; do
             if grep -rqF -- "$needle" "$M/lib" "$M/android/app/src/main" "$M/android/app/build.gradle"; then
               echo "::error::Beta value '$needle' found on main — dev branch content leaked (BRANCHING.md)."
               fail=1
             fi
           done
-          grep -qF "static const String apiBaseUrl = 'https://felegekidusan.com/api/v1';" "$M/lib/utils/config.dart" \
+          grep -qF "static const String apiBaseUrl = 'https://wbss.felegekidusan.com/api/v1';" "$M/lib/utils/config.dart" \
             || { echo "::error::apiBaseUrl on main is not the production API."; fail=1; }
-          grep -qF 'applicationId = "com.arkeonethiopia.fkss"' "$M/android/app/build.gradle" \
-            || { echo "::error::applicationId on main is not com.arkeonethiopia.fkss."; fail=1; }
+          grep -qF 'applicationId = "com.felegekidusan.wbss"' "$M/android/app/build.gradle" \
+            || { echo "::error::applicationId on main is not com.felegekidusan.wbss."; fail=1; }
           test ! -e Mobile/HOW_TO_BUILD_BETA.md \
             || { echo "::error::Mobile/HOW_TO_BUILD_BETA.md exists only on dev; it leaked to main."; fail=1; }
           exit $fail

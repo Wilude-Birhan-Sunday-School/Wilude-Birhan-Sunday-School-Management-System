@@ -2,7 +2,7 @@
 /**
  * App release metadata — how the phone knows a new APK exists.
  *
- * Edit /home/USER/.fkss_app_release.php on the server (see
+ * Edit /home/USER/.wbss_app_release.php on the server (see
  * api/v1/app_release.example.php). Never put the APK in git.
  *
  * P65: optional per-ABI artifacts. The universal APK ('apk_path') is
@@ -77,10 +77,10 @@ function fkssLoadAppRelease(): array
 
     $candidates = [];
     if (defined('ROOT_PATH')) {
-        $candidates[] = dirname(ROOT_PATH) . '/.fkss_app_release.php';
+        $candidates[] = dirname(ROOT_PATH) . '/.wbss_app_release.php';
         $candidates[] = ROOT_PATH . '/api/v1/app_release.local.php';
     }
-    $candidates[] = dirname(__DIR__, 2) . '/../.fkss_app_release.php';
+    $candidates[] = dirname(__DIR__, 2) . '/../.wbss_app_release.php';
     $candidates[] = dirname(__DIR__) . '/app_release.local.php';
 
     $file = null;
@@ -231,10 +231,10 @@ function fkssResolveApkPath(string $configured): ?string
 {
     $allowedRoots = [];
     if (defined('ROOT_PATH')) {
-        $allowedRoots[] = dirname(ROOT_PATH) . '/fkss_releases';
+        $allowedRoots[] = dirname(ROOT_PATH) . '/wbss_releases';
         $allowedRoots[] = ROOT_PATH . '/releases';
     }
-    $allowedRoots[] = dirname(__DIR__, 2) . '/../fkss_releases';
+    $allowedRoots[] = dirname(__DIR__, 2) . '/../wbss_releases';
     $allowedRoots[] = dirname(__DIR__, 2) . '/releases';
 
     $try = [];
@@ -259,7 +259,7 @@ function fkssResolveApkPath(string $configured): ?string
                 return $real;
             }
             // folder may not exist yet — allow exact configured file only if parent is allowed name
-            if (!$rootReal && $configured !== '' && basename(dirname($real)) === 'fkss_releases') {
+            if (!$rootReal && $configured !== '' && basename(dirname($real)) === 'wbss_releases') {
                 return $real;
             }
         }

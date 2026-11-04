@@ -15,7 +15,7 @@ This repository is **public**. **Private-handling policy:** keep open security/p
 
 | Area | Control | Location |
 |---|---|---|
-| Secrets | Loader searches one directory above the project, two above, then the project directory, trying `.fkss_env.php` before `.wbws_env.php` at each location. If no candidate exists, the HTTP setup path stops with status 500. Outside-web-root placement is a deployment requirement, not enforced by this search | `config.php`, `$_envBaseDirs` / `$_envFileNames` / `$_envLoaded` |
+| Secrets | Loader searches one directory above the project, two above, then the project directory for `.wbss_env.php`; only `SSMS_AUDIT_TESTING=1` enables a subsequent `.fkss_env.php` / `.wbws_env.php` test-fixture search. If no candidate exists, the HTTP setup path stops with status 500. Outside-web-root placement is a deployment requirement, not enforced by this search | `config.php`, `$_envBaseDirs` / `$_envPaths` / `$_envLoaded` |
 | Session | Session ID regenerated at login. Cookie flags HttpOnly, Secure (over HTTPS) and SameSite=Lax. `AdminSessionGuard` revalidates sessions against the database: an absolute timeout, disabled accounts, changed credentials and impersonation integrity | `admin/backend/login.php`, `backend/core/browser.php`, `AdminSessionGuard` |
 | Passwords | `password_hash` / `password_verify` | `admin/backend/login.php`, `AccountCredentialService` |
 | Brute force | Shared, atomic login throttling | `SecurityRateLimiter` (migration `008`) |
@@ -34,7 +34,7 @@ This repository is **public**. **Private-handling policy:** keep open security/p
 
 ## 3. Configuration and secrets
 
-The secrets file is named `.fkss_env.php` (legacy name: `.wbws_env.php`) and defines constants. Deploy it outside the web root. The loader also accepts a project-directory fallback; checked-in source does not prove the location actually used by a host. **Key names only. Never commit or paste values.**
+The WBSS secrets file is named `.wbss_env.php` and defines constants. The legacy `.fkss_env.php` and `.wbws_env.php` are only considered when `SSMS_AUDIT_TESTING=1` is explicitly enabled for a disposable test system. Deploy it outside the web root. The loader also accepts a project-directory fallback; checked-in source does not prove the location actually used by a host. **Key names only. Never commit or paste values.**
 
 | Group | Keys (from `env.example.php`) |
 |---|---|

@@ -18,8 +18,8 @@ final class AppReleaseManager
 
     /** Android packages this server may publish (production app and Beta). */
     public const KNOWN_PACKAGES = [
-        'com.arkeonethiopia.fkss' => 'FKSS',
-        'com.arkeonethiopia.fkss.beta' => 'FKSS Beta',
+        'com.felegekidusan.wbss' => 'WBSS',
+        'com.felegekidusan.wbss.beta' => 'WBSS Beta',
     ];
 
     /**
@@ -28,7 +28,7 @@ final class AppReleaseManager
     public static function getConfigFile(string $projectRoot): string
     {
         // Check for server-level private file first
-        $privateFile = dirname($projectRoot) . '/.fkss_app_release.php';
+        $privateFile = dirname($projectRoot) . '/.wbss_app_release.php';
         if (is_file($privateFile) && is_writable($privateFile)) {
             return $privateFile;
         }
@@ -42,7 +42,7 @@ final class AppReleaseManager
      */
     public static function getReleasesDirectory(string $projectRoot): string
     {
-        $privateDir = dirname($projectRoot) . '/fkss_releases';
+        $privateDir = dirname($projectRoot) . '/wbss_releases';
         if (is_dir($privateDir) && is_writable($privateDir)) {
             return $privateDir;
         }
@@ -648,7 +648,7 @@ final class AppReleaseManager
         $cur = ($curFile && is_file($curFile)) ? fkssApkManifest($curFile) : null;
         $label = static fn (array $a): string => (isset(self::KNOWN_PACKAGES[$a['package']])
             ? ((defined('SCHOOL_NAME_SHORT') ? SCHOOL_NAME_SHORT : 'School app')
-                . ($a['package'] === 'com.arkeonethiopia.fkss.beta' ? ' Beta' : ''))
+                . ($a['package'] === 'com.felegekidusan.wbss.beta' ? ' Beta' : ''))
             : $a['package']) . ' ' . $a['version_name'] . ' (build ' . $a['version_code'] . ')';
 
         if ($targetAbi === 'arm64-v8a' || $targetAbi === 'armeabi-v7a') {

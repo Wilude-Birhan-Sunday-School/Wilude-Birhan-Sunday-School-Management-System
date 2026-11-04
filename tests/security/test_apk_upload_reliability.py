@@ -19,7 +19,11 @@ import time
 import urllib.request
 import urllib.error
 
-from apk_fixture import write_apk
+from apk_fixture import write_apk as _fixture_write_apk
+
+def write_apk(path, *args, **kwargs):
+    kwargs.setdefault("package", "com.felegekidusan.wbss")
+    return _fixture_write_apk(path, *args, **kwargs)
 
 ROOT = Path(__file__).resolve().parents[2]
 HARNESS = r'''<?php

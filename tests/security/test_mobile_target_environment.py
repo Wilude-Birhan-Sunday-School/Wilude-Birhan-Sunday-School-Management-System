@@ -1,8 +1,8 @@
 """
 Mobile target-environment guard.
 
-`main` (production for BOTH remotes) must always build the PRODUCTION app:
-felegekidusan.com API and package com.arkeonethiopia.fkss.
+This school’s `main` branch must build the WBSS production-target app:
+wbss.felegekidusan.com API and package com.felegekidusan.wbss.
 Display names are configurable, but must not use beta branding.
 The FKSS Beta build lives ONLY on the `dev` branch of suraman21/SSMS
 (owner rule 2026-10-20: beta settings must never sync to the production
@@ -15,8 +15,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 M = ROOT / "Mobile/wbws_flutter_app"
 
-PROD_API = "https://felegekidusan.com/api/v1"
-PROD_PACKAGE = "com.arkeonethiopia.fkss"
+PROD_API = "https://wbss.felegekidusan.com/api/v1"
+PROD_PACKAGE = "com.felegekidusan.wbss"
 
 
 def read(rel):
@@ -35,7 +35,8 @@ class MobileTargetEnvironmentGuard(unittest.TestCase):
         self.assertNotIn("isBeta", config)
         gradle = read("android/app/build.gradle")
         self.assertIn(f'applicationId = "{PROD_PACKAGE}"', gradle)
-        self.assertNotIn(".fkss.beta", gradle)
+        self.assertNotIn(".wbss.beta", gradle)
+        self.assertIn('PRODUCT_BUNDLE_IDENTIFIER = com.felegekidusan.wbss;', read("ios/Runner.xcodeproj/project.pbxproj"))
         manifest = read("android/app/src/main/AndroidManifest.xml")
         self.assertIn('android:label="${schoolAppName}"', manifest)
         self.assertIn('manifestPlaceholders.schoolAppName = schoolNames["SCHOOL_APP_NAME"]', gradle)

@@ -2,13 +2,13 @@
 /**
  * Copy this file ABOVE the website folder:
  *
- *   cp api/v1/app_release.example.php /home/arkeonet/.fkss_app_release.php
- *   chmod 600 /home/arkeonet/.fkss_app_release.php
+ *   cp api/v1/app_release.example.php /home/YOUR_ACCOUNT/.wbss_app_release.php
+ *   chmod 600 /home/YOUR_ACCOUNT/.wbss_app_release.php
  *
  * Then put the APKs here (never in git):
  *
- *   mkdir -p /home/arkeonet/fkss_releases
- *   cp FKSS-universal.apk /home/arkeonet/fkss_releases/fkss.apk
+ *   mkdir -p /home/YOUR_ACCOUNT/wbss_releases
+ *   cp WBSS-universal.apk /home/YOUR_ACCOUNT/wbss_releases/fkss.apk
  *
  * P65 (optional, recommended at fleet scale): also upload the per-ABI
  * builds produced by `flutter build apk --split-per-abi` and point the
@@ -16,8 +16,8 @@
  * matches their CPU. The universal 'apk_path' MUST stay published — it
  * is what old app versions and every fallback receive.
  *
- *   cp FKSS-armeabi-v7a.apk /home/arkeonet/fkss_releases/fkss-arm32.apk
- *   cp FKSS-arm64-v8a.apk    /home/arkeonet/fkss_releases/fkss-arm64.apk
+ *   cp WBSS-armeabi-v7a.apk /home/YOUR_ACCOUNT/wbss_releases/fkss-arm32.apk
+ *   cp WBSS-arm64-v8a.apk    /home/YOUR_ACCOUNT/wbss_releases/fkss-arm64.apk
  *
  * After each new build, raise latest_version / latest_build to match
  * pubspec.yaml (currently 1.7.4+41). Raise min_build only after the staged
@@ -36,10 +36,10 @@ return [
     'banner_text'    => '',
     'banner_kind'    => 'info',
     // Universal APK (both 32-bit and 64-bit phones) — ALWAYS publish.
-    'apk_path'       => '/home/arkeonet/fkss_releases/fkss.apk',
+    'apk_path'       => '/home/YOUR_ACCOUNT/wbss_releases/fkss.apk',
     // Optional per-ABI builds (~2x smaller per device). Leave '' to skip.
-    'apk_arm64_path' => '/home/arkeonet/fkss_releases/fkss-arm64.apk',
-    'apk_arm32_path' => '/home/arkeonet/fkss_releases/fkss-arm32.apk',
+    'apk_arm64_path' => '/home/YOUR_ACCOUNT/wbss_releases/fkss-arm64.apk',
+    'apk_arm32_path' => '/home/YOUR_ACCOUNT/wbss_releases/fkss-arm32.apk',
     'tiles'          => [
         'education' => ['classes', 'teachers', 'subjects', 'enrollment', 'grades', 'attendance', 'warnings'],
     ],

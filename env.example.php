@@ -6,13 +6,13 @@
  * This is a TEMPLATE. Do the following once, on the live server:
  *
  *   1. Copy this file to your account home folder, ONE LEVEL ABOVE
- *      public_html, and rename it to:   .fkss_env.php
- *      (Example full path:  /home/arkeonet/.fkss_env.php)
+ *      public_html, and rename it to:   .wbss_env.php
+ *      (Example full path:  /home/YOUR_ACCOUNT/.wbss_env.php)
  *
  *   2. Fill in the real values below.
  *
  *   3. Set its permission to 0600 (owner read/write only):
- *          chmod 600 /home/arkeonet/.fkss_env.php
+ *          chmod 600 /home/YOUR_ACCOUNT/.wbss_env.php
  *
  *   4. Reload the website. The "Setup required" message disappears.
  *
@@ -20,7 +20,7 @@
  * downloaded through a browser, so the database password stays secret
  * even if a web-server misconfiguration exposes the site folder.
  *
- * NEVER commit the real .fkss_env.php to git. (It is already listed in
+ * NEVER commit the real .wbss_env.php to git. (It is already listed in
  * .gitignore.) This example file is safe because it contains no real
  * secrets.
  * ============================================================
@@ -38,7 +38,7 @@ define('DB_PASS', 'REPLACE_WITH_YOUR_DB_PASSWORD');
 // origins, QR-card payloads and the uptime check all derive from this
 // single value, so this one line is the whole domain configuration.
 // No scheme, no www, no trailing slash:
-// define('SITE_DOMAIN', 'felegekidusan.com');
+// define('SITE_DOMAIN', 'wbss.felegekidusan.com');
 
 
 // ---- Security keys ----
@@ -125,7 +125,7 @@ define('TELEMETRY_HASH_SECRET', 'REPLACE_WITH_A_LONG_RANDOM_STRING_5'); // HMAC 
 //                    (NOT the r2.dev dev URL — that one is test-only).
 //                    This is the ONE value to change when you move to a
 //                    new server/domain — nothing is stored in the DB.
-// The real values below live ONLY in .fkss_env.php, never in git.
+// The real values below live ONLY in .wbss_env.php, never in git.
 // define('MEZMUR_MEDIA_ACCOUNT_ID',          'REPLACE_WITH_YOUR_R2_ACCOUNT_ID');
 // define('MEZMUR_MEDIA_ACCESS_KEY_ID',       'REPLACE_WITH_YOUR_R2_ACCESS_KEY');
 // define('MEZMUR_MEDIA_SECRET_ACCESS_KEY',   'REPLACE_WITH_YOUR_R2_SECRET_KEY');

@@ -47,10 +47,10 @@ echo "== 3. database + user (from the env secrets file) =="
 # name. (Same class of defect as the hardcoded ROOT in four test modules,
 # which the first real CI run caught.)
 _env_values=$(php -r '
-$names = [".fkss_env.php", ".wbws_env.php"];
+$names = [".wbss_env.php", ".fkss_env.php", ".wbws_env.php"];
 $dirs  = [dirname(getcwd()), dirname(getcwd(), 2), getcwd()];
-foreach ($dirs as $d) {
-    foreach ($names as $n) {
+foreach ($names as $n) {
+    foreach ($dirs as $d) {
         $p = $d . "/" . $n;
         if (is_readable($p)) {
             require $p;
@@ -59,7 +59,7 @@ foreach ($dirs as $d) {
         }
     }
 }
-fwrite(STDERR, "provision_env.sh: no .fkss_env.php / .wbws_env.php found in "
+fwrite(STDERR, "provision_env.sh: no .wbss_env.php / audit fixture found in "
              . implode(", ", $dirs) . PHP_EOL);
 exit(1);
 ') || exit 1

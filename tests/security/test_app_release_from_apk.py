@@ -7,7 +7,7 @@ uploads are checked (right app, not older, per-device files match).
 Each test builds a throw-away server tree:
     <tmp>/home/public_html            ROOT_PATH
     <tmp>/home/public_html/releases   APK files
-    <tmp>/home/.fkss_app_release.php  or public_html/api/v1/app_release.local.php
+    <tmp>/home/.wbss_app_release.php  or public_html/api/v1/app_release.local.php
 with the real PHP code linked in.
 """
 from __future__ import annotations
@@ -24,7 +24,11 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from apk_fixture import write_apk
+from apk_fixture import write_apk as _fixture_write_apk
+
+def write_apk(path, *args, **kwargs):
+    kwargs.setdefault("package", "com.felegekidusan.wbss")
+    return _fixture_write_apk(path, *args, **kwargs)
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -92,7 +96,7 @@ class ReleaseFromApkTests(unittest.TestCase):
         self.harness = self.tmp / "harness.php"
         self.harness.write_text(HARNESS)
         self.local_cfg = self.web / "api/v1/app_release.local.php"
-        self.private_cfg = self.home / ".fkss_app_release.php"
+        self.private_cfg = self.home / ".wbss_app_release.php"
         self.universal = self.web / "releases/fkss.apk"
 
     def tearDown(self):
@@ -142,7 +146,7 @@ class ReleaseFromApkTests(unittest.TestCase):
         out = self.ok(op="load")
         self.assertEqual((out["rel"]["latest_version"], out["rel"]["latest_build"]), ("1.7.4", 41))
         self.assertEqual(out["rel"]["version_source"], "apk")
-        self.assertEqual(out["rel"]["apk_package"], "com.arkeonethiopia.fkss")
+        self.assertEqual(out["rel"]["apk_package"], "com.felegekidusan.wbss")
         self.assertEqual((out["phone"]["latest_version"], out["phone"]["latest_build"]), ("1.7.4", 41))
 
     def test_unreadable_apk_falls_back_to_typed_version(self):
@@ -269,6 +273,16 @@ class ReleaseFromApkTests(unittest.TestCase):
         self.assertFalse(s["background_drains_enabled"])
         self.assertEqual((s["min_version"], s["min_build"]), ("1.6.0", 30))
 
+    def test_original_school_private_release_is_not_loaded_or_served(self):
+        old_dir = self.home / "fkss_releases"
+        old_dir.mkdir()
+        old_apk = write_apk(old_dir / "fkss.apk", package="com.arkeonethiopia.fkss")
+        (self.home / ".fkss_app_release.php").write_text(
+            php_config({"latest_version": "9.9.9", "apk_path": str(old_apk)}))
+        rel = self.ok(op="load")["rel"]
+        self.assertNotEqual(rel["latest_version"], "9.9.9")
+        self.assertFalse(rel["download_available"])
+
     # ── B6: upload checks ───────────────────────────────────────────────
     def inspect(self, path, abi="universal"):
         return self.run_op(op="inspect", file=str(path), abi=abi)
@@ -277,13 +291,14 @@ class ReleaseFromApkTests(unittest.TestCase):
         self.cfg()
         write_apk(self.universal, version_code=41)
         other = write_apk(self.tmp / "other.apk", package="com.example.other", version_code=50)
-        beta = write_apk(self.tmp / "beta.apk", package="com.arkeonethiopia.fkss.beta", version_code=50)
+        old_school = write_apk(self.tmp / "old-school.apk", package="com.arkeonethiopia.fkss", version_code=50)
+        beta = write_apk(self.tmp / "beta.apk", package="com.felegekidusan.wbss.beta", version_code=50)
         older = write_apk(self.tmp / "older.apk", version_code=40)
         same = write_apk(self.tmp / "same.apk", version_code=41)
         newer = write_apk(self.tmp / "newer.apk", version_code=42)
         junk = self.tmp / "junk.apk"
         junk.write_bytes(b"junk" * 1000)
-        for path, word in ((other, "not a recognized school app"), (beta, "delete the current APK first"),
+        for path, word in ((other, "not a recognized school app"), (old_school, "not a recognized school app"), (beta, "delete the current APK first"),
                            (older, "older than"), (junk, "not a readable Android app")):
             res = self.inspect(path)
             self.assertFalse(res["ok"], path.name)
@@ -358,7 +373,7 @@ class ReleaseFromApkTests(unittest.TestCase):
 
     def test_first_upload_and_switching_apps_after_delete(self):
         self.cfg()
-        beta = write_apk(self.tmp / "beta.apk", package="com.arkeonethiopia.fkss.beta", version_code=5)
+        beta = write_apk(self.tmp / "beta.apk", package="com.felegekidusan.wbss.beta", version_code=5)
         self.assertFalse(self.inspect(beta, "armeabi-v7a")["ok"], "split without a universal file")
         self.assertTrue(self.inspect(beta)["ok"], "first upload of any FKSS app")
         write_apk(self.universal, version_code=41)
@@ -426,14 +441,14 @@ class ReleaseDashboardJsTests(unittest.TestCase):
     def test_latest_fields_are_read_only_when_taken_from_the_apk(self):
         out = self.run_js("""
             UI.populateForm({ latest_version: '1.7.4', latest_build: 41, version_source: 'apk',
-                              apk_package: 'com.arkeonethiopia.fkss', min_version: '1.0.0', min_build: 1 });
+                              apk_package: 'com.felegekidusan.wbss', min_version: '1.0.0', min_build: 1 });
             const a = [els['cfg-latest-version'].readOnly, els['cfg-latest-build'].readOnly, els['cfg-version-source'].textContent];
             UI.populateForm({ latest_version: '1.6.10', latest_build: 36, version_source: 'config', min_version: '1.0.0', min_build: 1 });
             a.push(els['cfg-latest-version'].readOnly);
             console.log(JSON.stringify(a));
         """)
         self.assertEqual(out[:2], [True, True])
-        self.assertTrue("com.arkeonethiopia.fkss" in out[2])
+        self.assertTrue("com.felegekidusan.wbss" in out[2])
         self.assertFalse(out[3])
 
     def test_phone_policy_text(self):

@@ -134,9 +134,9 @@ class AndroidApkGateTests(unittest.TestCase):
                 suffix = ('.bat' if name == 'apksigner' else '.exe') if gate.os.name == 'nt' else ''
                 (tools / (name + suffix)).touch()
             args = SimpleNamespace(apk=self.make_apk(root / 'test.apk'), sdk_root=str(root),
-                build_tools='36.0.0', package='com.arkeonethiopia.fkss', version='1.7.4', version_code=41,
+                build_tools='36.0.0', package='com.felegekidusan.wbss', version='1.7.4', version_code=41,
                 max_min_sdk=24, min_target_sdk=36, abis=','.join(gate.ABIS))
-            good = "package: name='com.arkeonethiopia.fkss' versionCode='41' versionName='1.7.4'\nsdkVersion:'24'\ntargetSdkVersion:'36'\n"
+            good = "package: name='com.felegekidusan.wbss' versionCode='41' versionName='1.7.4'\nsdkVersion:'24'\ntargetSdkVersion:'36'\n"
             with mock.patch.object(gate, 'run_tool', side_effect=[good, 'aligned', 'MOCK signed']) as run:
                 report = gate.verify(args)
                 self.assertEqual((report['min_sdk'], report['target_sdk']), (24, 36))
@@ -145,7 +145,7 @@ class AndroidApkGateTests(unittest.TestCase):
             for bad in (good.replace("sdkVersion:'24'", "sdkVersion:'29'"),
                         good.replace("targetSdkVersion:'36'", "targetSdkVersion:'35'"),
                         good.replace("versionCode='41'", "versionCode='42'"),
-                        good.replace("name='com.arkeonethiopia.fkss'", "name='example.other'"), 'unknown'):
+                        good.replace("name='com.felegekidusan.wbss'", "name='example.other'"), 'unknown'):
                 with mock.patch.object(gate, 'run_tool', return_value=bad), self.assertRaises(ValueError):
                     gate.verify(args)
             with mock.patch.object(gate, 'run_tool', side_effect=[good, 'aligned', ValueError('invalid signature')]), self.assertRaises(ValueError):

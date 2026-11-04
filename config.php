@@ -35,18 +35,23 @@ if (PHP_SAPI !== 'cli') {
 // LOAD SECRETS FROM ENV FILE (outside web root)
 // ============================================================
 // Secrets file lives ABOVE public_html so it's never web-accessible.
-// NOTE: school_config.php isn't loaded yet, so we list candidate env filenames here.
-// Checks each name in each location — works for any school deployment.
-$_envFileNames = ['.fkss_env.php', '.wbws_env.php'];
+// This independent WBSS deployment must never silently load the original
+// school's credentials. Search all WBSS locations first, then permit the
+// legacy test fixture only in an explicitly enabled disposable audit world.
 $_envBaseDirs = [
-    dirname(__DIR__),       // /home/user/ (production)
-    dirname(__DIR__, 2),    // two levels up (some hosting layouts)
-    __DIR__,                // fallback: same dir (dev only — NOT recommended)
+    dirname(__DIR__),
+    dirname(__DIR__, 2),
+    __DIR__, // development fallback only; production belongs outside every web root
 ];
 $_envPaths = [];
 foreach ($_envBaseDirs as $_d) {
-    foreach ($_envFileNames as $_n) {
-        $_envPaths[] = $_d . '/' . $_n;
+    $_envPaths[] = $_d . '/.wbss_env.php';
+}
+if (getenv('SSMS_AUDIT_TESTING') === '1') {
+    foreach (['.fkss_env.php', '.wbws_env.php'] as $_n) {
+        foreach ($_envBaseDirs as $_d) {
+            $_envPaths[] = $_d . '/' . $_n;
+        }
     }
 }
 $_envLoaded = false;
@@ -71,7 +76,7 @@ if (!$_envLoaded) {
         . '<h2 style="color:#b91c1c">Setup required: secrets file missing</h2>'
         . '<p>The system cannot start because its secret configuration file was not found. '
         . 'This file holds the database password and security keys and must live <strong>above</strong> the public web folder.</p>'
-        . '<p>Create a file named <code>.fkss_env.php</code> in your account home folder '
+        . '<p>Create a file named <code>.wbss_env.php</code> in your account home folder '
         . '(one level above <code>public_html</code>) using the template <code>env.example.php</code> '
         . 'included with this project, then reload this page.</p>'
         . '</div>'

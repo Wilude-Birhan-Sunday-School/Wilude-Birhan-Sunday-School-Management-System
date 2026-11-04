@@ -169,7 +169,7 @@ def main():
     parser.add_argument("--sdk-root")
     parser.add_argument("--build-tools", default="36.0.0")
     parser.add_argument("--abis", default=",".join(ABIS))
-    parser.add_argument("--package", default="com.arkeonethiopia.fkss")
+    parser.add_argument("--package", default="com.felegekidusan.wbss")
     parser.add_argument("--version")
     parser.add_argument("--version-code", type=int)
     parser.add_argument("--max-min-sdk", type=int, default=24)

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 /// FKSS App — Configuration Constants
 class AppConfig {
-  static const String apiBaseUrl = 'https://felegekidusan.com/api/v1';
+  static const String apiBaseUrl = 'https://wbss.felegekidusan.com/api/v1';
 
   /// Site root (apiBaseUrl without the /api/v1 suffix) — the origin that
   /// serves RELATIVE upload URLs (category/singer covers, hymn art
@@ -19,7 +19,7 @@ class AppConfig {
   static String get schoolNameEnglish => SchoolBrand.fullNameEnglish;
   static String get schoolShortNameEnglish => SchoolBrand.shortNameEnglish;
   // ⚠ SINGLE SOURCE OF TRUTH for the update system: the app compares
-  // THESE values against the server's .fkss_app_release.php — pubspec.yaml's
+  // THESE values against the server's .wbss_app_release.php — pubspec.yaml's
   // version only feeds the Android package version. They MUST stay in sync
   // (test/version_sync_test.dart fails the release build if they drift —
   // drifting is what hid updates from phones before P65).

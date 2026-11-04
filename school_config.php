@@ -114,13 +114,10 @@ define('MEMBER_CODE_FORMAT', '');
 // └─────────────────────────────────────────────────────────────┘
 
 // Primary domain (no trailing slash).
-// ENVIRONMENT-FIRST (production cutover 2026-10): config.php loads the
-// environment file (.fkss_env.php) BEFORE this file, so each deployment
-// owns its domain there — production defines SITE_DOMAIN in
-// /home/felegeki/.fkss_env.php. The fallback below only applies when the
-// environment did not provide one, so development keeps today's value.
+// The private environment file is loaded first and can override this default.
+// Confirm SITE_DOMAIN in the WBSS environment points to the WBSS host.
 if (!defined('SITE_DOMAIN')) {
-    define('SITE_DOMAIN', 'felegekidusan.arkeonethiopia.com');
+    define('SITE_DOMAIN', 'wbss.felegekidusan.com');
 }
 
 // Full site URL

@@ -6,7 +6,7 @@
         </trust-anchors>
     </base-config>
     <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="true">felegekidusan.com</domain>
+        <domain includeSubdomains="false">wbss.felegekidusan.com</domain>
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
