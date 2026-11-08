@@ -89,7 +89,7 @@ Future<void> runBootstrap() async {
     final detail = await _writeBootstrapLog(error, stack);
     runApp(OfflineDataProtectionFailureApp(
       detail: detail,
-      migrationRecoveryRequired: error is InterruptedDatabaseMigration,
+      migrationRecoveryRequired: error is OfflineDatabaseRecoveryRequired,
     ));
     return;
   }
@@ -159,11 +159,15 @@ Future<String> _writeBootstrapLog(Object error, StackTrace stack) async {
 
 class OfflineDataProtectionFailureApp extends StatefulWidget {
   final String detail;
+  // Kept constructor name also covers orphaned ordinary SQLite sidecars.
   final bool migrationRecoveryRequired;
+  /// Defaults to the real bootstrap; injectable for isolated lifecycle tests.
+  final Future<void> Function() retryBootstrap;
   const OfflineDataProtectionFailureApp({
     super.key,
     required this.detail,
     this.migrationRecoveryRequired = false,
+    this.retryBootstrap = runBootstrap,
   });
 
   @override
@@ -176,8 +180,15 @@ class _OfflineDataProtectionFailureAppState
   bool _retrying = false;
 
   Future<void> _retry() async {
+    if (_retrying) return;
     setState(() => _retrying = true);
-    await runBootstrap(); // replaces this app on success
+    try {
+      await widget.retryBootstrap(); // replaces this app on success
+    } finally {
+      // A handled failure can update this same State with a new error detail.
+      // Success may instead dispose it; never update an unmounted screen.
+      if (mounted) setState(() => _retrying = false);
+    }
   }
 
   @override
@@ -209,7 +220,7 @@ class _OfflineDataProtectionFailureAppState
                   const SizedBox(height: 12),
                   Text(
                     widget.migrationRecoveryRequired
-                        ? 'Historical database migration files need review. '
+                        ? 'Offline database files need review. '
                             'This attempt kept the database files unchanged. '
                             'Do not clear app data or reinstall. Send the detail '
                             'line below to the school administrator before '
