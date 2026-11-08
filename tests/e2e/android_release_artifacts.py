@@ -50,7 +50,7 @@ def check_set(directory):
             raise ValueError(f'{kind}: APK/report/manifest hash mismatch')
         if report['version'] != manifest['app_version'] or report['version_code'] != int(manifest['app_build']):
             raise ValueError(f'{kind}: universal/per-device version mismatch')
-        if report['package'] != 'com.arkeonethiopia.fkss' or report['min_sdk'] > 24 or report['target_sdk'] < 36:
+        if report['package'] != 'com.felegekidusan.wbss' or report['min_sdk'] > 24 or report['target_sdk'] < 36:
             raise ValueError(f'{kind}: package or SDK support mismatch')
         abis = {value['abi'] for value in report['native_libraries'].values()}
         if abis != KINDS[kind]:

@@ -44,6 +44,14 @@ class MobileTargetEnvironmentGuard(unittest.TestCase):
         self.assertNotIn("Beta", manifest)
         self.assertNotIn("isBeta", read("lib/screens/auth/login_screen.dart"))
 
+    def test_preparation_scopes_use_school_server_identity(self):
+        for name in ("attendance_preparation_fetcher.dart", "grades_preparation_fetcher.dart"):
+            source = read(f"lib/services/{name}")
+            self.assertIn("serverIdentity: AppConfig.apiBaseUrl", source)
+            self.assertNotIn("https://felegekidusan.com/api/v1", source)
+        for path in ("lib/screens/attendance/attendance_screen.dart", "lib/screens/teacher/teacher_grades.dart", "lib/services/warm_store.dart"):
+            self.assertIn("serverIdentity: AppConfig.apiBaseUrl", read(path))
+
 
 if __name__ == "__main__":
     unittest.main()

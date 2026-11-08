@@ -23,11 +23,11 @@ class AndroidReleaseSetTests(unittest.TestCase):
         self.directory = Path(self.temp.name)
         items = []
         for kind, abis in release.KINDS.items():
-            apk = write_apk(self.directory / (kind + '.apk'), abis=tuple(sorted(abis)))
+            apk = write_apk(self.directory / (kind + '.apk'), package='com.felegekidusan.wbss', abis=tuple(sorted(abis)))
             sha = release.digest(apk)
             # Deliberately fabricated tool records. Actual SDK/ELF/signature
             # checks are exercised separately, with real APKs, by Android CI.
-            report = {'package': 'com.arkeonethiopia.fkss', 'version': '1.7.4', 'version_code': 41,
+            report = {'package': 'com.felegekidusan.wbss', 'version': '1.7.4', 'version_code': 41,
                       'min_sdk': 24, 'target_sdk': 36, 'sha256': sha,
                       'native_libraries': {f'lib/{abi}/libapp.so': {'abi': abi} for abi in abis}}
             report_name = kind + '.json'
@@ -79,7 +79,8 @@ class AndroidReleaseSetTests(unittest.TestCase):
 
     def test_package_or_sdk_regressions_refused(self):
         for values in ({'min_sdk': 29}, {'min_sdk': 24, 'target_sdk': 35},
-                       {'target_sdk': 36, 'package': 'example.other'}):
+                       {'target_sdk': 36, 'package': 'example.other'},
+                       {'target_sdk': 36, 'package': 'com.arkeonethiopia.fkss'}):
             with self.subTest(values=values):
                 self.change_report(**values)
                 with self.assertRaises(ValueError):
@@ -97,6 +98,17 @@ class AndroidReleaseSetTests(unittest.TestCase):
         result = release.inspect_publication(release.check_set(self.directory))
         self.assertEqual(set(result), set(release.KINDS))
         self.assertEqual({row['version_code'] for row in result.values()}, {41})
+
+    def test_wrong_school_apk_bytes_fail_the_real_publication_inspector(self):
+        # Reports alone are not trusted by the publication inspector. Keep the
+        # WBSS allowlist strict even if a fabricated report claims WBSS.
+        artifacts = release.check_set(self.directory)
+        wrong = write_apk(self.directory / 'wrong-school.apk', package='com.arkeonethiopia.fkss',
+                          abis=tuple(sorted(release.KINDS['universal'])))
+        artifacts['universal']['path'] = wrong
+        artifacts['universal']['sha256'] = release.digest(wrong)
+        with self.assertRaisesRegex(ValueError, 'actual PHP inspector refused'):
+            release.inspect_publication(artifacts)
 
     def summary_inputs(self):
         build = self.directory / 'build'
