@@ -37,7 +37,7 @@ PUBLIC_PAGES = {
 }
 
 # Shared, non-page includes of the public site.
-SHARED = ['public_site.php', 'site_content.php']
+SHARED = ['public_site.php', 'site_content.php', 'site_lang.php']
 
 
 def read(name):
@@ -51,6 +51,7 @@ class PublicWebsiteStructureTests(unittest.TestCase):
         cls.bootstrap = read('public_site.php')
         cls.content = read('site_content.php')
         cls.pages = {name: read(name) for name in PUBLIC_PAGES.values()}
+        cls.lang = read('site_lang.php')
         cls.registry = read('admin/backend/services/BrowserPageRoutes.php')
         cls.htaccess = read('.htaccess')
 
@@ -144,7 +145,7 @@ class PublicWebsiteStructureTests(unittest.TestCase):
         self.assertNotIn('fontawesome', ''.join(self.pages.values()).lower())
 
     def test_shared_layout_has_accessibility_and_seo_hooks(self):
-        for token in ('skip-link', 'aria-label="Primary"', 'aria-expanded="false"',
+        for token in ('skip-link', "ui('primary_nav')", 'aria-expanded="false"',
                       'class="visually-hidden"', 'rel="canonical"', 'property="og:title"',
                       'application/ld+json', 'name="viewport"'):
             with self.subTest(token=token):
@@ -169,7 +170,9 @@ class PublicWebsiteStructureTests(unittest.TestCase):
         self.assertIn('SecurityRateLimiter', endpoint)
         self.assertIn("consume('public-registration'", endpoint)
         self.assertIn('cms_registration_submissions', endpoint)
-        self.assertIn("jsonResponse(['status'=>'error','message'=>'Service temporarily unavailable", endpoint)
+        # The endpoint still refuses an unwritable world; the message is now
+        # built by the localising helper instead of a bare English string.
+        self.assertIn("$msg('Service temporarily unavailable", endpoint)
         for filename in PUBLIC_PAGES.values():
             source = read(filename)
             for match in re.finditer(r'action="([^"]+)"', source):
@@ -184,7 +187,7 @@ class PublicWebsiteStructureTests(unittest.TestCase):
         self.assertNotIn('Ages 4', self.content)
         self.assertNotIn('Little Lambs', self.content)
         self.assertNotIn('fallback_classes', self.bootstrap)
-        levels = self.content.split("'levels' => [", 1)[1][:400]
+        levels = self.content.split("'levels' => [", 1)[1][:1400]
         self.assertIn('An adult (18 or over)', levels)
         self.assertIn('Myself — I am the person joining', levels)
         endpoint = read('register_submit.php')
@@ -246,8 +249,8 @@ class PublicWebsiteStructureTests(unittest.TestCase):
         self.assertNotIn('member_code', joined)
         self.assertNotIn('report_card', joined)
         privacy_copy = read('site_content.php')
-        self.assertIn('Individual results are not published', privacy_copy)
-        self.assertIn('no member personal information', privacy_copy)
+        self.assertIn('Individual results are never published', privacy_copy)
+        self.assertIn('Only photographs approved by the school appear in the public gallery', privacy_copy)
 
     # 5 — optional data path --------------------------------------------
     def test_optional_announcements_table_is_read_only_and_guarded(self):
@@ -268,6 +271,107 @@ class PublicWebsiteStructureTests(unittest.TestCase):
             for statement in ('INSERT INTO', 'UPDATE ', 'DELETE FROM', 'TRUNCATE', 'DROP TABLE'):
                 with self.subTest(file=filename, statement=statement.strip()):
                     self.assertNotIn(statement, source)
+
+
+class PublicWebsiteBilingualTests(unittest.TestCase):
+    """Amharic is the default language; English is one switch away.
+
+    These assertions pin the two things that break silently in a bilingual
+    site: a language that cannot be chosen, and a string that was never
+    translated (which shows as English text inside an Amharic page).
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.lang = read('site_lang.php')
+        cls.bootstrap = read('public_site.php')
+        cls.content = read('site_content.php')
+        cls.css = read('css/wbss-site.css')
+        cls.pages = {name: read(name) for name in PUBLIC_PAGES.values()}
+
+    def test_amharic_is_the_default_language(self):
+        self.assertIn("const WBSS_SITE_LANG_DEFAULT = 'am';", self.lang)
+        self.assertIn("const WBSS_SITE_LANGS = ['am', 'en'];", self.lang)
+        # Only those two values are ever accepted, whatever the request says.
+        self.assertIn('in_array($requested, WBSS_SITE_LANGS, true)', self.lang)
+        self.assertIn('in_array($cookie, WBSS_SITE_LANGS, true)', self.lang)
+        self.assertIn("'samesite' => 'Lax'", self.lang)
+
+    def test_document_language_and_alternates_are_declared(self):
+        self.assertIn('<html lang="<?= e(site_lang()) ?>">', self.bootstrap)
+        self.assertIn('hreflang="am"', self.bootstrap)
+        self.assertIn('hreflang="en"', self.bootstrap)
+        self.assertIn('hreflang="x-default"', self.bootstrap)
+        self.assertIn("'inLanguage' => site_lang()", self.bootstrap)
+
+    def test_the_switch_is_on_every_page(self):
+        # Rendered by the shared header and again inside the mobile drawer.
+        self.assertIn('function site_lang_switch', self.bootstrap)
+        self.assertEqual(self.bootstrap.count('site_lang_switch('), 3)  # def + header + drawer
+        self.assertIn("site_lang_url('am')", self.bootstrap)
+        self.assertIn("site_lang_url('en')", self.bootstrap)
+        # Amharic is listed first, because it is the default.
+        am = self.bootstrap.index("site_lang_url('am')")
+        en = self.bootstrap.index("site_lang_url('en')")
+        self.assertLess(am, en)
+
+    def test_every_editorial_string_is_a_pair(self):
+        # L('English', 'አማርኛ') — a single-argument L() would silently ship
+        # English text to Amharic readers.
+        single = re.findall(r"L\('(?:[^'\\]|\\.)*'\)", self.content)
+        self.assertEqual(single, [], f'strings without a translation: {single[:3]}')
+        for pair in re.finditer(r"L\(\s*'((?:[^'\\]|\\.)*)'\s*,\s*'((?:[^'\\]|\\.)*)'", self.content):
+            with self.subTest(text=pair.group(1)[:40]):
+                self.assertRegex(pair.group(2), r'[\u1200-\u139F]|^English$',
+                                 'the second argument must be Amharic')
+
+    def test_templates_hold_no_hard_coded_interface_english(self):
+        # Chrome, buttons and labels come from the ui dictionary, so a new
+        # language only needs new strings, not new templates.
+        for key in ('skip_link', 'register', 'privacy_link', 'search_site',
+                    'primary_nav', 'open_menu', 'join_heading'):
+            with self.subTest(key=key):
+                self.assertRegex(self.content, rf"'{key}'\s*=> L\(")
+        self.assertIn('function ui(string $key)', self.bootstrap)
+        self.assertNotIn('aria-label="Primary"', self.bootstrap)
+        self.assertNotIn('aria-label="Breadcrumb"', self.bootstrap)
+        self.assertNotIn('>Skip to main content<', self.bootstrap)
+
+    def test_client_side_messages_are_translated_too(self):
+        for token in ('data-msg-required', 'data-msg-email', 'data-msg-sending',
+                      'data-msg-failed', 'data-msg-joining'):
+            with self.subTest(token=token):
+                self.assertIn(token, self.bootstrap)
+        js = read('js/wbss-site.js')
+        self.assertIn('document.body.dataset', js)
+        # The page always wins; the English string survives only as the last
+        # resort fallback for a stripped-down page.
+        for key, english in (('msgRequired', 'Please complete the required fields'),
+                             ('msgEmail', 'Please check the email address')):
+            self.assertIn(f"bodyData.{key} || '{english}", js)
+
+    def test_the_form_endpoint_answers_in_the_visitors_language(self):
+        endpoint = read('register_submit.php')
+        self.assertIn("$_POST['lang']", endpoint)
+        self.assertIn("'am'", endpoint)
+        self.assertIn('require_once __DIR__ . \'/site_lang.php\';', endpoint)
+        # An unexpected value must fall back to English, never be echoed.
+        self.assertNotIn('<?=', endpoint)
+
+    def test_amharic_typography_rules_exist(self):
+        self.assertIn('--font-am', self.css)
+        self.assertIn('html[lang="am"]', self.css)
+        self.assertIn('.lang-switch', self.css)
+        # Ethiopic must never be uppercased or tracked like Latin small caps.
+        self.assertIn('text-transform: none', self.css)
+
+    def test_nothing_depends_on_a_webfont_or_cdn(self):
+        for filename in list(PUBLIC_PAGES.values()) + SHARED:
+            source = read(filename)
+            with self.subTest(file=filename):
+                self.assertNotIn('fonts.googleapis.com', source)
+                self.assertNotIn('fonts.gstatic.com', source)
+        self.assertIn('"Noto Serif Ethiopic"', self.css)
 
 
 if __name__ == '__main__':

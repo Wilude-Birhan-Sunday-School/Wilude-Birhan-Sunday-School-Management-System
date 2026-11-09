@@ -5,19 +5,18 @@ require_once __DIR__ . '/public_site.php';
 
 $page = [
     'slug'      => '/404',
-    'title'     => 'Page not found',
-    'title_tag' => 'Page not found · ' . SCHOOL_NAME,
-    'description' => 'The page you asked for is not part of the Wilude Birhan Sunday School public website.',
+    'title'     => L('Page not found', 'ገጹ አልተገኘም'),
+    'title_tag' => t(L('Page not found', 'ገጹ አልተገኘም')) . ' · ' . site_school_name(),
+    'description' => L('This address is not part of the public website.', 'ይህ አድራሻ በህዝባዊው ድረ-ገጽ ውስጥ የለም።'),
 ];
 site_head($page);
 site_header($page);
 ?>
 <section class="page-hero">
     <div class="wrap page-hero__inner">
-        <p class="eyebrow eyebrow--gold">Error 404</p>
-        <h1 class="page-hero__title">That page is not here</h1>
-        <p class="page-hero__am" lang="am">ይህ ገጽ አልተገኘም</p>
-        <p class="page-hero__lead">The address may have changed, or the link may be out of date. These pages will get you back on track.</p>
+        <p class="eyebrow eyebrow--gold"><?= e(ui('not_found_kicker')) ?></p>
+        <h1 class="page-hero__title"><?= e(ui('page_not_here')) ?></h1>
+        <p class="page-hero__lead"><?= e(t(L('The address may have changed, or the link may be out of date.', 'አድራሻው ተቀይሮ ሊሆን ይችላል፤ ወይም አገናኙ ጊዜ ያለፈበት ሊሆን ይችላል።'))) ?></p>
     </div>
 </section>
 <section class="section">
@@ -25,27 +24,27 @@ site_header($page);
         <div class="grid grid--3">
             <article class="card">
                 <span class="icon-badge"><?= site_icon('book') ?></span>
-                <h3 style="margin-top:1rem"><a href="<?= e(site_page('/programs')) ?>" style="text-decoration:none">Programs</a></h3>
-                <p>Class levels and the curriculum for each age.</p>
+                <h3 style="margin-top:1rem"><a href="<?= e(site_page('/programs')) ?>" style="text-decoration:none"><?= e(t(L('Programmes', 'መርሃ ግብሮች'))) ?></a></h3>
+                <p><?= e(t(L('Subjects and the Sunday programme.', 'ትምህርቶችና የእሁድ መርሃ ግብር።'))) ?></p>
             </article>
             <article class="card">
                 <span class="icon-badge"><?= site_icon('calendar') ?></span>
-                <h3 style="margin-top:1rem"><a href="<?= e(site_page('/news')) ?>" style="text-decoration:none">News and notices</a></h3>
-                <p>Announcements, photographs and school updates.</p>
+                <h3 style="margin-top:1rem"><a href="<?= e(site_page('/news')) ?>" style="text-decoration:none"><?= e(t(L('News and notices', 'ዜናና ማሳሰቢያዎች'))) ?></a></h3>
+                <p><?= e(t(L('Announcements and photographs.', 'ማስታወቂያዎችና ፎቶዎች።'))) ?></p>
             </article>
             <article class="card">
                 <span class="icon-badge"><?= site_icon('mail') ?></span>
-                <h3 style="margin-top:1rem"><a href="<?= e(site_page('/contact')) ?>" style="text-decoration:none">Contact</a></h3>
-                <p>Reach the school office and find the parish.</p>
+                <h3 style="margin-top:1rem"><a href="<?= e(site_page('/contact')) ?>" style="text-decoration:none"><?= e(ui('contact')) ?></a></h3>
+                <p><?= e(t(L('Reach the school office.', 'የትምህርት ቤቱን ጽ/ቤት ያግኙ።'))) ?></p>
             </article>
         </div>
         <p style="margin-top:1.8rem">
-            <a class="btn btn--primary" href="<?= e(site_page('/')) ?>">Back to the home page<?= site_icon('arrow') ?></a>
+            <a class="btn btn--primary" href="<?= e(site_page('/')) ?>"><?= e(ui('back_home')) ?><?= site_icon('arrow') ?></a>
         </p>
         <form class="search-form" role="search" method="get" action="<?= e(site_page('/search')) ?>" style="margin-top:1.6rem">
-            <label class="visually-hidden" for="notfound-q">Search this website</label>
-            <input id="notfound-q" type="search" name="q" placeholder="Search the website">
-            <button class="btn btn--outline" type="submit">Search</button>
+            <label class="visually-hidden" for="notfound-q"><?= e(ui('search_site')) ?></label>
+            <input id="notfound-q" type="search" name="q" placeholder="<?= e(ui('search_placeholder')) ?>">
+            <button class="btn btn--outline" type="submit"><?= e(ui('search')) ?></button>
         </form>
     </div>
 </section>

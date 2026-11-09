@@ -1,5 +1,5 @@
 <?php
-/** Public Programs page. */
+/** Public Programmes page. */
 require_once __DIR__ . '/public_site.php';
 
 $content = site_content();
@@ -8,17 +8,18 @@ $programs = site_programs();
 
 $page = [
     'slug'        => '/programs',
-    'title'       => 'Programs',
-    'title_tag'   => 'Programs and curriculum · ' . SCHOOL_NAME,
-    'description' => 'Curriculum subjects and the weekly pattern of the Wilude Birhan Sunday School programme, taught to children, young people and adults at every level.',
+    'title'       => L('Programmes', 'መርሃ ግብሮች'),
+    'title_tag'   => null,
+    'description' => $programsContent['lead'],
     'breadcrumbs' => [
-        ['label' => 'Home', 'path' => '/'],
-        ['label' => 'Programs', 'path' => '/programs'],
+        ['label' => L('Home', 'መነሻ'), 'path' => '/'],
+        ['label' => L('Programmes', 'መርሃ ግብሮች'), 'path' => '/programs'],
     ],
 ];
+$page['title_tag'] = t($page['title']) . ' · ' . site_school_name();
 site_head($page);
 site_header($page);
-site_breadcrumbs($page['breadcrumbs'], 'የትምህርት መርሃ ግብሮች');
+site_breadcrumbs($page['breadcrumbs']);
 site_page_hero($programsContent['eyebrow'], $programsContent['title'], $programsContent['lead']);
 ?>
 
@@ -26,22 +27,15 @@ site_page_hero($programsContent['eyebrow'], $programsContent['title'], $programs
 <section class="section">
     <div class="wrap">
         <div class="section-head">
-            <p class="eyebrow">Classes</p>
-            <h2>Classes published by the school</h2>
-            <p class="section-head__lead">Each class follows the same curriculum at its own level, so a learner who moves up a class continues rather than restarts.</p>
+            <p class="eyebrow"><?= e(t($programsContent['classes_eyebrow'])) ?></p>
+            <h2><?= e(t($programsContent['classes_title'])) ?></h2>
         </div>
         <div class="grid grid--3">
             <?php foreach ($programs as $program): ?>
             <article class="card card--program" data-reveal>
                 <div class="card__top">
                     <span class="icon-badge"><?= site_icon($program['icon'] ?? 'book') ?></span>
-                    <?php if (!empty($program['ages'])): ?>
-                    <p class="card__ages"><?= site_icon('users') ?><?= e($program['ages']) ?></p>
-                    <?php endif; ?>
                     <h3><?= e($program['title']) ?></h3>
-                    <?php if (!empty($program['title_am'])): ?>
-                    <p class="card__am" lang="am"><?= e($program['title_am']) ?></p>
-                    <?php endif; ?>
                 </div>
                 <div class="card__body">
                     <?php if (!empty($program['summary'])): ?>
@@ -58,7 +52,6 @@ site_page_hero($programsContent['eyebrow'], $programsContent['title'], $programs
             </article>
             <?php endforeach; ?>
         </div>
-        <p class="muted" style="margin-top:1.2rem">These classes are published by the school administration.</p>
     </div>
 </section>
 <?php endif; ?>
@@ -66,16 +59,15 @@ site_page_hero($programsContent['eyebrow'], $programsContent['title'], $programs
 <section class="section section--sand">
     <div class="wrap">
         <div class="section-head">
-            <p class="eyebrow">Curriculum</p>
-            <h2>The subjects taught</h2>
-            <p class="section-head__lead">The curriculum is set by the school's Education Department and taught by the class teachers — the same subjects at every level, from the youngest class to adult members.</p>
+            <p class="eyebrow"><?= e(t($programsContent['curriculum_eyebrow'])) ?></p>
+            <h2><?= e(t($programsContent['curriculum_title'])) ?></h2>
         </div>
         <div class="grid grid--3">
             <?php foreach ($programsContent['curriculum'] as $subject): ?>
             <article class="card" data-reveal>
                 <span class="icon-badge"><?= site_icon('book') ?></span>
-                <h3 style="margin-top:1rem"><?= e($subject['title']) ?></h3>
-                <p><?= e($subject['text']) ?></p>
+                <h3 style="margin-top:1rem"><?= e(t($subject['title'])) ?></h3>
+                <p><?= e(t($subject['text'])) ?></p>
             </article>
             <?php endforeach; ?>
         </div>
@@ -85,14 +77,14 @@ site_page_hero($programsContent['eyebrow'], $programsContent['title'], $programs
 <section class="section">
     <div class="wrap split">
         <div data-reveal>
-            <p class="eyebrow">The week</p>
-            <h2><?= e($programsContent['week']['title']) ?></h2>
+            <p class="eyebrow"><?= e(t($programsContent['week_eyebrow'])) ?></p>
+            <h2><?= e(t($programsContent['week_title'])) ?></h2>
             <ol class="steps" style="margin-top:1.4rem">
-                <?php foreach ($programsContent['week']['steps'] as $step): ?>
+                <?php foreach ($programsContent['week_steps'] as $step): ?>
                 <li>
                     <div>
-                        <h3><?= e($step['title']) ?></h3>
-                        <p><?= e($step['text']) ?></p>
+                        <h3><?= e(t($step['title'])) ?></h3>
+                        <p><?= e(t($step['text'])) ?></p>
                     </div>
                 </li>
                 <?php endforeach; ?>
@@ -102,23 +94,23 @@ site_page_hero($programsContent['eyebrow'], $programsContent['title'], $programs
             <div class="notice">
                 <?= site_icon('sparkle') ?>
                 <div>
-                    <p><strong>Good to know</strong></p>
+                    <p><strong><?= e(t($programsContent['notices_title'])) ?></strong></p>
                     <ul style="margin:.5rem 0 0;padding-left:1rem">
                         <?php foreach ($programsContent['notices'] as $notice): ?>
-                        <li><?= e($notice) ?></li>
+                        <li><?= e(t($notice)) ?></li>
                         <?php endforeach; ?>
                     </ul>
                 </div>
             </div>
             <div class="card" style="margin-top:1.2rem">
-                <h3 style="margin-top:0">Ask about a class</h3>
-                <p>Not sure which class suits you or your child? Send a request and the office will advise — any age is welcome.</p>
-                <p style="margin:0"><a class="btn btn--primary" href="<?= e(site_page('/admissions')) ?>">Registration request<?= site_icon('arrow') ?></a></p>
+                <h3 style="margin-top:0"><?= e(ui('ask_class')) ?></h3>
+                <p><?= e(t($programsContent['ask_text'])) ?></p>
+                <p style="margin:0"><a class="btn btn--primary" href="<?= e(site_page('/admissions')) ?>"><?= e(ui('register_request')) ?><?= site_icon('arrow') ?></a></p>
             </div>
         </div>
     </div>
 </section>
 
 <?php
-site_cta_band('Ready to join a class?', 'Registration requests are open to everyone in the parish — children, young people and adults. The school office will confirm the class with you.');
+site_cta_band($programsContent['cta_title'], $programsContent['cta_text']);
 site_footer();

@@ -8,28 +8,50 @@ site, so it is deliberately not collected by the security suite.
 Usage:
     WBSS_SITE_BASE=http://127.0.0.1:8089 python3 tests/e2e/public_website_render.py
 
-It requests every public page and fails on a non-200 answer, on any PHP
-error/warning text in the body, on a page whose title does not belong to it,
-on an unescaped search reflection, and on a missing escaped highlight.
+It requests every public page **in both languages** and fails on a non-200
+answer, on any PHP error/warning text in the body, on a page whose title does
+not belong to it, on a missing language declaration, on an unescaped search
+reflection, and on a missing escaped highlight.
+
+Amharic is the default language, so `/index.php` and `/index.php?lang=am` must
+render the same text, and `?lang=en` must render English.
 """
 import os
 import re
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 
 PAGES = {
-    '/index.php': 'Wilude Birhan Sunday School',
-    '/about.php': 'About us',
-    '/programs.php': 'Programs',
-    '/admissions.php': 'Admissions',
-    '/gallery.php': 'Gallery',
-    '/news.php': 'News and notices',
-    '/contact.php': 'Contact',
-    '/privacy.php': 'Privacy',
-    '/search.php?q=mezmur': 'Search',
+    '/index.php': 'home',
+    '/about.php': 'about',
+    '/programs.php': 'programs',
+    '/admissions.php': 'admissions',
+    '/gallery.php': 'gallery',
+    '/news.php': 'news',
+    '/contact.php': 'contact',
+    '/privacy.php': 'privacy',
+    '/search.php?q=mezmur': 'search',
+    '/404.php': 'notfound',
 }
-ERROR_MARKERS = ('Fatal error', 'Parse error', 'Warning:', 'Uncaught', 'Notice:')
+# Pages that must answer 200; the 404 document answers 404 by design.
+RETURNS_200 = {path: name for path, name in PAGES.items() if name != 'notfound'}
+AMHARIC = re.compile(r'[\u1200-\u137F]')
+ERROR_MARKERS = ('Fatal error', 'Parse error', 'Warning:', 'Uncaught', 'Notice:', 'Deprecated:')
+
+# Titles the school publishes for each page, per language.
+TITLES = {
+    'home': {'am': 'ውሉደ ብርሃን', 'en': 'Wilude Birhan'},
+    'about': {'am': 'ስለ እኛ', 'en': 'About us'},
+    'programs': {'am': 'መርሃ ግብሮች', 'en': 'Programmes'},
+    'admissions': {'am': 'ምዝገባ', 'en': 'Admissions'},
+    'gallery': {'am': 'ፎቶዎች', 'en': 'Gallery'},
+    'news': {'am': 'ዜና', 'en': 'News'},
+    'contact': {'am': 'ያግኙን', 'en': 'Contact'},
+    'privacy': {'am': 'ግላዊነት', 'en': 'Privacy'},
+    'search': {'am': 'ፍለጋ', 'en': 'Search'},
+}
 
 
 def fetch(base, path, timeout=20):
@@ -40,6 +62,10 @@ def fetch(base, path, timeout=20):
         return error.code, error.read().decode('utf-8', 'replace')
 
 
+def with_lang(path, lang):
+    return path + ('&' if '?' in path else '?') + 'lang=' + lang
+
+
 def main():
     base = (os.environ.get('WBSS_SITE_BASE') or (sys.argv[1] if len(sys.argv) > 1 else '')).rstrip('/')
     if not base:
@@ -47,57 +73,81 @@ def main():
         return 2
 
     failures = []
-    for path, expected in PAGES.items():
-        status, body = fetch(base, path)
-        title = re.search(r'<title>(.*?)</title>', body, re.S)
-        print(f'{path:<34} {status}  {(title.group(1)[:60] if title else "no title")}')
-        if status != 200:
-            failures.append(f'{path}: HTTP {status}')
-        for marker in ERROR_MARKERS:
-            if marker in body:
-                failures.append(f'{path}: body contains "{marker}"')
-        if expected not in body:
-            failures.append(f'{path}: expected text "{expected}" not found')
-        if '<h1' not in body:
-            failures.append(f'{path}: no <h1> element')
+    for path, slug in PAGES.items():
+        for lang in ('am', 'en'):
+            url = with_lang(path, lang)
+            status, body = fetch(base, url)
+            title = re.search(r'<title>(.*?)</title>', body, re.S)
+            print(f'{url:<40} {status}  {(title.group(1)[:52] if title else "no title")}')
+            expected_status = 200 if path in RETURNS_200 else 404
+            if status != expected_status:
+                failures.append(f'{url}: HTTP {status}, expected {expected_status}')
+            for marker in ERROR_MARKERS:
+                if marker in body:
+                    failures.append(f'{url}: body contains "{marker}"')
+            if f'<html lang="{lang}"' not in body:
+                failures.append(f'{url}: document language is not "{lang}"')
+            if '<h1' not in body:
+                failures.append(f'{url}: no <h1> element')
+            # Amharic pages must be Amharic; English pages must not be.
+            has_amharic = bool(AMHARIC.search(body))
+            if lang == 'am' and not has_amharic:
+                failures.append(f'{url}: no Ethiopic text on an Amharic page')
+            if path in TITLES:
+                if TITLES[slug][lang] not in body:
+                    failures.append(f'{url}: expected "{TITLES[slug][lang]}"')
+            # The switch, and the alternate-language declarations, are on
+            # every page in both directions.
+            if 'lang-switch' not in body:
+                failures.append(f'{url}: no language switch')
+            for token in ('hreflang="am"', 'hreflang="en"', 'hreflang="x-default"'):
+                if token not in body:
+                    failures.append(f'{url}: missing {token}')
 
-    status, body = fetch(base, '/search.php?q=mezmur')
-    if '<mark>' not in body:
-        failures.append('search: expected an escaped <mark> highlight')
+    # The default page is Amharic: no parameter must equal ?lang=am.
+    _, default_body = fetch(base, '/index.php')
+    _, am_body = fetch(base, '/index.php?lang=am')
+    if '<html lang="am"' not in default_body:
+        failures.append('home: Amharic is not the default language')
+    if len(default_body) != len(am_body):
+        failures.append('home: / and /?lang=am rendered different sizes')
 
-    status, body = fetch(base, '/search.php?q=%3Cscript%3Ealert(1)%3C/script%3E')
+    # Search works in both languages and never reflects markup.
+    for query in ('mezmur', urllib.parse.quote('መዝሙር')):  # English and Amharic queries
+        for lang in ('am', 'en'):
+            _, body = fetch(base, f'/search.php?q={query}&lang={lang}')
+            if '<mark>' not in body:
+                failures.append(f'search {query}/{lang}: expected an escaped <mark> highlight')
+    _, body = fetch(base, '/search.php?q=%3Cscript%3Ealert(1)%3C/script%3E')
     if '<script>alert(1)</script>' in body:
         failures.append('search: reflected an unescaped script tag')
 
-    # The schedule page and the XML sitemap were withdrawn from the site. The
-    # PHP development server answers unknown paths with index.php, so their
-    # absence is asserted from the rendered navigation instead of by URL.
-    status, body = fetch(base, '/index.php')
-    for retired in ('/schedule', '/sitemap'):
-        if retired in body:
-            failures.append(f'home: retired page "{retired}" is still linked')
+    # Retired pages are unlinked (the dev server answers unknown paths with
+    # index.php, so the links are what can be asserted here).
+    for lang in ('am', 'en'):
+        _, body = fetch(base, with_lang('/index.php', lang))
+        for retired in ('/schedule', '/sitemap'):
+            if retired in body:
+                failures.append(f'home {lang}: retired page "{retired}" is still linked')
 
-    status, body = fetch(base, '/news.php')
-    if 'news-media' not in body or '/themes/fkss/assets/wbss-' not in body:
-        failures.append('news: expected announcement photographs to render')
-
-    status, body = fetch(base, '/index.php')
-    if 'wbss-hero-courtyard.jpg' not in body:
-        failures.append('home: expected the new hero photograph')
-    for forbidden in ('Staff login', 'Draft website content', 'Weekly rhythm'):
-        if forbidden in body:
-            failures.append(f'home: "{forbidden}" must no longer appear')
-
-    # An unknown path is not asserted here: PHP's built-in development server
-    # answers unmatched paths with the index page, so the 404 document and the
-    # finite rewrite can only be checked on the configured web server.
+    # Photographs, and the text the school asked to have removed.
+    for lang in ('am', 'en'):
+        _, body = fetch(base, with_lang('/news.php', lang))
+        if 'news-media' not in body or '/themes/fkss/assets/wbss-' not in body:
+            failures.append(f'news {lang}: expected notice photographs to render')
+        _, body = fetch(base, with_lang('/index.php', lang))
+        if 'wbss-hero-courtyard.jpg' not in body:
+            failures.append(f'home {lang}: expected the hero photograph')
+        for forbidden in ('Staff login', 'Draft website content', 'Weekly rhythm', 'Every age welcome'):
+            if forbidden in body:
+                failures.append(f'home {lang}: "{forbidden}" must no longer appear')
 
     if failures:
         print('\nFAILED:')
         for failure in failures:
             print(' -', failure)
         return 1
-    print('\nAll public website render checks passed.')
+    print('\nAll public website render checks passed in Amharic and English.')
     return 0
 
 

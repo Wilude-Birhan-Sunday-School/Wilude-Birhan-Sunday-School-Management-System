@@ -33,7 +33,7 @@
         drawer.hidden = false;
         document.body.classList.add('nav-open');
         toggle.setAttribute('aria-expanded', 'true');
-        toggle.setAttribute('aria-label', 'Close menu');
+        toggle.setAttribute('aria-label', toggle.getAttribute('data-label-close') || 'Close menu');
         var items = focusable(drawer);
         if (items.length) { items[0].focus(); }
         document.addEventListener('keydown', onDrawerKeydown);
@@ -44,7 +44,7 @@
         drawer.hidden = true;
         document.body.classList.remove('nav-open');
         toggle.setAttribute('aria-expanded', 'false');
-        toggle.setAttribute('aria-label', 'Open menu');
+        toggle.setAttribute('aria-label', toggle.getAttribute('data-label-open') || 'Open menu');
         document.removeEventListener('keydown', onDrawerKeydown);
         if (lastFocused && typeof lastFocused.focus === 'function') { lastFocused.focus(); }
     }
@@ -128,6 +128,16 @@
     });
 
     /* ── Public forms (progressive enhancement over the same endpoint) ─── */
+    /* Every message is supplied by the page in the visitor's language
+       (Amharic or English), so nothing here is hard-coded English. */
+    var bodyData = document.body.dataset || {};
+    var MSG = {
+        required: bodyData.msgRequired || 'Please complete the required fields marked with *.',
+        email: bodyData.msgEmail || 'Please check the email address.',
+        sending: bodyData.msgSending || 'Sending your request…',
+        failed: bodyData.msgFailed || 'We could not send the request. Please try again.',
+        joining: bodyData.msgJoining || 'Joining'
+    };
     function setStatus(form, message, kind) {
         var box = form.querySelector('[data-form-status]');
         if (!box) { return; }
@@ -155,7 +165,7 @@
             var joining = (form.querySelector('[name="child_name"]') || {}).value;
             if (joining && String(joining).trim() !== '') {
                 var existing = String(data.get('message') || '').trim();
-                data.set('message', 'Joining: ' + String(joining).trim() + (existing ? '\n' + existing : ''));
+                data.set('message', MSG.joining + ': ' + String(joining).trim() + (existing ? '\n' + existing : ''));
             }
 
             form.querySelectorAll('[aria-invalid="true"]').forEach(function (field) {
@@ -170,21 +180,21 @@
                 }
             });
             if (invalid) {
-                setStatus(form, 'Please complete the required fields marked with *.', 'error');
+                setStatus(form, MSG.required, 'error');
                 invalid.focus();
                 return;
             }
             var email = form.querySelector('[name="email"]');
             if (email && String(email.value || '').trim() !== '' && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.value)) {
                 email.setAttribute('aria-invalid', 'true');
-                setStatus(form, 'Please check the email address.', 'error');
+                setStatus(form, MSG.email, 'error');
                 email.focus();
                 return;
             }
 
             if (button) { button.disabled = true; }
-            if (label) { label.textContent = 'Sending…'; }
-            setStatus(form, 'Sending your request…', 'busy');
+            if (label) { label.textContent = MSG.sending; }
+            setStatus(form, MSG.sending, 'busy');
 
             fetch(form.getAttribute('data-endpoint') || form.action, {
                 method: 'POST',
@@ -197,22 +207,20 @@
                 return response.json();
             }).then(function (payload) {
                 if (payload && payload.status === 'success') {
-                    setStatus(form, payload.message || 'Thank you. Your request has been received.', 'success');
+                    setStatus(form, payload.message || MSG.sending, 'success');
                     form.reset();
-                    if (label) { label.textContent = 'Sent'; }
+                    if (label) { label.textContent = label.getAttribute('data-sent-label') || 'Sent'; }
                     window.setTimeout(function () {
                         if (label) { label.textContent = originalLabel; }
                         if (button) { button.disabled = false; }
                     }, 4000);
                 } else {
-                    setStatus(form, (payload && payload.message) || 'We could not send the request. Please try again.', 'error');
+                    setStatus(form, (payload && payload.message) || MSG.failed, 'error');
                     if (button) { button.disabled = false; }
                     if (label) { label.textContent = originalLabel; }
                 }
             }).catch(function () {
-                setStatus(form,
-                    'We could not send the request. Check your connection, or call the school office during office hours.',
-                    'error');
+                setStatus(form, MSG.failed, 'error');
                 if (button) { button.disabled = false; }
                 if (label) { label.textContent = originalLabel; }
             });
