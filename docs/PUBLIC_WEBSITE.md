@@ -132,10 +132,13 @@ through phpMyAdmin or a future CMS screen.
 
 ## 8. Verification boundary
 
-- Static contracts and an optional rendered check live in
+- Static contracts live in
   [`tests/security/test_public_website.py`](../tests/security/test_public_website.py).
-  The rendered checks run only when `WBSS_SITE_BASE` names a running site, so an
-  unprovisioned environment skips instead of pretending to pass.
+  They always run and never skip, because the security suite fails on any skip.
+- The live render check is
+  [`tests/e2e/public_website_render.py`](../tests/e2e/public_website_render.py),
+  run deliberately against a provisioned site:
+  `WBSS_SITE_BASE=http://127.0.0.1:8089 python3 tests/e2e/public_website_render.py`.
 - What this documentation cannot claim: real Apache/.htaccess behaviour, a
   database-backed render, the gallery with real photos, form delivery against a
   live database and mail, search-engine indexing, screen-reader testing on real

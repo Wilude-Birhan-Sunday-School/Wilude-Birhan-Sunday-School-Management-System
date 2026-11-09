@@ -13,16 +13,13 @@ These tests pin the properties that make it safe to publish:
 4. the school's unverified content stays visibly marked as draft instead of
    being silently published as fact.
 
-Static assertions are cheap and always run. `RenderedSiteTests` exercises a
-real HTTP server only when WBSS_SITE_BASE is set, because an unprovisioned
-PHP world is not evidence.
+These are static assertions and never skip: a skipped test is an unverified
+claim (see the zero-skip rule in the backend checks). A live render is a
+separate opt-in script, `tests/e2e/public_website_render.py`, because that
+needs a provisioned PHP world.
 """
-import json
-import os
 import re
 import unittest
-import urllib.error
-import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -214,42 +211,6 @@ class PublicWebsiteStructureTests(unittest.TestCase):
             for statement in ('INSERT INTO', 'UPDATE ', 'DELETE FROM', 'TRUNCATE', 'DROP TABLE'):
                 with self.subTest(file=filename, statement=statement.strip()):
                     self.assertNotIn(statement, source)
-
-
-@unittest.skipUnless(os.environ.get('WBSS_SITE_BASE'), 'Set WBSS_SITE_BASE to a running site base URL')
-class RenderedSiteTests(unittest.TestCase):
-    """Requires a disposable PHP world; skips rather than pretending to pass."""
-
-    base = os.environ.get('WBSS_SITE_BASE', '').rstrip('/')
-
-    def fetch(self, path):
-        try:
-            with urllib.request.urlopen(self.base + path, timeout=15) as response:
-                return response.status, response.read().decode('utf-8', 'replace')
-        except urllib.error.HTTPError as error:
-            return error.code, error.read().decode('utf-8', 'replace')
-
-    @staticmethod
-    def handler(path):
-        """Handler path for a clean URL (Apache maps the clean URL; a bare PHP
-        development server does not run .htaccess, so tests use the handler)."""
-        return '/index.php' if path == '/' else path + '.php'
-
-    def test_pages_render_without_php_errors(self):
-        for path in PUBLIC_PAGES:
-            with self.subTest(page=path):
-                status, body = self.fetch(self.handler(path))
-                self.assertEqual(status, 200, body[:200])
-                for marker in ('Fatal error', 'Parse error', 'Warning:', 'Uncaught'):
-                    self.assertNotIn(marker, body)
-
-    def test_search_returns_escaped_markup_for_both_languages(self):
-        status, body = self.fetch('/search.php?q=mezmur')
-        self.assertEqual(status, 200)
-        self.assertIn('<mark>', body)
-        status, body = self.fetch('/search.php?q=%3Cscript%3Ealert(1)%3C/script%3E')
-        self.assertEqual(status, 200)
-        self.assertNotIn('<script>alert(1)</script>', body)
 
 
 if __name__ == '__main__':
