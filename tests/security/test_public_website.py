@@ -437,16 +437,15 @@ class PublicWebsiteMotionTests(unittest.TestCase):
                 for forbidden in ('SELECT ', 'INSERT ', 'UPDATE ', 'DELETE ', 'mysqli', 'PDO'):
                     self.assertNotIn(forbidden, source)
 
-    def test_countdown_is_configured_and_bilingual(self):
-        self.assertIn("'countdown'", self.content)
-        for key in ('cd_label', 'cd_days', 'cd_hours', 'cd_minutes', 'cd_seconds'):
-            self.assertIn(f"'{key}'", self.content)
-        self.assertIn('data-countdown', self.pages['index.php'])
-        self.assertIn('data-cd="days"', self.pages['index.php'])
-        # The count is computed in the visitor's browser from the school week,
-        # so no stale "next Sunday" date is ever served from PHP.
-        self.assertIn('data-weekday', self.pages['index.php'])
-        self.assertNotIn('new Date(', self.bootstrap)
+    def test_countdown_is_gone_not_hidden(self):
+        # The school asked for the Sunday countdown to be withdrawn. It is
+        # removed from the markup, the content file, the stylesheet and the
+        # script — not merely switched off by a flag.
+        for name in ('index.php', 'site_content.php', 'css/wbss-motion.css', 'js/wbss-motion.js'):
+            with self.subTest(file=name):
+                source = read(name)
+                self.assertNotIn('countdown', source.lower())
+                self.assertNotIn('data-cd=', source)
 
     def test_popup_is_opt_in_bilingual_and_once_per_session(self):
         self.assertIn('function site_popup(', self.bootstrap)

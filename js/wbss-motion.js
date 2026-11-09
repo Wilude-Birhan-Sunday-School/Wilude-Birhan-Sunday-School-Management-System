@@ -1,9 +1,8 @@
 /* Wilude Birhan Sunday School — motion behaviour.
    ---------------------------------------------------------------------------
    Enhancement only. Every page works without this file; it adds scroll
-   reveals, the sticky-header slide, the reading-progress bar, the countdown to
-   the next Sunday session, the popup, the photo lightbox and animated
-   accordions. Everything is skipped when the visitor prefers reduced motion. */
+   reveals, the sticky-header slide, the reading-progress bar, the popup, the
+   photo lightbox and animated accordions. Everything is skipped when the visitor prefers reduced motion. */
 (function () {
     'use strict';
 
@@ -101,68 +100,7 @@
     }, { passive: true });
     onScroll();
 
-    /* ── 4. Countdown to the next Sunday session ───────────────────────── */
-    var countdown = document.querySelector('[data-countdown]');
-    if (countdown) {
-        var hour = parseInt(countdown.getAttribute('data-hour') || '9', 10);
-        var minute = parseInt(countdown.getAttribute('data-minute') || '0', 10);
-        var weekday = parseInt(countdown.getAttribute('data-weekday') || '0', 10); // 0 = Sunday
-        var fields = {
-            days: countdown.querySelector('[data-cd="days"]'),
-            hours: countdown.querySelector('[data-cd="hours"]'),
-            minutes: countdown.querySelector('[data-cd="minutes"]'),
-            seconds: countdown.querySelector('[data-cd="seconds"]'),
-            more: countdown.querySelector('[data-cd="weeks"]')
-        };
-
-        var nextTarget = function () {
-            var now = new Date();
-            var target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute, 0, 0);
-            var delta = (weekday - target.getDay() + 7) % 7;
-            target.setDate(target.getDate() + delta);
-            if (target.getTime() <= now.getTime()) {
-                target.setDate(target.getDate() + 7);
-            }
-            return target;
-        };
-
-        var pad = function (value, size) {
-            var text = String(value);
-            while (text.length < (size || 2)) { text = '0' + text; }
-            return text;
-        };
-
-        var write = function (node, value) {
-            if (!node) { return; }
-            if (node.textContent === value) { return; }
-            node.textContent = value;
-            if (reduceMotion) { return; }
-            node.classList.remove('is-tick');
-            void node.offsetWidth;          // restart the flip animation
-            node.classList.add('is-tick');
-        };
-
-        var target = nextTarget();
-        var tick = function () {
-            var diff = target.getTime() - Date.now();
-            if (diff <= 0) {
-                target = nextTarget();
-                diff = target.getTime() - Date.now();
-            }
-            var seconds = Math.floor(diff / 1000);
-            var days = Math.floor(seconds / 86400);
-            write(fields.days, pad(days));
-            write(fields.hours, pad(Math.floor(seconds % 86400 / 3600)));
-            write(fields.minutes, pad(Math.floor(seconds % 3600 / 60)));
-            write(fields.seconds, pad(seconds % 60));
-            if (fields.more) { fields.more.textContent = pad(days); }
-        };
-
-        tick();
-        window.setInterval(tick, 1000);
-    }
-
-    /* ── 5. Modal plumbing shared by the popup and the lightbox ────────── */
+    /* ── 4. Modal plumbing shared by the popup and the lightbox ────────── */
     var openModal = null;
     var lastFocused = null;
 
@@ -226,7 +164,7 @@
         }
     });
 
-    /* ── 6. Popup: once per session, dismissible, never a trap ─────────── */
+    /* ── 5. Popup: once per session, dismissible, never a trap ─────────── */
     var popup = document.querySelector('[data-popup]');
     if (popup) {
         var key = popup.getAttribute('data-store-key') || 'wbss-popup';
@@ -242,7 +180,7 @@
         }
     }
 
-    /* ── 7. Photo lightbox ─────────────────────────────────────────────── */
+    /* ── 6. Photo lightbox ─────────────────────────────────────────────── */
     var lightbox = document.querySelector('[data-lightbox-modal]');
     if (lightbox) {
         var lightboxImage = lightbox.querySelector('[data-lightbox-img]');
@@ -326,7 +264,7 @@
         if (next) { next.addEventListener('click', function () { move(1); }); }
     }
 
-    /* ── 8. Accordions: animate the height instead of snapping ─────────── */
+    /* ── 7. Accordions: animate the height instead of snapping ─────────── */
     if (!reduceMotion) {
         Array.prototype.forEach.call(document.querySelectorAll('.accordion details'), function (details) {
             var panel = details.querySelector('p');
@@ -364,7 +302,7 @@
         });
     }
 
-    /* ── 9. Counters: <span data-count-to="12"> ────────────────────────── */
+    /* ── 8. Counters: <span data-count-to="12"> ────────────────────────── */
     var counters = document.querySelectorAll('[data-count-to]');
     if (counters.length) {
         var runCounter = function (el) {
@@ -398,7 +336,7 @@
             Array.prototype.forEach.call(counters, runCounter);
         }
     }
-    /* ── 10. Gallery: items arrive from the API, so reveal them as they land ─ */
+    /* ── 9. Gallery: items arrive from the API, so reveal them as they land ─ */
     var galleryGrid = document.querySelector('[data-gal="grid"]');
     if (galleryGrid && 'MutationObserver' in window) {
         var markGalleryItems = function () {
