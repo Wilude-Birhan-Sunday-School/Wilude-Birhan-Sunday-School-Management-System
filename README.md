@@ -72,7 +72,7 @@ The web server's document root is the repository root (production: `public_html`
 | Path | Contents |
 |---|---|
 | `Mobile/` | Flutter app in `wbws_flutter_app/`, plus icon and splash source images used by its build. See [Mobile/README.md](Mobile/README.md) |
-| `sql/` | Numbered SQL migrations (`001`–`078`), read-only checks (`preflight/`) and archived legacy schema sources (`legacy/`). See [sql/README.md](sql/README.md) |
+| `sql/` | Numbered SQL migrations (`001`–`079`), read-only checks (`preflight/`) and archived legacy schema sources (`legacy/`). See [sql/README.md](sql/README.md) |
 | `tests/` | Automated tests: `security/` (runs in CI), `e2e/`, `smoke/`, `audit/`, `mutation/`, `js/`, `fixtures/`. See [tests/README.md](tests/README.md) |
 | `scripts/` | Command-line tools for the operator: live URL check, production promotion, database restore, one-off data tools. See [scripts/README.md](scripts/README.md) |
 | `docs/` | Documentation. Start at [docs/README.md](docs/README.md) |

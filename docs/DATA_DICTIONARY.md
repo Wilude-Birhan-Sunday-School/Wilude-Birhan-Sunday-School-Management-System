@@ -243,6 +243,7 @@ erDiagram
 |---|---|---|---|
 | `cms_gallery_categories` | Gallery categories. | `sql/002_cms_schema.sql` | 3 |
 | `cms_gallery_photos` | Gallery photos. | `sql/002_cms_schema.sql` | 3 |
+| `cms_announcements` | Optional dated announcements shown by the public news page; absent is a supported state. | `sql/079_public_announcements.sql` | 2 |
 | `cms_programs` | Programs shown on the public site. | `sql/002_cms_schema.sql` | 2 |
 | `cms_registration_submissions` | Public registration-form submissions (reviewed before becoming members). | `sql/002_cms_schema.sql` | 2 |
 | `cms_schedule` | Public schedule. | `sql/002_cms_schema.sql` | 2 |

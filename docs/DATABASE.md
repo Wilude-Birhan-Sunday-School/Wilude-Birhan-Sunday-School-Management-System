@@ -24,14 +24,14 @@ The [Finance/Materials column reference](database/LEDGER_COLUMNS.md), source-rev
 
 | Source | What it is | Reliability |
 |---|---|---|
-| `sql/NNN_*.sql` (76 files, `001`–`078`) | Hand-written, mostly additive and idempotent migrations, applied by hand in phpMyAdmin | Authoritative for **intended** changes. Applied state unknown (section 4) |
+| `sql/NNN_*.sql` (77 files, `001`–`079`) | Hand-written, mostly additive and idempotent migrations, applied by hand in phpMyAdmin | Authoritative for **intended** changes. Applied state unknown (section 4) |
 | `sql/legacy/database_schema.sql` | Legacy snapshot with **11** tables (`users`, `members`, `wbws_groups`, `wbws_group_leaders`, `cache_storage`, `departments`, `staff_positions`, `member_staff_positions`, `member_code_migrations`, `member_code_sequences`, `member_type_settings`) | **Stale.** Line 10 says it "documents all tables", which is incorrect. Its `users.role` enum lists 6 roles, while the application accepts 13. Not the current schema; used only as the first step of `tests/e2e/provision_env.sh`. Moved from the repository root on 2026-10-23 ([RFC 0001](rfc/0001-repository-structure.md)) |
 | `sql/legacy/php-migrations/admin/*.php`, `sql/legacy/php-migrations/backend/*.php` | Early PHP migration scripts, including `auto_fix_database.php` in both folders. Moved from `admin/migrations/` and `backend/migrations/` on 2026-10-23 ([RFC 0001](rfc/0001-repository-structure.md) step 2b), content unchanged | Historical records. They no longer run: their settings-file links point at the old folders, so they stop before touching a database. The web server denies `sql/`, and each file also refuses web requests. Do not run them against production |
 | `admin/get_schema.php` | Former schema-dump page | **Retired.** CLI-only stub; returns 404 over HTTP. Not a schema source |
 | Runtime DDL | `MezmurSchemaReconciler::apply`, called from `admin/api_mezmur.php`, can create or alter Mezmur tables at request time | Production can drift from `sql/` |
 | `tests/e2e/provision_env.sh` | Encodes the apply order that produces a working test database | The best available **executable** description of the schema; test-only |
 
-At `7e28157` (2026-10-28), the **76 numbered migration files** (`001`–`078`, with gaps) contain **102 distinct `CREATE TABLE` target names**, excluding block/line comments and including archive/quarantine definitions. This is a lexical source inventory, not the number of active business tables or proof that every conditional statement ran. Legacy PHP/snapshot definitions are outside this count. The former count of 103 incorrectly treated the word `only` in migration 026's comment as a table.
+At the public-website commit (2026-11-03), the **77 numbered migration files** (`001`–`079`, with gaps) contain **103 distinct `CREATE TABLE` target names**, excluding block/line comments and including archive/quarantine definitions. `079_public_announcements.sql` adds `cms_announcements`; the earlier count of 76 files / 102 targets was recorded at `7e28157` (2026-10-28). This is a lexical source inventory, not the number of active business tables or proof that every conditional statement ran. Legacy PHP/snapshot definitions are outside this count. The former count of 103 incorrectly treated the word `only` in migration 026's comment as a table.
 
 ## 3. Migration rules in force
 
@@ -137,6 +137,7 @@ The summaries are based on each file's header comment. "Tables created" lists `C
 | `076_attendance_sessions.sql` | 2026-10-19 | Lesson-level Education attendance | attendance_session_records, attendance_sessions |
 | `077_timetable_builder.sql` | 2026-10-20 | Education timetable builder (per-class working days and bell schedule, weekly grid, make-up classes) | timetable_class_days, timetable_makeup_classes |
 | `078_school_calendar.sql` | 2026-10-20 | School calendar: planned holidays and "Day Off" days | school_day_offs, school_holidays |
+| `079_public_announcements.sql` | 2026-11-03 | Optional dated announcements for the public website news page; the site works without it | cms_announcements |
 
 ## 6. Recommended next steps (documented, not implemented)
 

@@ -1,4 +1,7 @@
 Options -Indexes -MultiViews
+
+# Public website: not-found page and the XML sitemap handler.
+ErrorDocument 404 /404.php
 # SSMS — production cache policy (standard HTTP caching)
 # Static assets are revalidated on every deploy so a `git pull` is always
 # reflected in the browser without manual cache clearing. HTML is never cached.
@@ -36,6 +39,8 @@ Options -Indexes -MultiViews
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    # Public sitemap: one handler, no arbitrary file mapping.
+    RewriteRule ^sitemap\.xml$ sitemap.php [L]
     RewriteRule ^admin/migrations/ - [F,L]
     RewriteRule ^backend/migrations/ - [F,L]
     RewriteRule ^admin/get_schema\.php$ - [F,L]
@@ -54,11 +59,11 @@ Options -Indexes -MultiViews
     # their original handlers. Child admin rules repeat this capability flag.
     RewriteRule ^ - [E=FKSS_BROWSER_ROUTES:1]
     # Retain the mount prefix when Apache Alias rewrites SCRIPT_NAME.
-    RewriteCond %{REQUEST_URI} ^((?:/[A-Za-z0-9_-]+)*)/(?:verify-member|(?:frontend/pages|monitor)/[a-z][a-z0-9-]*)$
+    RewriteCond %{REQUEST_URI} ^((?:/[A-Za-z0-9_-]+)*)/(?:verify-member|about|programs|schedule|admissions|gallery|news|contact|privacy|search|(?:frontend/pages|monitor)/[a-z][a-z0-9-]*)$
     RewriteRule ^ - [E=FKSS_BROWSER_PREFIX:%1]
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^(?:verify-member|(?:frontend/pages|monitor)/[a-z][a-z0-9-]*)$ browser_page.php [END]
+    RewriteRule ^(?:verify-member|about|programs|schedule|admissions|gallery|news|contact|privacy|search|(?:frontend/pages|monitor)/[a-z][a-z0-9-]*)$ browser_page.php [END]
 </IfModule>
 
 # php -- BEGIN cPanel-generated handler, do not edit

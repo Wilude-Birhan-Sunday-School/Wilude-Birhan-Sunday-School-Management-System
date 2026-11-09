@@ -12,7 +12,7 @@ Evidence labels: **VERIFIED** means supported by the cited source/date, not a ru
                          │ frontend/pages/*.php ──────────────────────► backend/api/*.php ──► admin/api_*.php (shims)   │
  Android app (Flutter) ─►│ api/v1/index.php ──► api/v1/routes/*.php                             (bearer access token)   │
                          │                 \______________ admin/backend/services/* (shared PHP services) ______________/│
-                         │ monitor/*  ·  app/ (legacy PWA)  ·  index.php (public site)                                   │
+                         │ monitor/*  ·  app/ (legacy PWA)  ·  public site (index.php + page handlers)                                   │
                          └──────────────┬──────────────────────────────┬─────────────────────────────┬────────────────┘
                                         ▼                              ▼                             ▼
                                      MariaDB                 S3-compatible object storage     Telegram Bot API

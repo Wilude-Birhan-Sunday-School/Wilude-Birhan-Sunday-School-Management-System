@@ -4,7 +4,7 @@ Database schema changes. Nothing here is part of the website: the root `.htacces
 
 | Path | What it is |
 |---|---|
-| `NNN_name.sql` (`001`–`078`) | Numbered migrations. Hand-written, mostly additive and idempotent. **The owner applies them to production by hand**; nothing applies them automatically |
+| `NNN_name.sql` (`001`–`079`) | Numbered migrations. Hand-written, mostly additive and idempotent. **The owner applies them to production by hand**; nothing applies them automatically |
 | `preflight/` | Read-only checks run before or after some migrations. They create temporary tables only and never change application data |
 | `legacy/` | Archived old schema sources: a stale schema snapshot and the early PHP migrations. Not to be applied. See [legacy/README.md](legacy/README.md) |
 
