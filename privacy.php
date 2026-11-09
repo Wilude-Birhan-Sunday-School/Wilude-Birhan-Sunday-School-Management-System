@@ -52,7 +52,7 @@ site_page_hero($privacy['eyebrow'], $privacy['title'], $privacy['lead']);
 
 <section class="section section--sand">
     <div class="wrap">
-        <div class="section-head">
+        <div class="section-head" <?= reveal('up') ?>>
             <p class="eyebrow"><?= e(t(L('Ask us', 'ይጠይቁን'))) ?></p>
             <h2><?= e(t(L('Questions about your information', 'ስለ መረጃዎ ጥያቄ'))) ?></h2>
         </div>

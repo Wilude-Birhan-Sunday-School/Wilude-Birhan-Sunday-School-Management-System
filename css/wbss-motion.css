@@ -1,0 +1,267 @@
+/* ==========================================================================
+   Wilude Birhan Sunday School — motion layer
+   --------------------------------------------------------------------------
+   Loaded after wbss-site.css, on every public page. Everything here is
+   enhancement only:
+
+   - Nothing is hidden unless JavaScript proved it is running (the `.js` class
+     is set by an inline script in the head), so a scripting failure can never
+     leave a page blank.
+   - `prefers-reduced-motion: reduce` turns every transform, animation and
+     transition off, including the countdown flip, the popup and the lightbox.
+   - Animations use transform/opacity only, so they stay on the compositor and
+     do not cause layout work on a slow phone.
+   ========================================================================== */
+
+:root {
+    --m-fast: .2s;
+    --m-dur: .45s;
+    --m-slow: .85s;
+    --m-ease: cubic-bezier(.22, .61, .36, 1);
+    --m-ease-out: cubic-bezier(.16, 1, .3, 1);
+    --m-ease-back: cubic-bezier(.34, 1.36, .64, 1);
+    --m-stagger: 80ms;
+}
+
+/* ── Keyframes ─────────────────────────────────────────────────────────── */
+@keyframes m-rise      { from { opacity: 0; transform: translate3d(0, 22px, 0); } to { opacity: 1; transform: none; } }
+@keyframes m-slide-in  { from { opacity: 0; transform: translate3d(-28px, 0, 0); } to { opacity: 1; transform: none; } }
+@keyframes m-slide-out { from { opacity: 0; transform: translate3d(28px, 0, 0); } to { opacity: 1; transform: none; } }
+@keyframes m-pop       { 0% { opacity: 0; transform: scale(.88) translateY(10px); }
+                         60% { opacity: 1; transform: scale(1.02) translateY(0); }
+                         100% { opacity: 1; transform: none; } }
+@keyframes m-kenburns  { from { transform: scale(1.04); } to { transform: scale(1.13); } }
+@keyframes m-draw      { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes m-flip      { 0% { transform: translateY(0); opacity: 1; }
+                         45% { transform: translateY(-55%); opacity: 0; }
+                         55% { transform: translateY(55%); opacity: 0; }
+                         100% { transform: translateY(0); opacity: 1; } }
+@keyframes m-fade      { from { opacity: 0; } to { opacity: 1; } }
+@keyframes m-sheet     { from { opacity: 0; transform: translate3d(0, 26px, 0) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes m-drawer-in { from { transform: translate3d(100%, 0, 0); } to { transform: none; } }
+@keyframes m-shine     { from { transform: translateX(-120%) skewX(-12deg); } to { transform: translateX(220%) skewX(-12deg); } }
+@keyframes m-page-in   { from { opacity: 0; transform: translate3d(0, 14px, 0); } to { opacity: 1; transform: none; } }
+@keyframes m-page-out  { from { opacity: 1; } to { opacity: 0; } }
+
+/* A reveal that slides sideways must never widen the page. `overflow-x: clip`
+   (not `hidden`) contains the travel without creating a scroll container, so
+   the sticky header keeps working. */
+.js .section,
+.js .cta-band,
+.js .site-footer,
+.js .hero { overflow-x: clip; }
+
+/* ── 1. Scroll reveals ─────────────────────────────────────────────────── */
+/* The base rule lives in wbss-site.css; these are the direction variants. */
+.js [data-reveal] {
+    transition:
+        opacity var(--m-dur) var(--m-ease-out),
+        transform var(--m-dur) var(--m-ease-out);
+    transition-delay: calc(var(--i, 0) * var(--m-stagger));
+}
+.js [data-reveal]         { --m-rv-x: 42px; --m-rv-y: 30px; }
+.js [data-reveal="up"]    { transform: translate3d(0, var(--m-rv-y), 0); }
+.js [data-reveal="left"]  { transform: translate3d(calc(-1 * var(--m-rv-x)), 0, 0); }
+.js [data-reveal="right"] { transform: translate3d(var(--m-rv-x), 0, 0); }
+.js [data-reveal="zoom"]  { transform: scale(.94); }
+.js [data-reveal="pop"]   { transform: scale(.9) translateY(10px); }
+/* A narrow column has no room for a long slide. */
+@media (max-width: 700px) {
+    .js [data-reveal] { --m-rv-x: 18px; --m-rv-y: 22px; }
+}
+.js [data-reveal].is-visible { opacity: 1; transform: none; }
+
+/* The gold rule before an eyebrow draws itself in. */
+.js .eyebrow::before { transform: scaleX(0); transform-origin: left center; transition: transform .6s var(--m-ease) .12s; }
+.js body.is-ready .eyebrow::before,
+.js [data-reveal].is-visible .eyebrow::before { transform: scaleX(1); }
+
+/* ── 2. Hero entrance, slow zoom and parallax ──────────────────────────── */
+.js .hero__media img { animation: m-kenburns 28s ease-in-out infinite alternate; }
+.js .hero__media { transition: transform .2s linear; will-change: transform; }
+
+.js body:not(.is-ready) .hero__content > * { opacity: 0; }
+.js body.is-ready .hero__content > * { animation: m-rise .75s var(--m-ease-out) both; }
+.js body.is-ready .hero__content > *:nth-child(1) { animation-delay: .05s; }
+.js body.is-ready .hero__content > *:nth-child(2) { animation-delay: .13s; }
+.js body.is-ready .hero__content > *:nth-child(3) { animation-delay: .21s; }
+.js body.is-ready .hero__content > *:nth-child(4) { animation-delay: .29s; }
+.js body.is-ready .hero__content > *:nth-child(5) { animation-delay: .37s; }
+.js body.is-ready .hero__content > *:nth-child(6) { animation-delay: .45s; }
+.js body.is-ready .hero__content > *:nth-child(7) { animation-delay: .53s; }
+.js body.is-ready .hero__content > *:nth-child(8) { animation-delay: .61s; }
+
+/* Inner page banners rise in as a block. */
+.js body.is-ready .page-hero__inner > * { animation: m-rise .7s var(--m-ease-out) both; }
+.js body.is-ready .page-hero__inner > *:nth-child(2) { animation-delay: .1s; }
+.js body.is-ready .page-hero__inner > *:nth-child(3) { animation-delay: .18s; }
+
+/* ── 3. Cards, media and links ─────────────────────────────────────────── */
+.card { transition: transform var(--m-fast) var(--m-ease), box-shadow var(--m-fast) var(--m-ease); }
+.js .card--news .news-media img,
+.js .card--news .news-media { transition: transform .65s var(--m-ease-out); }
+.js .card--news:hover .news-media img { transform: scale(1.06); }
+
+.news-media { overflow: hidden; }
+.news-media img { transition: transform .65s var(--m-ease-out); }
+.js .news-item:hover .news-media img { transform: scale(1.04); }
+
+/* A light sweep across the primary call to action on hover only. */
+.btn--gold { position: relative; overflow: hidden; }
+.btn--gold::after {
+    content: ""; position: absolute; inset: 0 auto 0 0; width: 40%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent);
+    transform: translateX(-140%) skewX(-12deg); opacity: 0; pointer-events: none;
+}
+.btn--gold:hover::after { animation: m-shine .85s var(--m-ease) forwards; opacity: 1; }
+
+.link-arrow .ico { transition: transform var(--m-fast) var(--m-ease); }
+.link-arrow:hover .ico { transform: translateX(4px); }
+
+/* ── 4. Sticky header: slides away on scroll down, back on scroll up ───── */
+.site-header {
+    transition: transform .38s var(--m-ease), box-shadow var(--m-fast) var(--m-ease),
+                background-color var(--m-fast) var(--m-ease);
+}
+.site-header.is-hidden { transform: translate3d(0, -104%, 0); }
+body.nav-open .site-header.is-hidden { transform: none; }
+
+/* ── 5. Scroll progress bar ────────────────────────────────────────────── */
+.scroll-progress {
+    position: fixed; inset: 0 0 auto 0; height: 3px; z-index: 150;
+    background: linear-gradient(90deg, var(--gold-600), var(--gold-300));
+    transform: scaleX(0); transform-origin: left center;
+    transition: transform .08s linear;
+    pointer-events: none;
+}
+.scroll-progress[hidden] { display: none; }
+
+/* ── 6. Countdown to the next Sunday session ───────────────────────────── */
+.countdown {
+    display: flex; flex-wrap: wrap; align-items: flex-end; gap: .5rem 1.15rem;
+    margin: 0; padding: 0; list-style: none;
+}
+.countdown__label {
+    flex: 1 0 100%; font-size: .74rem; font-weight: 700; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--gold-300); margin-bottom: .15rem;
+}
+html[lang="am"] .countdown__label { text-transform: none; letter-spacing: .02em; font-family: var(--font-am); }
+.countdown__unit { display: flex; flex-direction: column; align-items: center; min-width: 2.9rem; }
+.countdown__value {
+    font-variant-numeric: tabular-nums; font-weight: 800; line-height: 1;
+    font-size: clamp(1.25rem, 1.1rem + .8vw, 1.7rem); color: #fff;
+    display: block; overflow: hidden;
+}
+.countdown__value.is-tick { animation: m-flip .5s var(--m-ease); }
+.countdown__unit small {
+    font-size: .68rem; letter-spacing: .08em; text-transform: uppercase;
+    color: #b9d2c3; margin-top: .25rem;
+}
+html[lang="am"] .countdown__unit small { text-transform: none; letter-spacing: 0; font-family: var(--font-am); }
+.hero__meta .countdown { margin-top: .2rem; }
+.hero .countdown__label { color: var(--gold-300); }
+
+/* ── 7. Mobile drawer: slide + staggered items ─────────────────────────── */
+.js .drawer:not([hidden]) .drawer__panel { animation: m-drawer-in .34s var(--m-ease-out) both; }
+.js .drawer:not([hidden])::before { animation: m-fade .3s ease both; }
+.js .drawer:not([hidden]) .drawer__nav li { animation: m-slide-out .38s var(--m-ease-out) both; }
+.js .drawer:not([hidden]) .drawer__nav li:nth-child(1) { animation-delay: .05s; }
+.js .drawer:not([hidden]) .drawer__nav li:nth-child(2) { animation-delay: .09s; }
+.js .drawer:not([hidden]) .drawer__nav li:nth-child(3) { animation-delay: .13s; }
+.js .drawer:not([hidden]) .drawer__nav li:nth-child(4) { animation-delay: .17s; }
+.js .drawer:not([hidden]) .drawer__nav li:nth-child(5) { animation-delay: .21s; }
+.js .drawer:not([hidden]) .drawer__nav li:nth-child(6) { animation-delay: .25s; }
+.js .drawer:not([hidden]) .drawer__nav li:nth-child(7) { animation-delay: .29s; }
+
+/* ── 8. Accordion (FAQ) height animation ───────────────────────────────── */
+.accordion details > p { margin: 0; }
+.js .accordion details > p { overflow: hidden; transition: height .3s var(--m-ease-out), opacity .3s ease; }
+.accordion summary .ico { transition: transform var(--m-fast) var(--m-ease); }
+.accordion details[open] summary .ico { transform: rotate(180deg); }
+
+/* ── 9. Modal sheet used by the popup and the photo lightbox ───────────── */
+.modal {
+    position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;
+    padding: 1.1rem; background: rgba(2, 20, 10, .62);
+}
+.modal[hidden] { display: none; }
+.js .modal:not([hidden]) { animation: m-fade .22s ease both; }
+.js .modal:not([hidden]) .modal__sheet { animation: m-sheet .38s var(--m-ease-out) both; }
+.modal__sheet {
+    position: relative; width: min(34rem, 100%); max-height: 88vh; overflow: auto;
+    background: #fff; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+    padding: clamp(1.3rem, 1rem + 2vw, 2.1rem);
+}
+.modal__sheet--photo { width: auto; max-width: min(72rem, 100%); background: #04140b; padding: .8rem; }
+.modal__sheet--photo img { max-height: 74vh; width: auto; border-radius: var(--radius); }
+.modal__sheet--photo figcaption { color: #cfe3d6; font-size: .88rem; padding: .6rem .3rem .2rem; }
+.modal__close {
+    position: absolute; top: .55rem; right: .55rem; width: 2.5rem; height: 2.5rem;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--line-strong); border-radius: 999px; background: #fff;
+    color: var(--green-800); cursor: pointer; transition: transform var(--m-fast) var(--m-ease), background var(--m-fast) ease;
+}
+.modal__close:hover { transform: rotate(90deg); background: var(--green-50); }
+.modal__sheet--photo .modal__close { border-color: rgba(255, 255, 255, .4); background: rgba(255, 255, 255, .12); color: #fff; }
+.modal__title { margin: 0 0 .4rem; font-size: clamp(1.25rem, 1.1rem + .8vw, 1.6rem); }
+.modal__text { color: var(--ink-2); }
+.modal__actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.1rem; }
+.modal__actions .btn { width: auto; }
+.popup-note { font-size: .8rem; color: var(--muted); margin: .8rem 0 0; }
+body.modal-open { overflow: hidden; }
+
+/* ── 10. Photo lightbox trigger ────────────────────────────────────────── */
+.js .news-media { position: relative; cursor: zoom-in; }
+.js .news-media::after {
+    content: ""; position: absolute; inset: 0; background: rgba(2, 20, 10, .0);
+    transition: background var(--m-fast) ease;
+}
+.js .news-media:hover::after { background: rgba(2, 20, 10, .12); }
+.lightbox-nav { display: flex; gap: .5rem; justify-content: center; margin-top: .6rem; }
+.lightbox-nav button {
+    background: rgba(255, 255, 255, .12); color: #fff; border: 1px solid rgba(255, 255, 255, .3);
+    border-radius: 999px; padding: .45rem .9rem; font: inherit; font-size: .85rem; cursor: pointer;
+}
+.lightbox-nav button:hover { background: rgba(255, 255, 255, .22); }
+.lightbox-counter { align-self: center; min-width: 3.6rem; text-align: center; color: #cfe3d6; font-size: .85rem; }
+.js .news-media:focus-visible { outline: 3px solid var(--gold-500); outline-offset: 3px; }
+
+/* ── 11. Form feedback ─────────────────────────────────────────────────── */
+.js .form-status:not([hidden]) { animation: m-rise .34s var(--m-ease-out) both; }
+.site-form .btn[disabled] { transform: none; }
+
+/* ── 12. Back to top ───────────────────────────────────────────────────── */
+.to-top { transition: opacity var(--m-fast) ease, transform var(--m-fast) var(--m-ease); }
+.to-top:not([hidden]) .ico { animation: m-rise .3s var(--m-ease-out) both; }
+.to-top:hover .ico { transform: translateY(-2px); }
+
+/* ── 13. Cross-document page transitions (progressive) ─────────────────── */
+@view-transition { navigation: auto; }
+::view-transition-old(root) { animation: m-page-out .22s ease both; }
+::view-transition-new(root) { animation: m-page-in .3s var(--m-ease-out) both; }
+
+/* ── 14. Reduced motion: everything off, content visible ───────────────── */
+@media (prefers-reduced-motion: reduce) {
+    .js [data-reveal],
+    .js body:not(.is-ready) .hero__content > * { opacity: 1 !important; transform: none !important; }
+    .js [data-reveal] { transition: none !important; }
+    .js .hero__media img,
+    .js body.is-ready .hero__content > *,
+    .js body.is-ready .page-hero__inner > *,
+    .js .drawer:not([hidden]) .drawer__panel,
+    .js .drawer:not([hidden]) .drawer__nav li,
+    .js .modal:not([hidden]),
+    .js .modal:not([hidden]) .modal__sheet,
+    .js .form-status:not([hidden]),
+    .js .to-top .ico { animation: none !important; }
+    .js .eyebrow::before { transform: none !important; transition: none !important; }
+    .site-header, .card, .news-media img, .link-arrow .ico, .countdown__value { transition: none !important; }
+    .btn--gold:hover::after { animation: none !important; }
+    ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; }
+}
+
+/* ── 15. Print: no motion, no overlays ─────────────────────────────────── */
+@media print {
+    .scroll-progress, .modal, .to-top { display: none !important; }
+    .js [data-reveal], .js .hero__media img { animation: none !important; transform: none !important; opacity: 1 !important; }
+}

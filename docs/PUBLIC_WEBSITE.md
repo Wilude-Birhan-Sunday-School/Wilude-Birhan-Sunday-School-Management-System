@@ -42,6 +42,7 @@ clean URL for document navigation by `BrowserPageRoutes::navigationRedirect`.
 | `site_lang.php` | Language layer: `site_lang()` (Amharic by default), `L()` pairs, `t()` resolution, `cms_text()` for CMS rows and `site_lang_url()` for the switch |
 | `css/wbss-site.css` | Design system: WBSS green `#004820` and gold `#F0B818`, typography, components, responsive and print rules |
 | `js/wbss-site.js` | Progressive enhancement: sticky header state, accessible drawer, reveal animation, form submission, back-to-top |
+| `css/wbss-motion.css`, `js/wbss-motion.js` | Motion layer: scroll reveals, header slide, reading progress, countdown, popup, photo lightbox, accordion height animation. Additive only — see §5a |
 | `css/public_gallery.css`, `js/public_gallery.js` | Existing gallery component, restyled to the WBSS palette for this site |
 
 No external CDN, icon font or web font is loaded. Icons are inline SVG and the
@@ -124,6 +125,14 @@ redesign did not add a second write path:
   the drawer, `prefers-reduced-motion` support and print styles.
 - Reveal animations are gated on a `js` class set by an inline script, so a
   scripting failure can never leave content invisible.
+- The popup and the lightbox are `role="dialog" aria-modal="true"` sheets with
+  a labelled close button, Escape to dismiss, a focus trap while open and focus
+  returned to the element that opened them. Photographs are reachable by
+  keyboard (`role="button" tabindex="0"`), and the lightbox counter is announced.
+- axe-core (WCAG 2.1 A/AA) reports no violations on the ten public pages in both
+  languages, with the popup and the lightbox open. The two best-practice
+  advisories that remain — a top bar outside a landmark and an `h3` that follows
+  an `h1` on three pages — predate this work and are unchanged.
 - Per-page title, description, canonical URL, Open Graph/Twitter tags and
   JSON-LD (`EducationalOrganization`, `WebSite` with `SearchAction`,
   `BreadcrumbList`).
@@ -138,6 +147,34 @@ redesign did not add a second write path:
 - Announcement photographs are restricted to same-site, root-relative image
   paths (no scheme, no host, no `..`, image extension required); anything else
   renders nothing.
+
+## 5a. Motion
+
+Movement is decoration, so the whole layer is additive: the CSS hides nothing
+until the `js` class proves the script is running, and
+`prefers-reduced-motion: reduce` restores a still page with every word visible.
+Nothing new is downloaded — no animation library, no web font, no CDN.
+
+| Where | What happens |
+|---|---|
+| Every page | Sections and cards fade/slide in once as they reach the viewport, staggered within a row. `reveal('up', $index)` in the templates; the helper only emits the five variants the stylesheet defines (`up`, `left`, `right`, `zoom`, `pop`) |
+| Page heroes | The eyebrow, title and lead rise in sequence; the home hero photograph zooms slowly and drifts a little on scroll (transform only) |
+| Top of the page | A gold reading-progress bar follows the scroll position; the header slides away when reading down and returns on the first upward scroll |
+| Home | A countdown to the next Sunday session (`countdown` in `site_content.php`: weekday, hour, minute) counts days, hours, minutes and seconds in the visitor's own browser, so it never goes stale. The welcome sheet (`popup`) appears once per session, 9 s after load, and never over an open menu or lightbox |
+| News | Photographs open in a keyboard-operable lightbox: Enter or Space opens, arrows step through the set, Escape closes, and focus returns to the photograph |
+| Admissions | The FAQ answers animate open instead of snapping |
+| Menu | The mobile drawer slides in and its items follow, one behind the other |
+| Everywhere | Small state changes — buttons, card hover, form feedback, link arrows — use the same 150–450 ms easing curves |
+
+Two rules keep it honest: transforms and opacity only on scroll (no layout
+properties, so a school phone keeps its frame rate), and no element is wider
+than the page after its slide — sideways reveals live inside
+`overflow-x: clip` sections, and nothing scrolls horizontally at 320–1024 px in
+either language.
+
+The strings the motion layer adds — close, photo viewer, previous/next photo,
+countdown labels — are bilingual pairs in `site_content.php` like every other
+word on the site.
 
 ## 6. Published copy and the remaining office input
 

@@ -652,7 +652,12 @@ body { overflow-wrap: anywhere; }
 
 /* ── Responsive ────────────────────────────────────────────────────────── */
 @media (max-width: 1279px) {
+    /* The nav is the element that pushes the actions to the right with
+       margin-left:auto on wide screens. Hiding it would leave the language
+       switch and the menu button stranded mid-header, so the actions take
+       over that job. */
     .primary-nav { display: none; }
+    .header-actions { margin-left: auto; }
     .nav-toggle { display: flex; }
     .site-footer__grid { grid-template-columns: 1fr 1fr; gap: 1.8rem; }
     .grid--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }

@@ -25,7 +25,7 @@ site_page_hero($about['eyebrow'], $about['title'], $about['lead']);
 
 <section class="section">
     <div class="wrap split">
-        <div data-reveal>
+        <div <?= reveal('right') ?>>
             <p class="eyebrow"><?= e(t($about['story_title'])) ?></p>
             <h2><?= e(t($about['story_heading'])) ?></h2>
             <?php foreach ($about['story'] as $paragraph): ?>
@@ -36,7 +36,7 @@ site_page_hero($about['eyebrow'], $about['title'], $about['lead']);
                 <p><?= e(site_parish_name()) ?> · <?= e(site_lang_is_am() ? PARISH_NAME_EN : PARISH_NAME_AM) ?></p>
             </div>
         </div>
-        <div class="split__media" data-reveal>
+        <div class="split__media" <?= reveal('left') ?>>
             <img src="<?= e(site_page('/themes/fkss/assets/wbss-hero-courtyard.jpg')) ?>"
                  alt="<?= e(t(L('Children in white netela shawls walking towards a round Ethiopian Orthodox church with a thatched roof and painted frescoes.',
                                 'ልጆች በነጭ ነጠላ ተጠቅልለው ወደ ጎርፎ ቤት ያለው ክብ የኢትዮጵያ ኦርቶዶክስ ቤተክርስቲያን ሲሄዱ።'))) ?>"
@@ -49,12 +49,12 @@ site_page_hero($about['eyebrow'], $about['title'], $about['lead']);
 <section class="section section--sand">
     <div class="wrap">
         <div class="grid grid--2">
-            <article class="card" data-reveal>
+            <article class="card" <?= reveal('up') ?>>
                 <span class="icon-badge"><?= site_icon('cross') ?></span>
                 <h2 style="font-size:1.5rem;margin-top:1rem"><?= e(t($about['mission_title'])) ?></h2>
                 <p><?= e(t($about['mission'])) ?></p>
             </article>
-            <article class="card" data-reveal>
+            <article class="card" <?= reveal('up') ?>>
                 <span class="icon-badge icon-badge--gold"><?= site_icon('sparkle') ?></span>
                 <h2 style="font-size:1.5rem;margin-top:1rem"><?= e(t($about['vision_title'])) ?></h2>
                 <p><?= e(t($about['vision'])) ?></p>
@@ -65,13 +65,13 @@ site_page_hero($about['eyebrow'], $about['title'], $about['lead']);
 
 <section class="section">
     <div class="wrap">
-        <div class="section-head">
+        <div class="section-head" <?= reveal('up') ?>>
             <p class="eyebrow"><?= e(t($about['values_eyebrow'])) ?></p>
             <h2><?= e(t($about['values_title'])) ?></h2>
         </div>
         <div class="grid grid--3">
             <?php foreach ($about['values'] as $value): ?>
-            <article class="card" data-reveal>
+            <article class="card" <?= reveal('up') ?>>
                 <h3><?= e(t($value['title'])) ?></h3>
                 <p><?= e(t($value['text'])) ?></p>
             </article>
@@ -82,7 +82,7 @@ site_page_hero($about['eyebrow'], $about['title'], $about['lead']);
 
 <section class="section section--sand">
     <div class="wrap split">
-        <div data-reveal>
+        <div <?= reveal('left') ?>>
             <p class="eyebrow"><?= e(t($about['milestones_eyebrow'])) ?></p>
             <h2><?= e(t($about['milestones_title'])) ?></h2>
             <ol class="timeline" style="margin-top:1.6rem">
@@ -94,7 +94,7 @@ site_page_hero($about['eyebrow'], $about['title'], $about['lead']);
                 <?php endforeach; ?>
             </ol>
         </div>
-        <div data-reveal>
+        <div <?= reveal('right') ?>>
             <p class="eyebrow"><?= e(t($about['governance_eyebrow'])) ?></p>
             <h2><?= e(t($about['governance_title'])) ?></h2>
             <div class="grid" style="gap:1rem">
@@ -111,7 +111,7 @@ site_page_hero($about['eyebrow'], $about['title'], $about['lead']);
 
 <section class="section">
     <div class="wrap">
-        <div class="section-head">
+        <div class="section-head" <?= reveal('up') ?>>
             <p class="eyebrow"><?= e(t($about['teachers_eyebrow'])) ?></p>
             <h2><?= e(t($about['teachers_title'])) ?></h2>
             <p class="section-head__lead"><?= e(t($about['leadership_note'])) ?></p>
@@ -119,7 +119,7 @@ site_page_hero($about['eyebrow'], $about['title'], $about['lead']);
         <?php if ($teachers): ?>
         <div class="grid grid--4">
             <?php foreach ($teachers as $teacher): ?>
-            <article class="card center" data-reveal>
+            <article class="card center" <?= reveal('up') ?>>
                 <?php if (!empty($teacher['photo'])): ?>
                 <img src="<?= e(site_page($teacher['photo'])) ?>" alt="<?= e($teacher['name']) ?>"
                      width="120" height="120" loading="lazy" decoding="async"
@@ -136,7 +136,7 @@ site_page_hero($about['eyebrow'], $about['title'], $about['lead']);
         <?php else: ?>
         <div class="grid grid--4">
             <?php foreach ($about['teacher_roles'] as $role): ?>
-            <article class="card" data-reveal>
+            <article class="card" <?= reveal('up') ?>>
                 <span class="icon-badge"><?= site_icon($role['icon']) ?></span>
                 <h3 style="margin-top:1rem"><?= e(t($role['title'])) ?></h3>
                 <p><?= e(t($role['text'])) ?></p>

@@ -22,17 +22,17 @@ site_header($page);
 <section class="section">
     <div class="wrap">
         <div class="grid grid--3">
-            <article class="card">
+            <article class="card" <?= reveal('up') ?>>
                 <span class="icon-badge"><?= site_icon('book') ?></span>
                 <h3 style="margin-top:1rem"><a href="<?= e(site_page('/programs')) ?>" style="text-decoration:none"><?= e(t(L('Programmes', 'መርሃ ግብሮች'))) ?></a></h3>
                 <p><?= e(t(L('Subjects and the Sunday programme.', 'ትምህርቶችና የእሁድ መርሃ ግብር።'))) ?></p>
             </article>
-            <article class="card">
+            <article class="card" <?= reveal('up') ?>>
                 <span class="icon-badge"><?= site_icon('calendar') ?></span>
                 <h3 style="margin-top:1rem"><a href="<?= e(site_page('/news')) ?>" style="text-decoration:none"><?= e(t(L('News and notices', 'ዜናና ማሳሰቢያዎች'))) ?></a></h3>
                 <p><?= e(t(L('Announcements and photographs.', 'ማስታወቂያዎችና ፎቶዎች።'))) ?></p>
             </article>
-            <article class="card">
+            <article class="card" <?= reveal('up') ?>>
                 <span class="icon-badge"><?= site_icon('mail') ?></span>
                 <h3 style="margin-top:1rem"><a href="<?= e(site_page('/contact')) ?>" style="text-decoration:none"><?= e(ui('contact')) ?></a></h3>
                 <p><?= e(t(L('Reach the school office.', 'የትምህርት ቤቱን ጽ/ቤት ያግኙ።'))) ?></p>

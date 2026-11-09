@@ -121,6 +121,17 @@ return [
         'msg_sent'         => L('Thank you. Your request has been received.', 'እናመሰግናለን። ጥያቄዎ ደርሷል።'),
         'msg_failed'       => L('We could not send the request. Please try again or call the office.', 'ጥያቄው አልተላከም። እንደገና ይሞክሩ ወይም ጽ/ቤቱን ይደውሉ።'),
         'msg_joining'      => L('Joining', 'የሚመዘገበው'),
+        // Motion components: modal, lightbox, countdown.
+        'close'            => L('Close', 'ዝጋ'),
+        'photo_open'       => L('Open the photograph', 'ፎቶውን ይክፈቱ'),
+        'photo_viewer'     => L('Photograph viewer', 'የፎቶ መመልከቻ'),
+        'photo_prev'       => L('Previous', 'ቀዳሚ'),
+        'photo_next'       => L('Next', 'ቀጣይ'),
+        'cd_label'         => L('Next Sunday session', 'የሚቀጥለው የእሁድ ትምህርት'),
+        'cd_days'          => L('Days', 'ቀናት'),
+        'cd_hours'         => L('Hours', 'ሰዓታት'),
+        'cd_minutes'       => L('Minutes', 'ደቂቃዎች'),
+        'cd_seconds'       => L('Seconds', 'ሰከንዶች'),
     ],
 
     // ── Site-wide settings ─────────────────────────────────────────────
@@ -206,6 +217,26 @@ return [
         'programmes_head' => [
             'eyebrow' => L('Curriculum', 'ስርዓተ ትምህርት'),
             'title'   => L('What pupils learn', 'ተማሪዎች የሚማሩት'),
+        ],
+        // Countdown to the next Sunday lesson. The school can change the day
+        // and time here in one place; the script computes the next occurrence.
+        'countdown' => [
+            'enabled'  => true,
+            'weekday'  => 0,   // 0 = Sunday
+            'hour'     => 9,
+            'minute'   => 0,
+        ],
+        // One short welcome sheet per session, on the home page only.
+        'popup' => [
+            'enabled'   => true,
+            'delay'     => 9000,
+            'store_key' => 'wbss-welcome-2026',
+            'title'     => L('Registration is open', 'ምዝገባ ተከፍቷል'),
+            'text'      => L('A child, a young person or yourself — any age joins the same school. The office replies with the class and the start date.',
+                             'ልጅ፣ ወጣት ወይም ራስዎ — ማንኛውም ዕድሜ በአንድ ትምህርት ቤት ይቀላቀላል። ጽ/ቤቱ የክፍሉንና የመጀመሪያ ቀን መልሶ ይነግርዎታል።'),
+            'cta'       => ['label' => L('Registration request', 'የምዝገባ ጥያቄ'), 'path' => '/admissions'],
+            'dismiss'   => L('Not now', 'አሁን አይደለም'),
+            'note'      => L('Shown once per visit.', 'በአንድ ጉብኝት አንድ ጊዜ ይታያል።'),
         ],
         'visit_head' => [
             'eyebrow' => L('Visit us', 'ይጎብኙን'),

@@ -26,7 +26,7 @@ site_page_hero($galleryContent['eyebrow'], $galleryContent['title'], $galleryCon
 
 <section class="section" id="photos">
     <div class="wrap">
-        <div id="fkssGallery" class="fkss-gal gallery-shell" data-api="<?= e(site_url('/public_gallery.php')) ?>"
+        <div id="fkssGallery" class="fkss-gal gallery-shell" <?= reveal('up') ?> data-api="<?= e(site_url('/public_gallery.php')) ?>"
              data-empty="<?= e(ui('gallery_empty')) ?>" data-more="<?= e(ui('gallery_more')) ?>"
              data-msg-loading="<?= e(ui('gallery_loading')) ?>"
              data-msg-empty="<?= e(ui('gallery_empty')) ?>"
@@ -42,7 +42,7 @@ site_page_hero($galleryContent['eyebrow'], $galleryContent['title'], $galleryCon
             <p class="fkss-gal-empty" data-gal="empty" hidden><?= e(ui('gallery_empty')) ?></p>
             <button type="button" class="fkss-gal-more" data-gal="more" hidden><?= e(ui('gallery_more')) ?></button>
         </div>
-        <div class="notice" style="margin-top:1.6rem">
+        <div class="notice" style="margin-top:1.6rem" <?= reveal('zoom') ?>>
             <?= site_icon('image') ?>
             <p><?= e(t($galleryContent['note'])) ?></p>
         </div>
