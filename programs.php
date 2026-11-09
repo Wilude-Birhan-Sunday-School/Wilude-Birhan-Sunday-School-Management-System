@@ -26,13 +26,13 @@ site_page_hero($programsContent['eyebrow'], $programsContent['title'], $programs
 <?php if ($programs): ?>
 <section class="section">
     <div class="wrap">
-        <div class="section-head">
+        <div class="section-head" <?= reveal('up') ?>>
             <p class="eyebrow"><?= e(t($programsContent['classes_eyebrow'])) ?></p>
             <h2><?= e(t($programsContent['classes_title'])) ?></h2>
         </div>
         <div class="grid grid--3">
             <?php foreach ($programs as $program): ?>
-            <article class="card card--program" data-reveal>
+            <article class="card card--program" <?= reveal('up') ?>>
                 <div class="card__top">
                     <span class="icon-badge"><?= site_icon($program['icon'] ?? 'book') ?></span>
                     <h3><?= e($program['title']) ?></h3>
@@ -58,13 +58,13 @@ site_page_hero($programsContent['eyebrow'], $programsContent['title'], $programs
 
 <section class="section section--sand">
     <div class="wrap">
-        <div class="section-head">
+        <div class="section-head" <?= reveal('up') ?>>
             <p class="eyebrow"><?= e(t($programsContent['curriculum_eyebrow'])) ?></p>
             <h2><?= e(t($programsContent['curriculum_title'])) ?></h2>
         </div>
         <div class="grid grid--3">
             <?php foreach ($programsContent['curriculum'] as $subject): ?>
-            <article class="card" data-reveal>
+            <article class="card" <?= reveal('up') ?>>
                 <span class="icon-badge"><?= site_icon('book') ?></span>
                 <h3 style="margin-top:1rem"><?= e(t($subject['title'])) ?></h3>
                 <p><?= e(t($subject['text'])) ?></p>
@@ -76,7 +76,7 @@ site_page_hero($programsContent['eyebrow'], $programsContent['title'], $programs
 
 <section class="section">
     <div class="wrap split">
-        <div data-reveal>
+        <div <?= reveal('left') ?>>
             <p class="eyebrow"><?= e(t($programsContent['week_eyebrow'])) ?></p>
             <h2><?= e(t($programsContent['week_title'])) ?></h2>
             <ol class="steps" style="margin-top:1.4rem">
@@ -90,7 +90,7 @@ site_page_hero($programsContent['eyebrow'], $programsContent['title'], $programs
                 <?php endforeach; ?>
             </ol>
         </div>
-        <div data-reveal>
+        <div <?= reveal('right') ?>>
             <div class="notice">
                 <?= site_icon('sparkle') ?>
                 <div>

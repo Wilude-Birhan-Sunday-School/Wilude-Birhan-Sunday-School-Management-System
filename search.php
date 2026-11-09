@@ -176,7 +176,7 @@ site_page_hero($searchContent['eyebrow'], $searchContent['title'], $searchConten
 
 <section class="section">
     <div class="wrap">
-        <form class="search-form" role="search" method="get" action="<?= e(site_page('/search')) ?>">
+        <form class="search-form" role="search" method="get" action="<?= e(site_page('/search')) ?>" <?= reveal('up') ?>>
             <label class="visually-hidden" for="search-q"><?= e(ui('search_site')) ?></label>
             <input id="search-q" type="search" name="q" value="<?= e($query) ?>" placeholder="<?= e(ui('search_placeholder')) ?>">
             <button class="btn btn--primary" type="submit"><?= e(ui('search')) ?><?= site_icon('search') ?></button>
@@ -194,7 +194,7 @@ site_page_hero($searchContent['eyebrow'], $searchContent['title'], $searchConten
         <p class="muted" style="margin-top:1.4rem"><?= count($results) ?> <?= e(count($results) === 1 ? ui('q_result') : ui('q_results')) ?> <?= e(ui('for_query')) ?> “<?= e($query) ?>”.</p>
         <ul class="search-results">
             <?php foreach ($results as $result): ?>
-            <li class="search-result">
+            <li class="search-result" <?= reveal('up') ?>>
                 <p class="search-result__kind"><?= e($result['kind']) ?></p>
                 <h2><a href="<?= e($result['url']) ?>"><?= !empty($result['title_html']) ? $result['title'] : e($result['title']) ?></a></h2>
                 <?php if ($result['text'] !== ''): ?>

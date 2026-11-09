@@ -36,7 +36,7 @@ site_page_hero($newsContent['eyebrow'], $newsContent['title'], $newsContent['lea
         <ul class="news-list" style="margin-top:0">
             <?php foreach ($items as $item): ?>
             <?php $hasImage = !empty($item['image']); ?>
-            <li class="news-item<?= $hasImage ? '' : ' news-item--text' ?>" data-reveal>
+            <li class="news-item<?= $hasImage ? '' : ' news-item--text' ?>" <?= reveal('up') ?>>
                 <?php if ($hasImage): ?>
                 <div class="news-item__media"><?php site_news_media($item); ?></div>
                 <?php endif; ?>

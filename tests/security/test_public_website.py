@@ -135,7 +135,9 @@ class PublicWebsiteStructureTests(unittest.TestCase):
             r'(?:src|href)\s*=\s*["\'](https?:)?//([^"\']+)', re.IGNORECASE)
         allowed_hosts = {'schema.org'}
         offenders = []
-        for filename in list(PUBLIC_PAGES.values()) + SHARED + ['css/wbss-site.css', 'js/wbss-site.js']:
+        assets = ['css/wbss-site.css', 'js/wbss-site.js',
+                  'css/wbss-motion.css', 'js/wbss-motion.js']
+        for filename in list(PUBLIC_PAGES.values()) + SHARED + assets:
             for match in asset_rx.finditer(read(filename)):
                 host = match.group(2).split('/')[0].lower()
                 if host not in allowed_hosts:
@@ -372,6 +374,123 @@ class PublicWebsiteBilingualTests(unittest.TestCase):
                 self.assertNotIn('fonts.googleapis.com', source)
                 self.assertNotIn('fonts.gstatic.com', source)
         self.assertIn('"Noto Serif Ethiopic"', self.css)
+
+
+class PublicWebsiteMotionTests(unittest.TestCase):
+    """The motion layer: shipped locally, additive, and bilingual.
+
+    Motion is an enhancement, never a dependency: a browser without JavaScript,
+    or a visitor who asked for reduced motion, must still get the whole page.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.bootstrap = read('public_site.php')
+        cls.content = read('site_content.php')
+        cls.motion_css = read('css/wbss-motion.css')
+        cls.motion_js = read('js/wbss-motion.js')
+        cls.site_css = read('css/wbss-site.css')
+        cls.pages = {name: read(name) for name in PUBLIC_PAGES.values()}
+
+    def test_motion_assets_are_local_and_loaded_once(self):
+        self.assertIn("site_asset('/css/wbss-motion.css')", self.bootstrap)
+        self.assertIn("site_asset('/js/wbss-motion.js')", self.bootstrap)
+        self.assertEqual(self.bootstrap.count('wbss-motion.css'), 1)
+        self.assertEqual(self.bootstrap.count('wbss-motion.js'), 1)
+
+    def test_every_page_asks_for_animation(self):
+        # Each template opts in through the shared helper, never by hand.
+        for path, filename in PUBLIC_PAGES.items():
+            with self.subTest(page=path):
+                self.assertIn('<?= reveal(', self.pages[filename])
+        self.assertIn('function reveal(', self.bootstrap)
+        # The helper only emits the variants the stylesheet defines.
+        for variant in ('up', 'left', 'right', 'zoom', 'pop'):
+            self.assertIn(f"'{variant}'", self.bootstrap)
+
+    def test_animation_never_hides_content_without_javascript(self):
+        # Bare [data-reveal] rules may only come from the .js-gated layer.
+        self.assertNotRegex(self.motion_css, r'(?<![\.\w-])\[data-reveal\][^{]*\{[^}]*opacity:\s*0')
+        self.assertIn('.js [data-reveal]', self.motion_css)
+        self.assertIn('.js [data-reveal]', self.site_css)
+
+    def test_reduced_motion_and_print_switch_everything_off(self):
+        self.assertIn('prefers-reduced-motion: reduce', self.motion_css)
+        self.assertIn('prefers-reduced-motion: reduce', self.motion_js)
+        # Both the stylesheet and the script honour the preference.
+        self.assertIn('@media print', self.motion_css)
+        self.assertIn('.scroll-progress, .modal, .to-top { display: none !important; }', self.motion_css)
+
+    def test_script_is_dependency_free_and_never_writes(self):
+        self.assertNotIn('import ', self.motion_js)
+        self.assertNotIn('require(', self.motion_js)
+        self.assertNotIn('fetch(', self.motion_js)
+        self.assertNotIn('XMLHttpRequest', self.motion_js)
+        for forbidden in ('http://', 'https://', '//cdn.'):
+            self.assertNotIn(forbidden, self.motion_js)
+            self.assertNotIn(forbidden, self.motion_css)
+
+    def test_motion_layer_does_not_touch_the_database(self):
+        for name in ('css/wbss-motion.css', 'js/wbss-motion.js'):
+            with self.subTest(file=name):
+                source = read(name)
+                for forbidden in ('SELECT ', 'INSERT ', 'UPDATE ', 'DELETE ', 'mysqli', 'PDO'):
+                    self.assertNotIn(forbidden, source)
+
+    def test_countdown_is_configured_and_bilingual(self):
+        self.assertIn("'countdown'", self.content)
+        for key in ('cd_label', 'cd_days', 'cd_hours', 'cd_minutes', 'cd_seconds'):
+            self.assertIn(f"'{key}'", self.content)
+        self.assertIn('data-countdown', self.pages['index.php'])
+        self.assertIn('data-cd="days"', self.pages['index.php'])
+        # The count is computed in the visitor's browser from the school week,
+        # so no stale "next Sunday" date is ever served from PHP.
+        self.assertIn('data-weekday', self.pages['index.php'])
+        self.assertNotIn('new Date(', self.bootstrap)
+
+    def test_popup_is_opt_in_bilingual_and_once_per_session(self):
+        self.assertIn('function site_popup(', self.bootstrap)
+        self.assertIn('data-store-key', self.bootstrap)
+        self.assertIn("window.sessionStorage", self.motion_js)
+        self.assertIn("'popup'", self.content)
+        # It must be dismissible three ways and never trap the visitor.
+        self.assertIn("event.key === 'Escape'", self.motion_js)
+        self.assertIn('data-modal-close', self.bootstrap)
+        # Shown on the home page only.
+        self.assertIn("site_popup($home[\'popup\']", self.pages['index.php'])
+        for filename in PUBLIC_PAGES.values():
+            if filename == 'index.php':
+                continue
+            with self.subTest(page=filename):
+                self.assertNotIn('site_popup(', self.pages[filename])
+
+    def test_lightbox_is_keyboard_reachable_and_labelled(self):
+        self.assertIn('function site_lightbox(', self.bootstrap)
+        self.assertIn('aria-modal="true"', self.bootstrap)
+        self.assertIn('role="button" tabindex="0"', self.bootstrap)
+        self.assertIn("event.key === 'ArrowRight'", self.motion_js)
+        self.assertIn("event.key === 'Escape'", self.motion_js)
+        self.assertIn('data-lightbox-counter', self.bootstrap)
+        self.assertIn('data-lightbox-caption', self.bootstrap)
+        # Photographs stay in the news list; the lightbox adds no new source.
+        self.assertIn('data-lightbox', self.bootstrap)
+
+    def test_motion_strings_are_all_pairs(self):
+        for key in ('close', 'photo_open', 'photo_viewer', 'photo_prev', 'photo_next'):
+            with self.subTest(key=key):
+                self.assertRegex(
+                    self.content,
+                    r"'%s'\s*=>\s*L\(" % key,
+                    'UI strings on the public site must be bilingual pairs')
+
+    def test_scrolling_only_moves_compositor_properties(self):
+        # The scroll handler may touch transform and class names only; a
+        # height/top animation would thrash layout on a school phone.
+        handler = self.motion_js.split('function onScroll()', 1)[1].split('/* ── 4.', 1)[0]
+        self.assertNotIn('style.height', handler)
+        self.assertNotIn('style.top', handler)
+        self.assertIn('scaleX', handler)
+
 
 
 if __name__ == '__main__':

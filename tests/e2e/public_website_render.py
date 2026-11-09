@@ -13,6 +13,11 @@ answer, on any PHP error/warning text in the body, on a page whose title does
 not belong to it, on a missing language declaration, on an unescaped search
 reflection, and on a missing escaped highlight.
 
+It also checks that the motion layer is actually served and wired: the local
+stylesheet and script on every page, reveal hooks on every template, the
+countdown and the once-per-session popup on the home page only, and the photo
+lightbox on the news page — in both languages.
+
 Amharic is the default language, so `/index.php` and `/index.php?lang=am` must
 render the same text, and `?lang=en` must render English.
 """
@@ -103,6 +108,29 @@ def main():
             for token in ('hreflang="am"', 'hreflang="en"', 'hreflang="x-default"'):
                 if token not in body:
                     failures.append(f'{url}: missing {token}')
+            # Motion is served locally on every page and every template opts in.
+            for token in ('/css/wbss-motion.css', '/js/wbss-motion.js',
+                          'id="scroll-progress"', 'data-reveal="'):
+                if token not in body:
+                    failures.append(f'{url}: motion layer missing {token}')
+
+    # Home: the countdown to the next Sunday session, and the popup.
+    for lang in ('am', 'en'):
+        _, body = fetch(base, with_lang('/index.php', lang))
+        for token in ('data-countdown', 'data-cd="days"', 'data-cd="seconds"',
+                      'data-popup', 'data-store-key="wbss-welcome-2026"'):
+            if token not in body:
+                failures.append(f'home {lang}: missing {token}')
+    _, body = fetch(base, '/about.php')
+    if 'data-popup' in body:
+        failures.append('about: the popup must stay on the home page only')
+
+    # News: photographs open in the accessible lightbox.
+    _, body = fetch(base, '/news.php')
+    for token in ('data-lightbox', 'data-lightbox-modal', 'role="button" tabindex="0"',
+                  'aria-modal="true"'):
+        if token not in body:
+            failures.append(f'news: lightbox missing {token}')
 
     # The default page is Amharic: no parameter must equal ?lang=am.
     _, default_body = fetch(base, '/index.php')

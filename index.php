@@ -47,8 +47,21 @@ site_header($page);
                     <?= e(t($home['secondary_cta']['label'])) ?>
                 </a>
             </div>
+            <?php $cd = $home['countdown']; ?>
             <div class="hero__meta">
                 <p><?= site_icon('pin') ?><?= e(t($content['contact']['address_lines'][0])) ?></p>
+                <?php if (!empty($cd['enabled'])): ?>
+                <ul class="countdown" data-countdown
+                    data-weekday="<?= (int) ($cd['weekday'] ?? 0) ?>"
+                    data-hour="<?= (int) ($cd['hour'] ?? 9) ?>"
+                    data-minute="<?= (int) ($cd['minute'] ?? 0) ?>">
+                    <li class="countdown__label"><?= e(ui('cd_label')) ?></li>
+                    <li class="countdown__unit"><span class="countdown__value" data-cd="days">00</span><small><?= e(ui('cd_days')) ?></small></li>
+                    <li class="countdown__unit"><span class="countdown__value" data-cd="hours">00</span><small><?= e(ui('cd_hours')) ?></small></li>
+                    <li class="countdown__unit"><span class="countdown__value" data-cd="minutes">00</span><small><?= e(ui('cd_minutes')) ?></small></li>
+                    <li class="countdown__unit"><span class="countdown__value" data-cd="seconds">00</span><small><?= e(ui('cd_seconds')) ?></small></li>
+                </ul>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -58,7 +71,7 @@ site_header($page);
     <div class="wrap">
         <ul class="highlights" style="list-style:none;padding:0;margin:0">
             <?php foreach ($home['highlights'] as $highlight): ?>
-            <li class="highlight" data-reveal>
+            <li class="highlight" <?= reveal('pop') ?>>
                 <span class="icon-badge"><?= site_icon($highlight['icon']) ?></span>
                 <h3><?= e(t($highlight['title'])) ?></h3>
                 <p><?= e(t($highlight['text'])) ?></p>
@@ -70,12 +83,12 @@ site_header($page);
 
 <section class="section">
     <div class="wrap split">
-        <div class="split__media" data-reveal>
+        <div class="split__media" <?= reveal('left') ?>>
             <img src="<?= e(site_page($home['intro']['image'])) ?>" alt="<?= e(t($home['intro']['image_alt'])) ?>"
                  width="1568" height="882" loading="lazy" decoding="async">
             <p class="split__caption"><?= e(t($home['intro']['caption'])) ?></p>
         </div>
-        <div data-reveal>
+        <div <?= reveal('right') ?>>
             <p class="eyebrow"><?= e(t($home['intro']['eyebrow'])) ?></p>
             <h2><?= e(t($home['intro']['title'])) ?></h2>
             <?php foreach ($home['intro']['body'] as $paragraph): ?>
@@ -101,7 +114,7 @@ site_header($page);
         </div>
         <div class="grid grid--4">
             <?php foreach ($content['pillars'] as $pillar): ?>
-            <article class="card" data-reveal>
+            <article class="card" <?= reveal('up') ?>>
                 <span class="icon-badge"><?= site_icon($pillar['icon']) ?></span>
                 <h3><?= e(t($pillar['title'])) ?></h3>
                 <p><?= e(t($pillar['text'])) ?></p>
@@ -120,7 +133,7 @@ site_header($page);
         </div>
         <div class="grid grid--3">
             <?php foreach ($curriculum as $subject): ?>
-            <article class="card" data-reveal>
+            <article class="card" <?= reveal('zoom') ?>>
                 <span class="icon-badge"><?= site_icon('book') ?></span>
                 <h3><?= e(t($subject['title'])) ?></h3>
                 <p><?= e(t($subject['text'])) ?></p>
@@ -154,7 +167,7 @@ site_header($page);
         </div>
         <div class="grid grid--3">
             <?php foreach (array_slice($news, 0, 3) as $item): ?>
-            <article class="card card--news" data-reveal>
+            <article class="card card--news" <?= reveal('up') ?>>
                 <?php site_news_media($item); ?>
                 <div class="card__body">
                     <p class="card__badge"><?= e($item['kind'] === 'announcement' ? ui('announcement') : ui('notice')) ?></p>
@@ -188,4 +201,5 @@ site_header($page);
 
 <?php
 site_cta_band();
+site_popup($home['popup'] ?? []);
 site_footer();

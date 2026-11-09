@@ -28,7 +28,7 @@ site_page_hero(
 
 <section class="section">
     <div class="wrap split" style="align-items:start">
-        <div data-reveal>
+        <div <?= reveal('left') ?>>
             <?php site_contact_cards(); ?>
             <div class="notice notice--green" style="margin-top:1.2rem">
                 <?= site_icon('pin') ?>
@@ -40,7 +40,7 @@ site_page_hero(
                 <p><?= e(t($contact['response_note'])) ?></p>
             </div>
         </div>
-        <div data-reveal>
+        <div <?= reveal('right') ?>>
             <?php site_form('enquiry'); ?>
         </div>
     </div>
@@ -48,7 +48,7 @@ site_page_hero(
 
 <section class="section section--sand">
     <div class="wrap">
-        <div class="section-head">
+        <div class="section-head" <?= reveal('up') ?>>
             <p class="eyebrow"><?= e(t(L('Common questions', 'ተደጋጋሚ ጥያቄዎች'))) ?></p>
             <h2><?= e(t(L('Before you write', 'ከመጻፍዎ በፊት'))) ?></h2>
         </div>

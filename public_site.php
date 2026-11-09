@@ -235,6 +235,20 @@ function site_icon(string $name, string $class = ''): string
         . 'aria-hidden="true" focusable="false">' . $body . '</svg>';
 }
 
+/**
+ * Reveal hook for a block: data-reveal="up|left|right|zoom|pop".
+ * The motion stylesheet only hides the block once JavaScript is proven, and
+ * the script marks it visible when it scrolls into view. An unknown value
+ * falls back to the plain fade-up that wbss-site.css already provides.
+ */
+function reveal(string $variant = 'up', int $index = 0): string
+{
+    $allowed = ['up', 'left', 'right', 'zoom', 'pop'];
+    $variant = in_array($variant, $allowed, true) ? $variant : 'up';
+    $style = $index > 0 ? ' style="--i:' . min($index, 8) . '"' : '';
+    return 'data-reveal="' . $variant . '"' . $style;
+}
+
 /** Text for an optional CMS row, falling back to the English field. */
 function site_localised(array $row, string $field, string $suffix = '_am'): string
 {
@@ -282,6 +296,7 @@ function site_head(array $page): void
 <link rel="apple-touch-icon" href="<?= e(site_page(THEME_BASE_PATH . '/assets/logos/icon-192.png')) ?>">
 <script>document.documentElement.classList.add('js');</script>
 <link rel="stylesheet" href="<?= e(site_asset('/css/wbss-site.css')) ?>">
+<link rel="stylesheet" href="<?= e(site_asset('/css/wbss-motion.css')) ?>">
 <?php if ($needsGallery): ?>
 <link rel="stylesheet" href="<?= e(site_asset('/css/public_gallery.css')) ?>">
 <?php endif; ?>
@@ -385,6 +400,7 @@ function site_header(array $page): void
       data-msg-failed="<?= e(ui('msg_failed')) ?>"
       data-msg-joining="<?= e(ui('msg_joining')) ?>">
 <a class="skip-link" href="#main"><?= e(ui('skip_link')) ?></a>
+<div class="scroll-progress" id="scroll-progress" aria-hidden="true"></div>
 <div class="topbar">
     <div class="wrap topbar__inner">
         <p class="topbar__identity"<?= site_lang_is_am() ? ' lang="am"' : '' ?>><?= e(site_parish_name()) ?></p>
@@ -507,12 +523,12 @@ function site_cta_band($title = '', $text = ''): void
     ?>
 <section class="cta-band">
     <div class="wrap cta-band__inner">
-        <div>
+        <div <?= reveal('left') ?>>
             <p class="eyebrow eyebrow--gold"><?= e(ui('register_request')) ?></p>
             <h2><?= e($title) ?></h2>
             <p><?= e($text) ?></p>
         </div>
-        <div class="cta-band__actions">
+        <div class="cta-band__actions" <?= reveal('right') ?>>
             <a class="btn btn--gold" href="<?= e(site_page('/admissions')) ?>"><?= e(ui('register_request')) ?> <?= site_icon('arrow') ?></a>
             <a class="btn btn--ghost" href="<?= e(site_page('/contact')) ?>"><?= e(ui('cta_contact')) ?></a>
         </div>
@@ -530,7 +546,7 @@ function site_footer(): void
     ?>
 </main>
 <footer class="site-footer">
-    <div class="wrap site-footer__grid">
+    <div class="wrap site-footer__grid" <?= reveal('up') ?>>
         <div class="site-footer__brand">
             <a class="brand brand--footer" href="<?= e(site_page('/')) ?>">
                 <img class="brand__mark" src="<?= e(site_page(SCHOOL_LOGO_PATH)) ?>" alt="" width="56" height="56" decoding="async">
@@ -593,7 +609,9 @@ function site_footer(): void
     </div>
 </footer>
 <button type="button" class="to-top" id="to-top" hidden aria-label="<?= e(ui('back_to_top')) ?>"><?= site_icon('chevron') ?></button>
+<?php site_lightbox(); ?>
 <script src="<?= e(site_asset('/js/wbss-site.js')) ?>" defer></script>
+<script src="<?= e(site_asset('/js/wbss-motion.js')) ?>" defer></script>
 <?php if (!empty($GLOBALS['WBSS_PAGE_GALLERY'])): ?>
 <script src="<?= e(site_asset('/js/public_gallery.js')) ?>" defer></script>
 <?php endif; ?>
@@ -620,7 +638,7 @@ function site_form(string $mode = 'registration', $title = ''): void
     $note = $isEnquiry ? ui('enquiry_note') : t($content['admissions']['form']['note']);
     ?>
 <form class="site-form" id="<?= $isEnquiry ? 'contact-form' : 'registration-form' ?>" method="post" action="<?= e($endpoint) ?>"
-      data-endpoint="<?= e($endpoint) ?>" novalidate>
+      data-endpoint="<?= e($endpoint) ?>" <?= reveal('zoom') ?> novalidate>
     <div class="site-form__head">
         <h2><?= e($heading) ?></h2>
         <p><?= e($note) ?></p>
@@ -742,6 +760,62 @@ function site_contact_cards(): void
 <?php
 }
 
+/**
+ * Full-screen photograph viewer. One sheet for the whole page: the script
+ * fills it from whichever notice the visitor opened, with arrow navigation
+ * between the photographs of that page. Keyboard and screen-reader complete.
+ */
+function site_lightbox(): void
+{
+    ?>
+<div class="modal" id="site-lightbox" data-lightbox-modal hidden>
+    <div class="modal__sheet modal__sheet--photo" role="dialog" aria-modal="true" aria-label="<?= e(ui('photo_viewer')) ?>">
+        <button type="button" class="modal__close" data-modal-close aria-label="<?= e(ui('close')) ?>"><?= site_icon('close') ?></button>
+        <figure style="margin:0">
+            <img data-lightbox-img src="" alt="" decoding="async">
+            <figcaption data-lightbox-caption></figcaption>
+        </figure>
+        <div class="lightbox-nav">
+            <button type="button" data-lightbox-prev aria-label="<?= e(ui('photo_prev')) ?>"><?= e(ui('photo_prev')) ?></button>
+            <span class="lightbox-counter" data-lightbox-counter aria-live="polite"></span>
+            <button type="button" data-lightbox-next aria-label="<?= e(ui('photo_next')) ?>"><?= e(ui('photo_next')) ?></button>
+        </div>
+    </div>
+</div>
+<?php
+}
+
+/**
+ * Short welcome sheet, shown once per browser session on the pages that ask
+ * for it. It never traps the visitor: close button, Escape and a backdrop
+ * click all dismiss it, and it is skipped under prefers-reduced-motion
+ * (the animation is disabled; the sheet itself still works).
+ */
+function site_popup(array $popup): void
+{
+    if (empty($popup['enabled'])) {
+        return;
+    }
+    ?>
+<div class="modal" id="site-popup" data-popup hidden
+     data-delay="<?= (int) ($popup['delay'] ?? 9000) ?>"
+     data-store-key="<?= e((string) ($popup['store_key'] ?? 'wbss-popup')) ?>">
+    <div class="modal__sheet" role="dialog" aria-modal="true" aria-labelledby="site-popup-title" aria-describedby="site-popup-text">
+        <button type="button" class="modal__close" data-modal-close aria-label="<?= e(ui('close')) ?>"><?= site_icon('close') ?></button>
+        <h2 class="modal__title" id="site-popup-title"><?= e(t($popup['title'] ?? '')) ?></h2>
+        <p class="modal__text" id="site-popup-text"><?= e(t($popup['text'] ?? '')) ?></p>
+        <div class="modal__actions">
+            <a class="btn btn--primary" href="<?= e(site_page($popup['cta']['path'] ?? '/admissions')) ?>">
+                <?= e(t($popup['cta']['label'] ?? '')) ?><?= site_icon('arrow') ?>
+            </a>
+            <button type="button" class="btn btn--outline" data-modal-close><?= e(t($popup['dismiss'] ?? '')) ?></button>
+        </div>
+        <p class="popup-note"><?= e(t($popup['note'] ?? '')) ?></p>
+    </div>
+</div>
+<?php
+}
+
 // ── Normalised content accessors ──────────────────────────────────────────
 /**
  * Programs: class rows the school published through the CMS. The public
@@ -824,7 +898,9 @@ function site_news_items(): array
             'date_iso' => $timestamp ? date('c', $timestamp) : '',
             'link'     => $link,
             'image'    => site_media_url((string)($row['image_path'] ?? '')),
-            'image_alt'=> (string)($row['image_alt'] ?? ''),
+            // CMS rows store one string; built-in content stores an L() pair.
+            // Keep whichever arrived as-is — t() resolves both at render time.
+            'image_alt'=> $row['image_alt'] ?? '',
             'draft'    => false,
         ];
     }
@@ -832,7 +908,7 @@ function site_news_items(): array
         $item['date'] = '';
         $item['date_iso'] = '';
         $item['image'] = site_media_url((string) ($item['image'] ?? ''));
-        $item['image_alt'] = (string)($item['image_alt'] ?? '');
+        $item['image_alt'] = $item['image_alt'] ?? '';
         $items[] = $item;
     }
     // Newest dated announcement first; undated standing notices keep their
@@ -873,7 +949,9 @@ function site_news_media(array $item): void
         return;
     }
     ?>
-    <figure class="news-media">
+    <figure class="news-media" data-lightbox data-src="<?= e(site_page($src)) ?>"
+            data-caption="<?= e(t($item['image_alt'] ?? '')) ?>"
+            role="button" tabindex="0" aria-label="<?= e(ui('photo_open')) ?>">
         <img src="<?= e(site_page($src)) ?>" alt="<?= e(t($item['image_alt'] ?? '')) ?>"
              width="1672" height="941" loading="lazy" decoding="async">
     </figure>

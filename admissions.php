@@ -25,7 +25,7 @@ site_page_hero($admissions['eyebrow'], $admissions['title'], $admissions['lead']
 
 <section class="section">
     <div class="wrap split">
-        <div data-reveal>
+        <div <?= reveal('left') ?>>
             <p class="eyebrow"><?= e(t($admissions['steps_eyebrow'])) ?></p>
             <h2><?= e(t($admissions['steps_title'])) ?></h2>
             <ol class="steps" style="margin-top:1.2rem">
@@ -43,7 +43,7 @@ site_page_hero($admissions['eyebrow'], $admissions['title'], $admissions['lead']
                 <p><?= e(t($admissions['form_note'])) ?></p>
             </div>
         </div>
-        <div data-reveal>
+        <div <?= reveal('right') ?>>
             <?php site_form('registration'); ?>
         </div>
     </div>
@@ -52,7 +52,7 @@ site_page_hero($admissions['eyebrow'], $admissions['title'], $admissions['lead']
 <section class="section section--sand">
     <div class="wrap">
         <div class="grid grid--2">
-            <div data-reveal>
+            <div <?= reveal('left') ?>>
                 <p class="eyebrow"><?= e(t($admissions['requirements_eyebrow'])) ?></p>
                 <h2><?= e(t($admissions['requirements_title'])) ?></h2>
                 <ul class="check-list" style="margin-top:1rem">
@@ -65,7 +65,7 @@ site_page_hero($admissions['eyebrow'], $admissions['title'], $admissions['lead']
                     <p><?= e(t($admissions['fees_note'])) ?></p>
                 </div>
             </div>
-            <div data-reveal>
+            <div <?= reveal('right') ?>>
                 <p class="eyebrow"><?= e(t($admissions['faq_eyebrow'])) ?></p>
                 <h2><?= e(t($admissions['faq_title'])) ?></h2>
                 <div class="accordion" style="margin-top:1.2rem">
