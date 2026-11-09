@@ -10,7 +10,7 @@ $page = [
     'slug'        => '/programs',
     'title'       => 'Programs',
     'title_tag'   => 'Programs and curriculum · ' . SCHOOL_NAME,
-    'description' => 'Class levels, curriculum subjects and the weekly pattern of the Wilude Birhan Sunday School programme for children and young people aged 4 to 18.',
+    'description' => 'Curriculum subjects and the weekly pattern of the Wilude Birhan Sunday School programme, taught to children, young people and adults at every level.',
     'breadcrumbs' => [
         ['label' => 'Home', 'path' => '/'],
         ['label' => 'Programs', 'path' => '/programs'],
@@ -22,12 +22,13 @@ site_breadcrumbs($page['breadcrumbs'], 'የትምህርት መርሃ ግብሮ�
 site_page_hero($programsContent['eyebrow'], $programsContent['title'], $programsContent['lead']);
 ?>
 
+<?php if ($programs): ?>
 <section class="section">
     <div class="wrap">
         <div class="section-head">
-            <p class="eyebrow">Class levels</p>
-            <h2>Classes by age</h2>
-            <p class="section-head__lead">Each class follows the same curriculum at its own level, so a child who moves up a class continues rather than restarts.</p>
+            <p class="eyebrow">Classes</p>
+            <h2>Classes published by the school</h2>
+            <p class="section-head__lead">Each class follows the same curriculum at its own level, so a learner who moves up a class continues rather than restarts.</p>
         </div>
         <div class="grid grid--3">
             <?php foreach ($programs as $program): ?>
@@ -57,20 +58,17 @@ site_page_hero($programsContent['eyebrow'], $programsContent['title'], $programs
             </article>
             <?php endforeach; ?>
         </div>
-        <?php if (($programs[0]['source'] ?? 'site') === 'cms'): ?>
         <p class="muted" style="margin-top:1.2rem">These classes are published by the school administration.</p>
-        <?php else: ?>
-        <p class="muted" style="margin-top:1.2rem">This is the standard class structure. The school may adjust names or groupings for a given year.</p>
-        <?php endif; ?>
     </div>
 </section>
+<?php endif; ?>
 
 <section class="section section--sand">
     <div class="wrap">
         <div class="section-head">
             <p class="eyebrow">Curriculum</p>
-            <h2>What children learn</h2>
-            <p class="section-head__lead">The curriculum is set by the school's Education Department and taught by the class teachers.</p>
+            <h2>The subjects taught</h2>
+            <p class="section-head__lead">The curriculum is set by the school's Education Department and taught by the class teachers — the same subjects at every level, from the youngest class to adult members.</p>
         </div>
         <div class="grid grid--3">
             <?php foreach ($programsContent['curriculum'] as $subject): ?>
@@ -114,7 +112,7 @@ site_page_hero($programsContent['eyebrow'], $programsContent['title'], $programs
             </div>
             <div class="card" style="margin-top:1.2rem">
                 <h3 style="margin-top:0">Ask about a class</h3>
-                <p>Not sure which class suits your child? Send a request and the office will advise.</p>
+                <p>Not sure which class suits you or your child? Send a request and the office will advise — any age is welcome.</p>
                 <p style="margin:0"><a class="btn btn--primary" href="<?= e(site_page('/admissions')) ?>">Registration request<?= site_icon('arrow') ?></a></p>
             </div>
         </div>
@@ -122,5 +120,5 @@ site_page_hero($programsContent['eyebrow'], $programsContent['title'], $programs
 </section>
 
 <?php
-site_cta_band('Ready to join a class?', 'Registration requests are open to the children of the parish. The school office will confirm the class with you.');
+site_cta_band('Ready to join a class?', 'Registration requests are open to everyone in the parish — children, young people and adults. The school office will confirm the class with you.');
 site_footer();

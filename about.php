@@ -36,9 +36,9 @@ site_page_hero($about['eyebrow'], $about['title'], $about['lead'], '', '');
             </div>
         </div>
         <div class="split__media" data-reveal>
-            <img src="<?= e(site_page('/themes/fkss/assets/wbss-heritage-hero.jpg')) ?>"
-                 alt="A church courtyard with carved wooden doors and woven textile detail."
-                 width="1568" height="882" loading="lazy" decoding="async">
+            <img src="<?= e(site_page('/themes/fkss/assets/wbss-hero-courtyard.jpg')) ?>"
+                 alt="Children in white netela shawls walking towards the door of a round Ethiopian Orthodox church with a thatched roof and painted frescoes."
+                 width="1672" height="941" loading="lazy" decoding="async">
             <p class="split__caption">The parish compound where the school meets each Sunday.</p>
         </div>
     </div>

@@ -11,7 +11,6 @@ final class BrowserPageRoutes
         // Public website pages (same handlers as /about.php etc.).
         '/about' => '/about.php',
         '/programs' => '/programs.php',
-        '/schedule' => '/schedule.php',
         '/admissions' => '/admissions.php',
         '/gallery' => '/gallery.php',
         '/news' => '/news.php',

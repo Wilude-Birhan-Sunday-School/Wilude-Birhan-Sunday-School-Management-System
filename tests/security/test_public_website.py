@@ -28,7 +28,6 @@ PUBLIC_PAGES = {
     '/': 'index.php',
     '/about': 'about.php',
     '/programs': 'programs.php',
-    '/schedule': 'schedule.php',
     '/admissions': 'admissions.php',
     '/gallery': 'gallery.php',
     '/news': 'news.php',
@@ -82,7 +81,11 @@ class PublicWebsiteStructureTests(unittest.TestCase):
 
     def test_apache_dispatches_only_the_registered_public_slugs(self):
         self.assertIn('ErrorDocument 404 /404.php', self.htaccess)
-        self.assertIn('RewriteRule ^sitemap\\.xml$ sitemap.php [L]', self.htaccess)
+        # The retired pages must not keep a handler behind them.
+        self.assertNotIn('sitemap.php', self.htaccess)
+        self.assertNotIn('schedule', self.htaccess)
+        self.assertFalse((ROOT / 'sitemap.php').exists())
+        self.assertFalse((ROOT / 'schedule.php').exists())
         dispatch = [line for line in self.htaccess.splitlines() if 'browser_page.php [END]' in line]
         self.assertEqual(len(dispatch), 1)
         for slug in PUBLIC_PAGES:
@@ -92,15 +95,23 @@ class PublicWebsiteStructureTests(unittest.TestCase):
         # Still finite: no generic rewrite may append .php to user input.
         self.assertNotIn('$1.php', self.htaccess)
 
-    def test_sitemap_and_robots_agree_with_the_published_pages(self):
-        sitemap = read('sitemap.php')
-        self.assertIn("$content['pages']", sitemap)
-        self.assertIn("application/xml", sitemap)
+    def test_robots_is_scoped_and_publishes_no_sitemap(self):
         robots = read('robots.txt')
-        self.assertIn('Sitemap: https://', robots)
         self.assertIn('Disallow: /search', robots)
         for folder in ('/admin/', '/api/', '/monitor/'):
             self.assertIn(f'Disallow: {folder}', robots)
+        # The school asked for the sitemap to be withdrawn; a robots.txt that
+        # advertised one would point crawlers at a 404.
+        self.assertNotIn('Sitemap:', robots)
+
+    def test_schedule_page_and_its_copy_are_gone(self):
+        for filename in list(PUBLIC_PAGES.values()) + SHARED + ['404.php', 'register_submit.php']:
+            source = read(filename)
+            with self.subTest(file=filename):
+                self.assertNotIn("'/schedule'", source)
+                self.assertNotIn('site_schedule_rows', source)
+        self.assertNotIn('Weekly rhythm', self.index)
+        self.assertNotIn("'schedule' =>", self.content)
 
     # 2 — output safety and self-containment ----------------------------
     def test_output_is_escaped_through_the_helper(self):
@@ -165,6 +176,40 @@ class PublicWebsiteStructureTests(unittest.TestCase):
                 self.assertNotIn('register_submit.php', match.group(1),
                                  f'{filename} must let the shared form own the endpoint')
 
+    def test_registration_accepts_any_age_and_adults_registering_themselves(self):
+        # No age bands and no upper limit: a 60-year-old joins like a child.
+        self.assertIn('name="age" type="number"'.replace('name="age" type="number"', 'type="number" name="age"'), self.bootstrap)
+        self.assertIn('min="1" max="120"', self.bootstrap)
+        self.assertNotIn('<select id="reg-age"', self.bootstrap)
+        self.assertNotIn('Ages 4', self.content)
+        self.assertNotIn('Little Lambs', self.content)
+        self.assertNotIn('fallback_classes', self.bootstrap)
+        levels = self.content.split("'levels' => [", 1)[1][:400]
+        self.assertIn('An adult (18 or over)', levels)
+        self.assertIn('Myself — I am the person joining', levels)
+        endpoint = read('register_submit.php')
+        self.assertIn("Input::integer($age, 'Age', 1, 120)", endpoint)
+
+    def test_news_items_support_photographs_safely(self):
+        for token in ('function site_media_url', 'function site_news_media', "'image_path'", "'image_alt'"):
+            with self.subTest(token=token):
+                self.assertIn(token, self.bootstrap)
+        # Only same-site, root-relative image paths may render.
+        self.assertIn("str_starts_with($path, '//')", self.bootstrap)
+        self.assertIn('str_contains($path, \'..\')', self.bootstrap)
+        self.assertIn("'/themes/fkss/assets/wbss-", self.content)
+        sql = read('sql/080_announcement_images.sql')
+        self.assertIn('`image_path` VARCHAR(255)', sql)
+        self.assertIn('`image_alt` VARCHAR(255)', sql)
+        self.assertNotIn('DROP ', sql.upper())
+        self.assertNotRegex(sql.upper(), r'^\s*(DELETE\s+FROM|TRUNCATE)')
+        # The photographs the pages reference must exist in the repository.
+        for asset in ('themes/fkss/assets/wbss-hero-courtyard.jpg',
+                      'themes/fkss/assets/wbss-teaching-room.jpg',
+                      'themes/fkss/assets/wbss-mezmur-practice.jpg'):
+            with self.subTest(asset=asset):
+                self.assertTrue((ROOT / asset).is_file(), asset)
+
     def test_child_name_is_folded_into_the_message_not_a_new_field(self):
         # The endpoint has no child_name column; the browser merges it into the
         # free-text message instead of inventing an unvalidated parameter.
@@ -173,16 +218,28 @@ class PublicWebsiteStructureTests(unittest.TestCase):
         self.assertNotIn('child_name', read('register_submit.php'))
 
     # 4 — honest content ------------------------------------------------
-    def test_unverified_school_content_stays_flagged_as_draft(self):
-        self.assertIn("define('WBSS_SITE_CONTENT_DRAFT', true)", self.content)
-        self.assertIn("'draft_notice'", self.content)
-        self.assertIn('draft-bar', self.bootstrap)
-        # Contact details reused from the previous site stay marked, so nobody
-        # can publish a placeholder phone number or email as if it were real.
+    def test_draft_notice_is_withdrawn_and_no_placeholder_is_published(self):
+        # The school office approved the copy, so the site-wide warning bar is
+        # gone. Editorial `draft` flags stay in site_content.php as an internal
+        # note only: they must not reach the rendered pages.
+        self.assertIn("define('WBSS_SITE_CONTENT_DRAFT', false)", self.content)
+        self.assertNotIn("'draft_notice'", self.content)
+        self.assertNotIn('draft-bar', self.bootstrap)
+        self.assertNotIn('draft-bar', read('css/wbss-site.css'))
+        self.assertNotIn('awaiting approval', self.content)
+        # A placeholder must never be published as if it were the real number.
+        self.assertNotIn('+251 XXX', self.content)
+        self.assertNotIn('XXX XXX', ''.join(self.pages.values()))
         for key in ("'phone_primary'", "'email_primary'"):
             with self.subTest(key=key):
                 block = self.content.split(key, 1)[1][:220]
                 self.assertIn("'draft' => true", block)
+
+    def test_staff_login_is_not_advertised_on_the_public_web(self):
+        joined = ''.join(self.pages.values()) + self.bootstrap + self.content
+        self.assertNotIn('/admin/login', joined)
+        self.assertNotIn('Staff login', joined)
+        self.assertNotIn('admin_login_path', self.content)
 
     def test_no_individual_pupil_information_is_published(self):
         joined = ''.join(self.pages.values())

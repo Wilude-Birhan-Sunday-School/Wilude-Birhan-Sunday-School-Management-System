@@ -31,7 +31,7 @@ The [Finance/Materials column reference](database/LEDGER_COLUMNS.md), source-rev
 | Runtime DDL | `MezmurSchemaReconciler::apply`, called from `admin/api_mezmur.php`, can create or alter Mezmur tables at request time | Production can drift from `sql/` |
 | `tests/e2e/provision_env.sh` | Encodes the apply order that produces a working test database | The best available **executable** description of the schema; test-only |
 
-At the public-website commit (2026-11-03), the **77 numbered migration files** (`001`–`079`, with gaps) contain **103 distinct `CREATE TABLE` target names**, excluding block/line comments and including archive/quarantine definitions. `079_public_announcements.sql` adds `cms_announcements`; the earlier count of 76 files / 102 targets was recorded at `7e28157` (2026-10-28). This is a lexical source inventory, not the number of active business tables or proof that every conditional statement ran. Legacy PHP/snapshot definitions are outside this count. The former count of 103 incorrectly treated the word `only` in migration 026's comment as a table.
+At the public-website copy-update commit, the **78 numbered migration files** (`001`–`080`, with gaps) contain **103 distinct `CREATE TABLE` target names**, excluding block/line comments and including archive/quarantine definitions. `079_public_announcements.sql` adds `cms_announcements`; the earlier count of 76 files / 102 targets was recorded at `7e28157` (2026-10-28). This is a lexical source inventory, not the number of active business tables or proof that every conditional statement ran. Legacy PHP/snapshot definitions are outside this count. The former count of 103 incorrectly treated the word `only` in migration 026's comment as a table.
 
 ## 3. Migration rules in force
 
@@ -138,6 +138,7 @@ The summaries are based on each file's header comment. "Tables created" lists `C
 | `077_timetable_builder.sql` | 2026-10-20 | Education timetable builder (per-class working days and bell schedule, weekly grid, make-up classes) | timetable_class_days, timetable_makeup_classes |
 | `078_school_calendar.sql` | 2026-10-20 | School calendar: planned holidays and "Day Off" days | school_day_offs, school_holidays |
 | `079_public_announcements.sql` | 2026-11-03 | Optional dated announcements for the public website news page; the site works without it | cms_announcements |
+| `080_announcement_images.sql` | 2026-11-03 | Optional `image_path` / `image_alt` columns so a dated announcement can carry a photograph; no-op when `079` has not been applied; the site works without it | — (adds columns to `cms_announcements`) |
 
 ## 6. Recommended next steps (documented, not implemented)
 

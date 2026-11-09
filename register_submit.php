@@ -34,8 +34,9 @@ try {
     $normalPhone = validatePhone($phone);
     if ($normalPhone === null) throw new LedgerInputException('Please enter a valid phone number.');
     if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) throw new LedgerInputException('Email is not valid.');
-    // The public form currently offers ages 4–18; no guessed age is stored.
-    if ($age !== '') $age = (string)Input::integer($age, 'Age', 4, 18);
+    // Every age is accepted, with no upper limit for adult members; the
+    // bounds only reject impossible values, and no age is guessed.
+    if ($age !== '') $age = (string)Input::integer($age, 'Age', 1, 120);
     $phone = $normalPhone;
 
     // Reserve atomically before INSERT. The old read/increment/write JSON
