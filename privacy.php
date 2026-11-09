@@ -65,8 +65,8 @@ site_page_hero($privacy['eyebrow'], $privacy['title'], $privacy['lead']);
             <div class="card">
                 <span class="icon-badge icon-badge--gold"><?= site_icon('lock') ?></span>
                 <h3 style="margin-top:1rem">Staff access is separate</h3>
-                <p>The public website has no administrative login. Staff accounts, roles and pupil records belong to the school administration system and are protected by its own permissions.</p>
-                <a class="link-arrow" href="<?= e(site_url('/admin/login')) ?>">Staff login<?= site_icon('arrow') ?></a>
+                <p>The public website has no administrative login and publishes no link to one. Staff accounts, roles and pupil records belong to the school administration system and are protected by its own permissions.</p>
+                <p class="muted" style="font-size:.9rem;margin:0">Staff reach the administration system from their own bookmark or the school's internal instructions.</p>
             </div>
         </div>
     </div>

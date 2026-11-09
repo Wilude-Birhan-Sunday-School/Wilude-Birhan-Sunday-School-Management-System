@@ -43,7 +43,6 @@ if (!defined('PUBLIC_SITE_ASSET_VERSION')) define('PUBLIC_SITE_ASSET_VERSION', '
 $WBSS_CMS = [
     'available' => false,
     'programs'  => [],
-    'schedule'  => [],
     'teachers'  => [],
     'social'    => [],
     'news'      => [],
@@ -70,7 +69,6 @@ if (file_exists($_wbssCmsConfig)) {
             return $rows;
         };
         $WBSS_CMS['programs'] = $_wbssFetch($conn, 'SELECT * FROM cms_programs WHERE is_active=1 ORDER BY sort_order, id');
-        $WBSS_CMS['schedule'] = $_wbssFetch($conn, 'SELECT * FROM cms_schedule WHERE is_active=1 ORDER BY sort_order, id');
         $WBSS_CMS['teachers'] = $_wbssFetch($conn, 'SELECT * FROM cms_teachers WHERE is_active=1 ORDER BY sort_order, id');
         $WBSS_CMS['social']   = $_wbssFetch($conn, 'SELECT * FROM cms_social_links WHERE is_active=1 AND url IS NOT NULL AND url NOT IN (\'\', \'#\') ORDER BY sort_order, id');
         // Optional table: dated announcements appear automatically once the
@@ -229,7 +227,7 @@ function site_head(array $page): void
     $title = $page['title_tag'] ?? ($page['title'] . ' · ' . SCHOOL_NAME);
     $description = $page['description'] ?? $content['home']['lead'];
     $canonical = site_canonical();
-    $ogImage = 'https://' . SITE_DOMAIN . '/themes/fkss/assets/wbss-heritage-hero.jpg';
+    $ogImage = 'https://' . SITE_DOMAIN . '/themes/fkss/assets/wbss-hero-courtyard.jpg';
     $needsGallery = !empty($page['gallery']);
     ?>
 <!DOCTYPE html>
@@ -342,14 +340,6 @@ function site_header(array $page): void
     ?>
 <body class="site">
 <a class="skip-link" href="#main">Skip to main content</a>
-<?php if (defined('WBSS_SITE_CONTENT_DRAFT') && WBSS_SITE_CONTENT_DRAFT): ?>
-<div class="draft-bar" id="draft-bar">
-    <div class="wrap draft-bar__inner">
-        <span><?= e($content['site']['draft_notice']) ?></span>
-        <button type="button" class="draft-bar__close" data-dismiss="draft-bar" aria-label="Dismiss notice"><?= site_icon('close') ?></button>
-    </div>
-</div>
-<?php endif; ?>
 <div class="topbar">
     <div class="wrap topbar__inner">
         <p class="topbar__identity">
@@ -358,7 +348,6 @@ function site_header(array $page): void
             <span><?= e(PARISH_NAME_EN) ?></span>
         </p>
         <ul class="topbar__links">
-            <li><?= site_icon('clock') ?><span>Sunday lessons 9:00 AM – 12:00 PM</span></li>
             <?php if ($phone !== ''): ?>
             <li><?= site_icon('phone') ?><span><?= e($phone) ?></span></li>
             <?php endif; ?>
@@ -417,7 +406,7 @@ function site_header(array $page): void
                 <?php endforeach; ?>
             </ul>
         </nav>
-        <a class="btn btn--primary btn--block" href="<?= e(site_page('/admissions')) ?>">Register your child</a>
+        <a class="btn btn--primary btn--block" href="<?= e(site_page('/admissions')) ?>">Registration request</a>
         <div class="drawer__meta">
             <p><?= site_icon('pin') ?><?= e($content['contact']['address_lines'][0]) ?></p>
             <?php if ($phone !== ''): ?><p><?= site_icon('phone') ?><?= e($phone) ?></p><?php endif; ?>
@@ -473,7 +462,7 @@ function site_cta_band(string $title = '', string $text = ''): void
 {
     $content = site_content();
     $title = $title !== '' ? $title : 'Begin with a conversation';
-    $text = $text !== '' ? $text : 'Send a registration request and the school office will contact you about the right class for your child.';
+    $text = $text !== '' ? $text : 'Send a registration request — for a child or for yourself — and the school office will contact you about the right class. Any age is welcome.';
     ?>
 <section class="cta-band">
     <div class="wrap cta-band__inner">
@@ -559,9 +548,7 @@ function site_footer(): void
             <p>&copy; <?= e(COPYRIGHT_YEAR) ?> <?= e(SCHOOL_NAME_AMHARIC) ?> · <?= e(SCHOOL_TRANSLATION_EN . ' ' . SCHOOL_TYPE) ?>. <?= e(DENOMINATION_EN) ?>.</p>
             <ul>
                 <li><a href="<?= e(site_page('/privacy')) ?>">Privacy and safeguarding</a></li>
-                <li><a href="<?= e(site_page('/sitemap.xml')) ?>">Sitemap</a></li>
-                <li><a href="<?= e(site_url($content['site']['admin_login_path'])) ?>"><?= site_icon('lock') ?>Staff login</a></li>
-            </ul>
+            </ul>            </ul>
         </div>
     </div>
 </footer>
@@ -585,7 +572,7 @@ function site_footer(): void
 function site_form(string $mode = 'registration', string $title = ''): void
 {
     $content = site_content();
-    $programs = $content['admissions']['form']['programs'];
+    $levels = $content['admissions']['form']['levels'] ?? [];
     $isEnquiry = $mode === 'enquiry';
     $endpoint = site_url('/register_submit.php');
     ?>
@@ -598,7 +585,7 @@ function site_form(string $mode = 'registration', string $title = ''): void
     <div class="form-status" data-form-status role="status" aria-live="polite" hidden></div>
     <div class="field-row">
         <div class="field">
-            <label for="<?= $isEnquiry ? 'enq' : 'reg' ?>-name"><?= $isEnquiry ? 'Your name' : 'Parent / guardian name' ?> <span aria-hidden="true">*</span></label>
+            <label for="<?= $isEnquiry ? 'enq' : 'reg' ?>-name"><?= $isEnquiry ? 'Your name' : 'Your name (parent, guardian or adult member)' ?> <span aria-hidden="true">*</span></label>
             <input id="<?= $isEnquiry ? 'enq' : 'reg' ?>-name" type="text" name="full_name" required maxlength="150" autocomplete="name">
         </div>
         <div class="field">
@@ -609,26 +596,25 @@ function site_form(string $mode = 'registration', string $title = ''): void
     <?php if (!$isEnquiry): ?>
     <div class="field-row">
         <div class="field">
-            <label for="reg-child">Child's full name <span aria-hidden="true">*</span></label>
-            <input id="reg-child" type="text" name="child_name" required maxlength="150" autocomplete="off">
+            <label for="reg-child">Name of the person joining <span aria-hidden="true">*</span></label>
+            <input id="reg-child" type="text" name="child_name" required maxlength="150" autocomplete="off"
+                   aria-describedby="reg-child-hint">
+            <p class="field__hint" id="reg-child-hint">A child, a young person, or yourself — any age.</p>
         </div>
         <div class="field">
-            <label for="reg-age">Child's age</label>
-            <select id="reg-age" name="age">
-                <option value="">Select age</option>
-                <?php for ($age = 4; $age <= 18; $age++): ?>
-                <option value="<?= $age ?>"><?= $age ?> years</option>
-                <?php endfor; ?>
-            </select>
+            <label for="reg-age">Age of the person joining</label>
+            <input id="reg-age" type="number" name="age" min="1" max="120" step="1" inputmode="numeric"
+                   placeholder="Any age" aria-describedby="reg-age-hint">
+            <p class="field__hint" id="reg-age-hint">No age limit — children and adults are both welcome.</p>
         </div>
     </div>
     <div class="field-row">
         <div class="field">
-            <label for="reg-program">Programme interest</label>
+            <label for="reg-program">Who is joining?</label>
             <select id="reg-program" name="program_interest">
-                <option value="">Select a class</option>
-                <?php foreach ($programs as $program): ?>
-                <option value="<?= e($program) ?>"><?= e($program) ?></option>
+                <option value="">Select one</option>
+                <?php foreach ($levels as $level): ?>
+                <option value="<?= e($level) ?>"><?= e($level) ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
@@ -657,7 +643,7 @@ function site_form(string $mode = 'registration', string $title = ''): void
     <div class="field">
         <label for="<?= $isEnquiry ? 'enq' : 'reg' ?>-message"><?= $isEnquiry ? 'Message' : 'Questions or special needs' ?> <span aria-hidden="true">*</span></label>
         <textarea id="<?= $isEnquiry ? 'enq' : 'reg' ?>-message" name="message" rows="4"<?= $isEnquiry ? ' required' : '' ?> maxlength="5000"
-            placeholder="<?= $isEnquiry ? 'How can the school office help?' : 'Tell us about your child, their previous class, or anything the teacher should know.' ?>"></textarea>
+            placeholder="<?= $isEnquiry ? 'How can the school office help?' : 'Tell us about the person joining, their previous class, or anything the teacher should know.' ?>"></textarea>
     </div>
     <div class="honeypot" aria-hidden="true">
         <label for="<?= $isEnquiry ? 'enq' : 'reg' ?>-website">Leave this field empty</label>
@@ -675,8 +661,8 @@ function site_form(string $mode = 'registration', string $title = ''): void
     <noscript>
         <p class="site-form__noscript">
             JavaScript is switched off in your browser. You can still send this form, but the confirmation
-            message will appear as plain text. Please write your child's name at the start of the message
-            so the office receives it with your request.
+            message will appear as plain text. Please write the name of the person joining at the start of the
+            message so the office receives it with your request.
             To speak to someone instead, call the school office<?php if (!empty($content['contact']['phone_primary']['value'])): ?> on <?= e($content['contact']['phone_primary']['value']) ?><?php endif; ?>
             or email<?php if (!empty($content['contact']['email_primary']['value'])): ?> <a href="<?= e($content['contact']['email_primary']['href']) ?>"><?= e($content['contact']['email_primary']['value']) ?></a><?php endif; ?>.
         </p>
@@ -691,13 +677,14 @@ function site_contact_cards(): void
     $contact = site_content()['contact'];
     $items = [
         ['icon' => 'pin', 'label' => 'Where we are', 'lines' => $contact['address_lines'], 'link' => ['label' => 'Open in maps', 'href' => $contact['map_url'], 'external' => true]],
-        ['icon' => 'phone', 'label' => $contact['phone_primary']['label'] ?? 'Phone', 'lines' => [$contact['phone_primary']['value']], 'link' => null],
+        ['icon' => 'phone', 'label' => $contact['phone_primary']['label'] ?? 'Phone', 'lines' => array_filter([(string) ($contact['phone_primary']['value'] ?? '')]), 'link' => null],
         ['icon' => 'mail', 'label' => $contact['email_primary']['label'] ?? 'Email', 'lines' => [$contact['email_primary']['value']], 'link' => ['label' => 'Send an email', 'href' => $contact['email_primary']['href'], 'external' => false]],
         ['icon' => 'clock', 'label' => 'Office hours', 'lines' => array_map(static fn($h) => $h['day'] . ': ' . $h['time'], $contact['office_hours']), 'link' => null],
     ];
     ?>
 <ul class="contact-cards">
     <?php foreach ($items as $item): ?>
+    <?php if (!$item['lines']) { continue; } ?>
     <li class="contact-card">
         <span class="contact-card__icon"><?= site_icon($item['icon']) ?></span>
         <h3><?= e($item['label']) ?></h3>
@@ -717,8 +704,8 @@ function site_contact_cards(): void
 
 // ── Normalised content accessors ──────────────────────────────────────────
 /**
- * Programs: CMS rows when the school has published them, otherwise the
- * standard class structure from site_content.php. Both return the same keys.
+ * Programs: class rows the school published through the CMS. The public
+ * website no longer invents an age-banded class list of its own.
  */
 function site_programs(): array
 {
@@ -745,40 +732,15 @@ function site_programs(): array
         }
         return $programs;
     }
-    $programs = [];
-    foreach (site_content()['programs']['fallback_classes'] as $class) {
-        $class['icon'] = 'book';
-        $class['source'] = 'site';
-        $programs[] = $class;
-    }
-    return $programs;
+    // No class list is hard-coded in the website: the school publishes classes
+    // through the CMS, and the page falls back to the curriculum subjects.
+    return [];
 }
 
-/** Weekly schedule: CMS rows, otherwise the published standard week. */
-function site_schedule_rows(): array
+/** Curriculum subjects taught at every level (editorial content). */
+function site_curriculum(): array
 {
-    $cms = site_cms();
-    if (!empty($cms['schedule'])) {
-        $rows = [];
-        foreach ($cms['schedule'] as $row) {
-            $rows[] = [
-                'day'        => (string)($row['day_of_week'] ?? ''),
-                'day_am'     => (string)($row['day_of_week_am'] ?? ''),
-                'time'       => (string)($row['time_label'] ?? ''),
-                'activity'   => (string)($row['activity'] ?? ''),
-                'activity_am'=> (string)($row['activity_am'] ?? ''),
-                'place'      => (string)($row['location'] ?? ''),
-                'source'     => 'cms',
-            ];
-        }
-        return $rows;
-    }
-    $rows = [];
-    foreach (site_content()['schedule']['fallback_week'] as $row) {
-        $row['source'] = 'site';
-        $rows[] = $row;
-    }
-    return $rows;
+    return site_content()['programs']['curriculum'] ?? [];
 }
 
 function site_teachers(): array
@@ -822,18 +784,66 @@ function site_news_items(): array
             'title'    => (string)($row['title'] ?? ''),
             'title_am' => (string)($row['title_am'] ?? ''),
             'text'     => (string)($row['body'] ?? ''),
+            'text_am'  => (string)($row['body_am'] ?? ''),
             'date'     => $timestamp ? date('j F Y', $timestamp) : '',
             'date_iso' => $timestamp ? date('c', $timestamp) : '',
             'link'     => $link,
+            'image'    => site_media_url((string)($row['image_path'] ?? '')),
+            'image_alt'=> (string)($row['image_alt'] ?? ''),
             'draft'    => false,
         ];
     }
     foreach (site_content()['news']['items'] as $item) {
         $item['date'] = '';
         $item['date_iso'] = '';
+        $item['text_am'] = $item['text_am'] ?? '';
+        $item['image'] = site_media_url((string)($item['image'] ?? ''));
+        $item['image_alt'] = (string)($item['image_alt'] ?? '');
         $items[] = $item;
     }
+    // Newest dated announcement first; undated standing notices keep their
+    // editorial order after them (usort is stable in PHP 8).
+    usort($items, static function (array $a, array $b): int {
+        $at = ($a['date_iso'] ?? '') !== '' ? (int) strtotime((string) $a['date_iso']) : 0;
+        $bt = ($b['date_iso'] ?? '') !== '' ? (int) strtotime((string) $b['date_iso']) : 0;
+        return $bt <=> $at;
+    });
     return $items;
+}
+
+/**
+ * Accept only same-site image paths: root-relative, no scheme or host, no
+ * traversal, no whitespace, and a known image extension. Anything else
+ * renders nothing, so a stored value can never inject an off-site image.
+ */
+function site_media_url(string $path): string
+{
+    $path = trim($path);
+    if ($path === '' || $path[0] !== '/' || str_starts_with($path, '//')) {
+        return '';
+    }
+    if (str_contains($path, '..') || preg_match('/\s/', $path)) {
+        return '';
+    }
+    if (!preg_match('#^/[A-Za-z0-9._/-]+\.(?:jpe?g|png|webp|avif)$#i', $path)) {
+        return '';
+    }
+    return $path;
+}
+
+/** Optional news photograph. Prints nothing when the item has no valid image. */
+function site_news_media(array $item): void
+{
+    $src = site_media_url((string) ($item['image'] ?? ''));
+    if ($src === '') {
+        return;
+    }
+    ?>
+    <figure class="news-media">
+        <img src="<?= e(site_page($src)) ?>" alt="<?= e((string) ($item['image_alt'] ?? '')) ?>"
+             width="1672" height="941" loading="lazy" decoding="async">
+    </figure>
+    <?php
 }
 
 /** Days since a CMS row was published, used only for ordering messages. */

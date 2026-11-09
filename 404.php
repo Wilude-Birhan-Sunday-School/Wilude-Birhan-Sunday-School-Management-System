@@ -30,8 +30,8 @@ site_header($page);
             </article>
             <article class="card">
                 <span class="icon-badge"><?= site_icon('calendar') ?></span>
-                <h3 style="margin-top:1rem"><a href="<?= e(site_page('/schedule')) ?>" style="text-decoration:none">Schedule</a></h3>
-                <p>Sunday times and school office hours.</p>
+                <h3 style="margin-top:1rem"><a href="<?= e(site_page('/news')) ?>" style="text-decoration:none">News and notices</a></h3>
+                <p>Announcements, photographs and school updates.</p>
             </article>
             <article class="card">
                 <span class="icon-badge"><?= site_icon('mail') ?></span>

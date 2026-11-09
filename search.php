@@ -81,15 +81,15 @@ if ($query !== '') {
             ];
         }
     }
-    // Weekly schedule.
-    foreach (site_schedule_rows() as $row) {
-        $haystack = $row['day'] . ' ' . $row['day_am'] . ' ' . $row['time'] . ' ' . $row['activity'] . ' ' . $row['activity_am'] . ' ' . $row['place'];
+    // Curriculum subjects.
+    foreach (site_curriculum() as $subject) {
+        $haystack = $subject['title'] . ' ' . $subject['text'];
         if (site_search_match($haystack, $query)) {
             $results[] = [
-                'kind'  => 'Schedule',
-                'title' => $row['day'] . ' · ' . $row['time'],
-                'url'   => site_page('/schedule'),
-                'text'  => site_search_snippet($row['activity'] . ' — ' . $row['place'], $query),
+                'kind'  => 'Curriculum',
+                'title' => $subject['title'],
+                'url'   => site_page('/programs'),
+                'text'  => site_search_snippet($subject['text'], $query),
                 'label' => '',
             ];
         }
@@ -150,7 +150,7 @@ site_page_hero($searchContent['eyebrow'], $searchContent['title'], $searchConten
         <?php elseif (!$results): ?>
         <div class="notice" style="margin-top:1.6rem">
             <?= site_icon('search') ?>
-            <p><?= e($searchContent['none']) ?> Try a shorter word, or browse <a href="<?= e(site_page('/programs')) ?>">programmes</a> and <a href="<?= e(site_page('/schedule')) ?>">the schedule</a>.</p>
+            <p><?= e($searchContent['none']) ?> Try a shorter word, or browse <a href="<?= e(site_page('/programs')) ?>">the programme</a> and <a href="<?= e(site_page('/news')) ?>">the notices</a>.</p>
         </div>
         <?php else: ?>
         <p class="muted" style="margin-top:1.4rem"><?= count($results) ?> result<?= count($results) === 1 ? '' : 's' ?> for “<?= e($query) ?>”.</p>

@@ -16,23 +16,6 @@
         window.addEventListener('scroll', setHeaderState, { passive: true });
     }
 
-    /* ── Dismissible notices ───────────────────────────────────────────── */
-    document.querySelectorAll('[data-dismiss]').forEach(function (button) {
-        var id = button.getAttribute('data-dismiss');
-        var target = document.getElementById(id);
-        if (!target) { return; }
-        try {
-            if (window.sessionStorage.getItem('wbss-dismissed-' + id) === '1') {
-                target.remove();
-                return;
-            }
-        } catch (error) { /* private mode: keep the notice visible */ }
-        button.addEventListener('click', function () {
-            try { window.sessionStorage.setItem('wbss-dismissed-' + id, '1'); } catch (error) {}
-            target.remove();
-        });
-    });
-
     /* ── Mobile drawer ─────────────────────────────────────────────────── */
     var toggle = document.getElementById('nav-toggle');
     var drawer = document.getElementById('mobile-drawer');
@@ -165,13 +148,14 @@
             var data = new FormData(form);
 
             // The public endpoint stores one free-text message per lead. The
-            // child's name is a separate field on the admissions form, so it is
-            // folded into the message here (and requested inside the message in
-            // the no-script notice) instead of inventing a new endpoint field.
-            var childName = (form.querySelector('[name="child_name"]') || {}).value;
-            if (childName && String(childName).trim() !== '') {
+            // name of the person joining (a child, or an adult registering
+            // themselves) is a separate field on the admissions form, so it is
+            // folded into the message here — and asked for inside the message in
+            // the no-script notice — instead of inventing a new endpoint field.
+            var joining = (form.querySelector('[name="child_name"]') || {}).value;
+            if (joining && String(joining).trim() !== '') {
                 var existing = String(data.get('message') || '').trim();
-                data.set('message', 'Child: ' + String(childName).trim() + (existing ? '\n' + existing : ''));
+                data.set('message', 'Joining: ' + String(joining).trim() + (existing ? '\n' + existing : ''));
             }
 
             form.querySelectorAll('[aria-invalid="true"]').forEach(function (field) {

@@ -22,7 +22,6 @@ PAGES = {
     '/index.php': 'Wilude Birhan Sunday School',
     '/about.php': 'About us',
     '/programs.php': 'Programs',
-    '/schedule.php': 'Schedule',
     '/admissions.php': 'Admissions',
     '/gallery.php': 'Gallery',
     '/news.php': 'News and notices',
@@ -70,9 +69,24 @@ def main():
     if '<script>alert(1)</script>' in body:
         failures.append('search: reflected an unescaped script tag')
 
-    status, body = fetch(base, '/sitemap.php')
-    if status != 200 or '<urlset' not in body:
-        failures.append('sitemap: expected XML with a urlset element')
+    # The schedule page and the XML sitemap were withdrawn from the site. The
+    # PHP development server answers unknown paths with index.php, so their
+    # absence is asserted from the rendered navigation instead of by URL.
+    status, body = fetch(base, '/index.php')
+    for retired in ('/schedule', '/sitemap'):
+        if retired in body:
+            failures.append(f'home: retired page "{retired}" is still linked')
+
+    status, body = fetch(base, '/news.php')
+    if 'news-media' not in body or '/themes/fkss/assets/wbss-' not in body:
+        failures.append('news: expected announcement photographs to render')
+
+    status, body = fetch(base, '/index.php')
+    if 'wbss-hero-courtyard.jpg' not in body:
+        failures.append('home: expected the new hero photograph')
+    for forbidden in ('Staff login', 'Draft website content', 'Weekly rhythm'):
+        if forbidden in body:
+            failures.append(f'home: "{forbidden}" must no longer appear')
 
     # An unknown path is not asserted here: PHP's built-in development server
     # answers unmatched paths with the index page, so the 404 document and the

@@ -12,17 +12,15 @@ mobile API is separate and keeps its own authentication, roles and CSRF rules.
 
 | Clean URL | Handler | Purpose |
 |---|---|---|
-| `/` | `index.php` | Home: identity, commitments, class preview, weekly rhythm, notices, contact |
+| `/` | `index.php` | Home: identity, commitments, curriculum, notices with photographs, contact |
 | `/about` | `about.php` | Story, mission, vision, values, milestones, governance, teaching team |
-| `/programs` | `programs.php` | Class levels, curriculum subjects, what a Sunday looks like |
-| `/schedule` | `schedule.php` | Weekly programme and school office hours |
+| `/programs` | `programs.php` | Curriculum subjects, classes published by the school, what a Sunday looks like |
 | `/admissions` | `admissions.php` | Registration steps, requirements, FAQ and the registration request form |
-| `/news` | `news.php` | Dated CMS announcements (when published) plus standing notices |
+| `/news` | `news.php` | Dated CMS announcements (newest first) and standing notices, each able to carry a photograph |
 | `/gallery` | `gallery.php` | Public photo gallery, served by `public_gallery.php` |
 | `/contact` | `contact.php` | Address, phone, email, hours and the enquiry form |
 | `/privacy` | `privacy.php` | What the site collects, publishes and does not publish |
-| `/search` | `search.php` | Server-side search over pages, programmes, schedule, notices and FAQ |
-| `/sitemap.xml` | `sitemap.php` | XML sitemap of the public pages |
+| `/search` | `search.php` | Server-side search over pages, curriculum subjects, notices and FAQ |
 | — | `404.php` | Not-found page (`ErrorDocument 404` in the root `.htaccess`) |
 
 Clean URLs are **not** a generic rewrite. Each slug is an explicit entry in
@@ -46,7 +44,11 @@ clean URL for document navigation by `BrowserPageRoutes::navigationRedirect`.
 | `css/public_gallery.css`, `js/public_gallery.js` | Existing gallery component, restyled to the WBSS palette for this site |
 
 No external CDN, icon font or web font is loaded. Icons are inline SVG and the
-two hero photographs live in `themes/fkss/assets/`. This keeps the site fast on
+photographs live in `themes/fkss/assets/` (`wbss-hero-courtyard.jpg`,
+`wbss-teaching-room.jpg`, `wbss-mezmur-practice.jpg`). They show Ethiopian
+Orthodox parish life — a round thatched church with frescoes, netela shawls, a
+hand cross and a kebero drum — and contain no baked-in lettering, so the school
+name is always set as HTML text rather than as picture text. This keeps the site fast on
 mobile connections, avoids third-party tracking and keeps it inside the
 site's own Content-Security-Policy.
 
@@ -55,9 +57,10 @@ site's own Content-Security-Policy.
 1. **`site_content.php`** — editorial copy, contact details, FAQ, privacy text,
    standing notices and the page index used by navigation, search, footer and
    sitemap.
-2. **Existing CMS tables** (read-only): `cms_programs`, `cms_schedule`,
-   `cms_teachers`, `cms_social_links`, plus the optional
-   `cms_announcements` (`sql/079_public_announcements.sql`). When a CMS table
+2. **Existing CMS tables** (read-only): `cms_programs`, `cms_teachers`,
+   `cms_social_links`, plus the optional `cms_announcements`
+   (`sql/079_public_announcements.sql`, photographs via
+   `sql/080_announcement_images.sql`). When a CMS table
    has no active rows the site falls back to the standard structure in
    `site_content.php`, so no page is ever empty.
 3. **Photos** — `public_gallery.php` (`action=boot|albums|photos|featured`).
@@ -94,24 +97,32 @@ redesign did not add a second write path:
   JSON-LD (`EducationalOrganization`, `WebSite` with `SearchAction`,
   `BreadcrumbList`).
 - `robots.txt` disallows `/admin/`, `/api/`, `/monitor/`, `/app/`, `/uploads/`
-  and `/search`, and points to the sitemap.
+  and `/search`. It advertises no sitemap: the XML sitemap and its
+  `/sitemap.xml` route were withdrawn at the school's request, and the footer
+  no longer links to one.
+- Announcement photographs are restricted to same-site, root-relative image
+  paths (no scheme, no host, no `..`, image extension required); anything else
+  renders nothing.
 
-## 6. Draft content and what still needs the school's approval
+## 6. Published copy and the remaining office input
 
-`site_content.php` sets `WBSS_SITE_CONTENT_DRAFT`. While it is `true`, a slim
-bar at the top of every page states that contact details and some text are
-placeholders. The values flagged `'draft' => true` are:
+`site_content.php` sets `WBSS_SITE_CONTENT_DRAFT` to `false`; the former
+site-wide warning bar has been removed from the layout, the stylesheet and the
+script, and the copy is published as approved by the school office.
 
-- office phone `+251 XXX XXX XXX` and email `info@wulidebirhan.org` (both were
-  already published on the previous site);
-- the parish address lines;
-- the admissions requirements list;
+Items still flagged `'draft' => true` inside `site_content.php` are an internal
+editorial note only — nothing on the page reads them:
+
+- the office phone number, which is intentionally **empty** rather than a
+  placeholder: `+251 XXX XXX XXX` is no longer published, and every surface
+  that would print a phone number hides itself while the value is empty;
+- the email address `info@wulidebirhan.org` and the parish address lines;
 - the milestones ("our beginning", "growing structure", "keeping records").
 
-Nothing numeric or personal was invented: there are no pupil counts, exam
-results, staff names, fees, founding years or awards in the copy. Replace the
-placeholders, confirm the remaining text, then set
-`WBSS_SITE_CONTENT_DRAFT` to `false`.
+Send the office phone (and any corrections) to the developer and the value is
+published without a code change elsewhere. Nothing numeric or personal is
+invented: there are no pupil counts, exam results, staff names, fees, founding
+years or awards in the copy.
 
 The privacy page describes what the code actually does (leads are stored,
 gallery returns no member information, no analytics scripts are loaded). It is

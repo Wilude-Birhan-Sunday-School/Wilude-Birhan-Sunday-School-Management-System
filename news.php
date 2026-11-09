@@ -11,7 +11,7 @@ $page = [
     'slug'        => '/news',
     'title'       => 'News and notices',
     'title_tag'   => 'News and notices · ' . SCHOOL_NAME,
-    'description' => 'Announcements for pupils, parents and teachers of Wilude Birhan Sunday School.',
+    'description' => 'Announcements, notices and photographs for pupils, parents, teachers and adult members of Wilude Birhan Sunday School.',
     'breadcrumbs' => [
         ['label' => 'Home', 'path' => '/'],
         ['label' => 'News and notices', 'path' => '/news'],
@@ -32,25 +32,34 @@ site_page_hero($newsContent['eyebrow'], $newsContent['title'], $newsContent['lea
         </div>
         <?php endif; ?>
 
-        <ul class="search-results" style="margin-top:0">
+        <ul class="news-list" style="margin-top:0">
             <?php foreach ($items as $item): ?>
-            <li class="search-result" data-reveal>
-                <p class="search-result__kind">
-                    <?= $item['kind'] === 'announcement' ? 'Announcement' : 'Standing notice' ?>
-                    <?php if (!empty($item['date'])): ?> · <time datetime="<?= e($item['date_iso']) ?>"><?= e($item['date']) ?></time><?php endif; ?>
-                </p>
-                <h2><?= e($item['title']) ?></h2>
-                <?php if (!empty($item['title_am'])): ?>
-                <p class="am" lang="am" style="color:var(--green-700);margin:-.1rem 0 .4rem"><?= e($item['title_am']) ?></p>
+            <?php $hasImage = !empty($item['image']); ?>
+            <li class="news-item<?= $hasImage ? '' : ' news-item--text' ?>" data-reveal>
+                <?php if ($hasImage): ?>
+                <div class="news-item__media"><?php site_news_media($item); ?></div>
                 <?php endif; ?>
-                <p style="color:var(--ink-2)"><?= nl2br(e($item['text'])) ?></p>
-                <?php if (!empty($item['link'])): ?>
-                <p style="margin:.7rem 0 0">
-                    <a class="link-arrow" href="<?= e(site_page($item['link']['path'])) ?>">
-                        <?= e($item['link']['label']) ?><?= site_icon('arrow') ?>
-                    </a>
-                </p>
-                <?php endif; ?>
+                <div class="news-item__body">
+                    <p class="search-result__kind">
+                        <?= $item['kind'] === 'announcement' ? 'Announcement' : 'Standing notice' ?>
+                        <?php if (!empty($item['date'])): ?> · <time datetime="<?= e($item['date_iso']) ?>"><?= e($item['date']) ?></time><?php endif; ?>
+                    </p>
+                    <h2><?= e($item['title']) ?></h2>
+                    <?php if (!empty($item['title_am'])): ?>
+                    <p class="am" lang="am" style="color:var(--green-700);margin:-.1rem 0 .4rem"><?= e($item['title_am']) ?></p>
+                    <?php endif; ?>
+                    <p style="color:var(--ink-2)"><?= nl2br(e($item['text'])) ?></p>
+                    <?php if (!empty($item['text_am'])): ?>
+                    <p class="am" lang="am" style="color:var(--muted);font-size:.95rem"><?= nl2br(e($item['text_am'])) ?></p>
+                    <?php endif; ?>
+                    <?php if (!empty($item['link'])): ?>
+                    <p style="margin:.7rem 0 0">
+                        <a class="link-arrow" href="<?= e(site_page($item['link']['path'])) ?>">
+                            <?= e($item['link']['label']) ?><?= site_icon('arrow') ?>
+                        </a>
+                    </p>
+                    <?php endif; ?>
+                </div>
             </li>
             <?php endforeach; ?>
         </ul>
