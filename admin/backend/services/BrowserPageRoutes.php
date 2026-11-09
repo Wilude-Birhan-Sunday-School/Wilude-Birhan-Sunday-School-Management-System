@@ -8,6 +8,16 @@ final class BrowserPageRoutes
     // resolve exactly as they do when the legacy script is requested directly.
     private const PAGES = [
         '/' => '/index.php',
+        // Public website pages (same handlers as /about.php etc.).
+        '/about' => '/about.php',
+        '/programs' => '/programs.php',
+        '/schedule' => '/schedule.php',
+        '/admissions' => '/admissions.php',
+        '/gallery' => '/gallery.php',
+        '/news' => '/news.php',
+        '/contact' => '/contact.php',
+        '/privacy' => '/privacy.php',
+        '/search' => '/search.php',
         '/verify-member' => '/member.php',
         '/admin/login' => '/admin/index.php',
         '/admin/dashboard' => '/admin/dashboard.php',

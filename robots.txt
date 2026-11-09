@@ -7,3 +7,6 @@ Disallow: /app/
 Disallow: /uploads/
 Allow: /member.php
 Allow: /
+Disallow: /search
+
+Sitemap: https://wbss.felegekidusan.com/sitemap.xml

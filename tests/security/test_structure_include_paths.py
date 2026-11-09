@@ -58,7 +58,8 @@ DYNAMIC_ALLOWLIST = {
     "config.php": 4,
     "frontend/layouts/base.php": 1,
     "frontend/pages/dashboard.php": 1,
-    "index.php": 1,
+    # 2026-11-03: index.php no longer builds its CMS include path itself; the
+    # public site loads one fail-soft bootstrap (public_site.php) statically.
 }
 
 
