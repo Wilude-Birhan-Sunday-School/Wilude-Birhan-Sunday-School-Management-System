@@ -8,6 +8,18 @@
   if (!root) return;
 
   var api = root.getAttribute('data-api') || '/public_gallery.php';
+
+  /* Messages come from the page in the visitor's language (see gallery.php),
+     so this file holds no hard-coded English. */
+  var L = {
+    loading: root.getAttribute('data-msg-loading') || 'Loading photos…',
+    empty: root.getAttribute('data-msg-empty') || 'Photos will appear here when they are available.',
+    more: root.getAttribute('data-msg-more') || 'Show more photos',
+    failed: root.getAttribute('data-msg-failed') || 'Could not load the gallery. Please try again in a moment.',
+    offline: root.getAttribute('data-msg-offline') || 'You appear to be offline.',
+    moreFailed: root.getAttribute('data-msg-more-failed') || 'Could not load more photos. Please try again.',
+    imgFailed: root.getAttribute('data-msg-img-failed') || 'This photo could not be loaded.'
+  };
   var state = {
     album: 0,
     page: 1,
@@ -176,7 +188,7 @@
 
   async function boot() {
     if (els.grid) els.grid.innerHTML = skeletons(6);
-    say('Loading photos…');
+    say(L.loading);
     try {
       var d = await get('?action=boot');
       if (!d || d.status !== 'success') throw new Error('fail');
@@ -195,10 +207,10 @@
       }
     } catch (e) {
       if (els.grid) els.grid.innerHTML = '';
-      say(navigator.onLine ? 'Could not load the gallery. Please try again in a moment.' : 'You appear to be offline.', true);
+      say(navigator.onLine ? L.failed : L.offline, true);
       if (els.empty) {
         els.empty.hidden = false;
-        els.empty.textContent = 'Photos will appear here when they are available.';
+        els.empty.textContent = L.empty;
       }
     }
   }
@@ -211,7 +223,7 @@
       state.items = [];
       if (els.grid) els.grid.innerHTML = skeletons(6);
     }
-    if (els.more) { els.more.disabled = true; els.more.textContent = 'Loading…'; }
+    if (els.more) { els.more.disabled = true; els.more.textContent = L.loading; }
     try {
       var d = await get('?action=photos&album=' + encodeURIComponent(state.album) + '&page=' + state.page + '&limit=18');
       if (!d || d.status !== 'success') throw new Error('fail');
@@ -219,12 +231,12 @@
       state.hasMore = !!d.has_more;
       renderGrid(!reset);
     } catch (e) {
-      say('Could not load more photos. Check your connection and try again.', true);
+      say(L.moreFailed, true);
     }
     state.loading = false;
     if (els.more) {
       els.more.disabled = false;
-      els.more.textContent = 'Show more photos';
+      els.more.textContent = L.more;
       els.more.hidden = !state.hasMore;
     }
   }
@@ -307,7 +319,7 @@
         img.src = it.thumb;
         return;
       }
-      cap.textContent = 'This photo could not be loaded.';
+      cap.textContent = L.imgFailed;
     };
     img.src = it.full || it.thumb;
   }

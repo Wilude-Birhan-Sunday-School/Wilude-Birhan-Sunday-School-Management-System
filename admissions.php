@@ -8,38 +8,39 @@ $admissions = $content['admissions'];
 
 $page = [
     'slug'        => '/admissions',
-    'title'       => 'Admissions',
-    'title_tag'   => 'Admissions and registration · ' . SCHOOL_NAME,
-    'description' => 'How to register a child at Wilude Birhan Sunday School: steps, what to prepare, common questions and the registration request form.',
+    'title'       => L('Admissions', 'ምዝገባ'),
+    'title_tag'   => null,
+    'description' => $admissions['lead'],
     'breadcrumbs' => [
-        ['label' => 'Home', 'path' => '/'],
-        ['label' => 'Admissions', 'path' => '/admissions'],
+        ['label' => L('Home', 'መነሻ'), 'path' => '/'],
+        ['label' => L('Admissions', 'ምዝገባ'), 'path' => '/admissions'],
     ],
 ];
+$page['title_tag'] = t($page['title']) . ' · ' . site_school_name();
 site_head($page);
 site_header($page);
-site_breadcrumbs($page['breadcrumbs'], 'ምዝገባ');
+site_breadcrumbs($page['breadcrumbs']);
 site_page_hero($admissions['eyebrow'], $admissions['title'], $admissions['lead']);
 ?>
 
 <section class="section">
     <div class="wrap split">
         <div data-reveal>
-            <p class="eyebrow">How it works</p>
-            <h2>Four steps</h2>
+            <p class="eyebrow"><?= e(t($admissions['steps_eyebrow'])) ?></p>
+            <h2><?= e(t($admissions['steps_title'])) ?></h2>
             <ol class="steps" style="margin-top:1.2rem">
                 <?php foreach ($admissions['steps'] as $step): ?>
                 <li>
                     <div>
-                        <h3><?= e($step['title']) ?></h3>
-                        <p><?= e($step['text']) ?></p>
+                        <h3><?= e(t($step['title'])) ?></h3>
+                        <p><?= e(t($step['text'])) ?></p>
                     </div>
                 </li>
                 <?php endforeach; ?>
             </ol>
             <div class="notice" style="margin-top:1.4rem">
                 <?= site_icon('shield') ?>
-                <p><strong>Please note:</strong> the form below sends a request for the school office to contact you. It does not create a member account, and it does not enrol your child automatically.</p>
+                <p><?= e(t($admissions['form_note'])) ?></p>
             </div>
         </div>
         <div data-reveal>
@@ -52,29 +53,29 @@ site_page_hero($admissions['eyebrow'], $admissions['title'], $admissions['lead']
     <div class="wrap">
         <div class="grid grid--2">
             <div data-reveal>
-                <p class="eyebrow">Before you apply</p>
-                <h2>What to have ready</h2>
+                <p class="eyebrow"><?= e(t($admissions['requirements_eyebrow'])) ?></p>
+                <h2><?= e(t($admissions['requirements_title'])) ?></h2>
                 <ul class="check-list" style="margin-top:1rem">
                     <?php foreach ($admissions['requirements'] as $requirement): ?>
-                    <li><?= site_icon('check') ?><span><?= e($requirement) ?></span></li>
+                    <li><?= site_icon('check') ?><span><?= e(t($requirement)) ?></span></li>
                     <?php endforeach; ?>
                 </ul>
                 <div class="notice notice--green" style="margin-top:1.2rem">
                     <?= site_icon('heart') ?>
-                    <p><?= e($admissions['fees_note']) ?></p>
+                    <p><?= e(t($admissions['fees_note'])) ?></p>
                 </div>
             </div>
             <div data-reveal>
-                <p class="eyebrow">Questions</p>
-                <h2>Frequently asked</h2>
+                <p class="eyebrow"><?= e(t($admissions['faq_eyebrow'])) ?></p>
+                <h2><?= e(t($admissions['faq_title'])) ?></h2>
                 <div class="accordion" style="margin-top:1.2rem">
                     <?php foreach ($admissions['faq'] as $index => $faq): ?>
                     <details<?= $index === 0 ? ' open' : '' ?>>
                         <summary>
-                            <span><?= e($faq['q']) ?></span>
+                            <span><?= e(t($faq['q'])) ?></span>
                             <?= site_icon('chevron') ?>
                         </summary>
-                        <p><?= e($faq['a']) ?></p>
+                        <p><?= e(t($faq['a'])) ?></p>
                     </details>
                     <?php endforeach; ?>
                 </div>
@@ -84,5 +85,5 @@ site_page_hero($admissions['eyebrow'], $admissions['title'], $admissions['lead']
 </section>
 
 <?php
-site_cta_band('Still have a question?', 'The school office answers questions about classes, attendance and what a Sunday looks like.');
+site_cta_band($admissions['cta_title'], $admissions['cta_text']);
 site_footer();

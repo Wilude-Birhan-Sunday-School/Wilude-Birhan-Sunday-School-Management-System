@@ -28,6 +28,7 @@ if (PHP_SAPI !== 'cli') {
 
 require_once __DIR__ . '/school_config.php';
 require_once __DIR__ . '/branding_defaults.php';
+require_once __DIR__ . '/site_lang.php';
 
 /** @var array $WBSS_CONTENT Editorial content, editable without touching layout. */
 $WBSS_CONTENT = require __DIR__ . '/site_content.php';
@@ -99,6 +100,28 @@ function site_cms(): array
     return $GLOBALS['WBSS_CMS'];
 }
 
+/**
+ * Interface string from the 'ui' dictionary, resolved for the active
+ * language. Every button, label and aria-label on the site comes from here,
+ * so no English text is left hard-coded in the templates.
+ */
+function ui(string $key): string
+{
+    return t(site_content()['ui'][$key] ?? '');
+}
+
+/** The name of the organisation in the active language. */
+function site_school_name(): string
+{
+    return site_lang_is_am() ? SCHOOL_NAME_AMHARIC : (SCHOOL_TRANSLATION_EN . ' ' . SCHOOL_TYPE);
+}
+
+/** The parish name in the active language. */
+function site_parish_name(): string
+{
+    return site_lang_is_am() ? PARISH_NAME_AM : PARISH_NAME_EN;
+}
+
 /** Deployment base path ('' at a domain root, '/school' behind an Alias). */
 function site_base(): string
 {
@@ -166,7 +189,7 @@ function site_nav(): array
     $items = [];
     foreach (site_content()['pages'] as $page) {
         if (!empty($page['nav'])) {
-            $items[] = ['path' => $page['path'], 'title' => $page['title'], 'title_am' => $page['title_am']];
+            $items[] = ['path' => $page['path'], 'title' => $page['title']];
         }
     }
     return $items;
@@ -224,20 +247,23 @@ function site_localised(array $row, string $field, string $suffix = '_am'): stri
 function site_head(array $page): void
 {
     $content = site_content();
-    $title = $page['title_tag'] ?? ($page['title'] . ' · ' . SCHOOL_NAME);
-    $description = $page['description'] ?? $content['home']['lead'];
+    $title = t($page['title_tag'] ?? ($page['title'] . ' · ' . SCHOOL_NAME));
+    $description = t($page['description'] ?? $content['home']['lead']);
     $canonical = site_canonical();
     $ogImage = 'https://' . SITE_DOMAIN . '/themes/fkss/assets/wbss-hero-courtyard.jpg';
     $needsGallery = !empty($page['gallery']);
     ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= e(site_lang()) ?>">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= e($title) ?></title>
 <meta name="description" content="<?= e($description) ?>">
 <link rel="canonical" href="<?= e($canonical) ?>">
+<link rel="alternate" hreflang="am" href="<?= e($canonical) ?>?lang=am">
+<link rel="alternate" hreflang="en" href="<?= e($canonical) ?>?lang=en">
+<link rel="alternate" hreflang="x-default" href="<?= e($canonical) ?>">
 <meta name="robots" content="index,follow">
 <meta name="theme-color" content="<?= e(PUBLIC_SITE_PRIMARY) ?>">
 <meta property="og:type" content="website">
@@ -246,8 +272,8 @@ function site_head(array $page): void
 <meta property="og:description" content="<?= e($description) ?>">
 <meta property="og:url" content="<?= e($canonical) ?>">
 <meta property="og:image" content="<?= e($ogImage) ?>">
-<meta property="og:locale" content="en_ET">
-<meta property="og:locale:alternate" content="am_ET">
+<meta property="og:locale" content="<?= site_lang_is_am() ? 'am_ET' : 'en_ET' ?>">
+<meta property="og:locale:alternate" content="<?= site_lang_is_am() ? 'en_ET' : 'am_ET' ?>">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="<?= e($title) ?>">
 <meta name="twitter:description" content="<?= e($description) ?>">
@@ -272,9 +298,9 @@ function site_json_ld(array $page): string
         '@context' => 'https://schema.org',
         '@type' => 'EducationalOrganization',
         '@id' => 'https://' . SITE_DOMAIN . '/#school',
-        'name' => SCHOOL_NAME,
+        'name' => site_school_name(),
         'alternateName' => [SCHOOL_NAME_AMHARIC, SCHOOL_NAME_SHORT],
-        'description' => $content['home']['lead'],
+        'description' => t($content['home']['lead']),
         'url' => 'https://' . SITE_DOMAIN . '/',
         'logo' => 'https://' . SITE_DOMAIN . SCHOOL_LOGO_PATH,
         'parentOrganization' => [
@@ -284,7 +310,7 @@ function site_json_ld(array $page): string
         ],
         'address' => [
             '@type' => 'PostalAddress',
-            'streetAddress' => $contact['address_lines'][0] ?? '',
+            'streetAddress' => t($contact['address_lines'][0] ?? ''),
             'addressLocality' => 'Addis Ababa',
             'addressCountry' => 'ET',
         ],
@@ -292,7 +318,7 @@ function site_json_ld(array $page): string
     ];
     $office = [];
     foreach ($contact['office_hours'] as $hours) {
-        $office[] = ['@type' => 'OpeningHoursSpecification', 'description' => $hours['day'] . ' ' . $hours['time']];
+        $office[] = ['@type' => 'OpeningHoursSpecification', 'description' => t($hours['day']) . ' ' . t($hours['time'])];
     }
     if ($office) {
         $organisation['openingHoursSpecification'] = $office;
@@ -306,7 +332,7 @@ function site_json_ld(array $page): string
         '@id' => 'https://' . SITE_DOMAIN . '/#website',
         'url' => 'https://' . SITE_DOMAIN . '/',
         'name' => SCHOOL_NAME,
-        'inLanguage' => 'en',
+        'inLanguage' => site_lang(),
         'potentialAction' => [
             '@type' => 'SearchAction',
             'target' => 'https://' . SITE_DOMAIN . '/search?q={search_term_string}',
@@ -330,6 +356,20 @@ function site_json_ld(array $page): string
     return $json === false ? '{}' : $json;
 }
 
+/**
+ * Language switch: two links, the active language marked for assistive tech.
+ * Amharic is the default, so አማ comes first.
+ */
+function site_lang_switch(string $class = ''): void
+{
+    ?>
+    <div class="lang-switch<?= $class === '' ? '' : ' ' . e($class) ?>" role="group" aria-label="<?= e(ui('language')) ?>">
+        <a href="<?= e(site_lang_url('am')) ?>" lang="am" hreflang="am"<?= site_lang_is_am() ? ' class="is-active" aria-current="true"' : '' ?>>አማ</a>
+        <a href="<?= e(site_lang_url('en')) ?>" lang="en" hreflang="en"<?= site_lang_is_am() ? '' : ' class="is-active" aria-current="true"' ?>>EN</a>
+    </div>
+    <?php
+}
+
 // ── Header, notice bar and navigation ─────────────────────────────────────
 function site_header(array $page): void
 {
@@ -338,49 +378,51 @@ function site_header(array $page): void
     $nav = site_nav();
     $phone = $content['contact']['phone_primary']['value'] ?? '';
     ?>
-<body class="site">
-<a class="skip-link" href="#main">Skip to main content</a>
+<body class="site"
+      data-msg-required="<?= e(ui('msg_required')) ?>"
+      data-msg-email="<?= e(ui('msg_email')) ?>"
+      data-msg-sending="<?= e(ui('msg_sending')) ?>"
+      data-msg-failed="<?= e(ui('msg_failed')) ?>"
+      data-msg-joining="<?= e(ui('msg_joining')) ?>">
+<a class="skip-link" href="#main"><?= e(ui('skip_link')) ?></a>
 <div class="topbar">
     <div class="wrap topbar__inner">
-        <p class="topbar__identity">
-            <span lang="am"><?= e(PARISH_NAME_AM) ?></span>
-            <span class="topbar__sep" aria-hidden="true">·</span>
-            <span><?= e(PARISH_NAME_EN) ?></span>
-        </p>
+        <p class="topbar__identity"<?= site_lang_is_am() ? ' lang="am"' : '' ?>><?= e(site_parish_name()) ?></p>
         <ul class="topbar__links">
             <?php if ($phone !== ''): ?>
             <li><?= site_icon('phone') ?><span><?= e($phone) ?></span></li>
             <?php endif; ?>
-            <li><a href="<?= e(site_page('/contact')) ?>">Contact</a></li>
+            <li><a href="<?= e(site_page('/contact')) ?>"><?= e(ui('contact')) ?></a></li>
         </ul>
     </div>
 </div>
 <header class="site-header" id="site-header" data-header>
     <div class="wrap site-header__inner">
-        <a class="brand" href="<?= e(site_page('/')) ?>" aria-label="<?= e(SCHOOL_NAME . ' home') ?>">
+        <a class="brand" href="<?= e(site_page('/')) ?>" aria-label="<?= e(site_school_name() . ' — ' . ui('home_aria')) ?>">
             <img class="brand__mark" src="<?= e(site_page(SCHOOL_LOGO_PATH)) ?>" alt="" width="52" height="52" decoding="async">
             <span class="brand__text">
-                <span class="brand__name" lang="am"><?= e(SCHOOL_NAME_SHORT_AM) ?></span>
-                <span class="brand__sub"><?= e(SCHOOL_TRANSLATION_EN . ' ' . SCHOOL_TYPE) ?></span>
+                <span class="brand__name"<?= site_lang_is_am() ? ' lang="am"' : '' ?>><?= e(site_lang_is_am() ? SCHOOL_NAME_SHORT_AM : SCHOOL_NAME_SHORT) ?></span>
+                <span class="brand__sub"><?= e(site_lang_is_am() ? SCHOOL_TYPE_AM : (SCHOOL_TRANSLATION_EN . ' ' . SCHOOL_TYPE)) ?></span>
             </span>
         </a>
-        <nav class="primary-nav" aria-label="Primary">
+        <nav class="primary-nav" aria-label="<?= e(ui('primary_nav')) ?>">
             <ul>
                 <?php foreach ($nav as $item): ?>
                 <li>
                     <a href="<?= e(site_page($item['path'])) ?>"<?= site_is_current($item['path'], $slug) ? ' class="is-active" aria-current="page"' : '' ?>>
-                        <?= e($item['title']) ?>
+                        <?= e(t($item['title'])) ?>
                     </a>
                 </li>
                 <?php endforeach; ?>
             </ul>
         </nav>
         <div class="header-actions">
-            <a class="header-search-btn" href="<?= e(site_page('/search')) ?>" aria-label="Search this website" title="Search">
+            <?php site_lang_switch('lang-switch--header'); ?>
+            <a class="header-search-btn" href="<?= e(site_page('/search')) ?>" aria-label="<?= e(ui('search_site')) ?>" title="<?= e(ui('search')) ?>">
                 <?= site_icon('search') ?>
             </a>
-            <a class="btn btn--primary btn--sm header-cta" href="<?= e(site_page('/admissions')) ?>">Register</a>
-            <button type="button" class="nav-toggle" id="nav-toggle" aria-controls="mobile-drawer" aria-expanded="false" aria-label="Open menu">
+            <a class="btn btn--primary btn--sm header-cta" href="<?= e(site_page('/admissions')) ?>"><?= e(ui('register')) ?></a>
+            <button type="button" class="nav-toggle" id="nav-toggle" aria-controls="mobile-drawer" aria-expanded="false" aria-label="<?= e(ui('open_menu')) ?>" data-label-open="<?= e(ui('open_menu')) ?>" data-label-close="<?= e(ui('close_menu')) ?>">
                 <span class="nav-toggle__open"><?= site_icon('menu') ?></span>
                 <span class="nav-toggle__close"><?= site_icon('close') ?></span>
             </button>
@@ -388,27 +430,27 @@ function site_header(array $page): void
     </div>
 </header>
 <div class="drawer" id="mobile-drawer" hidden>
-    <div class="drawer__panel" role="dialog" aria-modal="true" aria-label="Site menu">
+    <div class="drawer__panel" role="dialog" aria-modal="true" aria-label="<?= e(ui('mobile_nav')) ?>">
         <form class="drawer__search" role="search" method="get" action="<?= e(site_page('/search')) ?>">
-            <label class="visually-hidden" for="drawer-search-input">Search this website</label>
-            <input id="drawer-search-input" type="search" name="q" placeholder="Search this website">
-            <button type="submit" aria-label="Search"><?= site_icon('search') ?></button>
+            <label class="visually-hidden" for="drawer-search-input"><?= e(ui('search_site')) ?></label>
+            <input id="drawer-search-input" type="search" name="q" placeholder="<?= e(ui('search_placeholder')) ?>">
+            <button type="submit" aria-label="<?= e(ui('search')) ?>"><?= site_icon('search') ?></button>
         </form>
-        <nav aria-label="Mobile">
+        <nav aria-label="<?= e(ui('primary_nav')) ?>">
             <ul class="drawer__nav">
                 <?php foreach ($nav as $item): ?>
                 <li>
                     <a href="<?= e(site_page($item['path'])) ?>"<?= site_is_current($item['path'], $slug) ? ' class="is-active" aria-current="page"' : '' ?>>
-                        <span><?= e($item['title']) ?></span>
-                        <span class="drawer__am" lang="am"><?= e($item['title_am']) ?></span>
+                        <span><?= e(t($item['title'])) ?></span>
                     </a>
                 </li>
                 <?php endforeach; ?>
             </ul>
         </nav>
-        <a class="btn btn--primary btn--block" href="<?= e(site_page('/admissions')) ?>">Registration request</a>
+        <a class="btn btn--primary btn--block" href="<?= e(site_page('/admissions')) ?>"><?= e(ui('register_request')) ?></a>
+        <?php site_lang_switch('lang-switch--drawer'); ?>
         <div class="drawer__meta">
-            <p><?= site_icon('pin') ?><?= e($content['contact']['address_lines'][0]) ?></p>
+            <p><?= site_icon('pin') ?><?= e(t($content['contact']['address_lines'][0])) ?></p>
             <?php if ($phone !== ''): ?><p><?= site_icon('phone') ?><?= e($phone) ?></p><?php endif; ?>
         </div>
     </div>
@@ -417,22 +459,21 @@ function site_header(array $page): void
 <?php
 }
 
-function site_breadcrumbs(array $trail, string $titleAm = ''): void
+function site_breadcrumbs(array $trail): void
 {
     if (!$trail) {
         return;
     }
     ?>
-<nav class="breadcrumbs" aria-label="Breadcrumb">
+<nav class="breadcrumbs" aria-label="<?= e(ui('breadcrumb')) ?>">
     <div class="wrap">
         <ol>
             <?php foreach ($trail as $i => $crumb): ?>
             <li>
                 <?php if ($i < count($trail) - 1): ?>
-                <a href="<?= e(site_page($crumb['path'])) ?>"><?= e($crumb['label']) ?></a>
+                <a href="<?= e(site_page($crumb['path'])) ?>"><?= e(t($crumb['label'])) ?></a>
                 <?php else: ?>
-                <span aria-current="page"><?= e($crumb['label']) ?></span>
-                <?php if ($titleAm !== ''): ?><span class="am" lang="am"><?= e($titleAm) ?></span><?php endif; ?>
+                <span aria-current="page"><?= e(t($crumb['label'])) ?></span>
                 <?php endif; ?>
             </li>
             <?php endforeach; ?>
@@ -443,37 +484,37 @@ function site_breadcrumbs(array $trail, string $titleAm = ''): void
 }
 
 /** Inner page hero used by every page except the home page. */
-function site_page_hero(string $eyebrow, string $title, string $lead = '', string $titleAm = '', string $leadAm = ''): void
+function site_page_hero($eyebrow, $title, $lead = ''): void
 {
+    $eyebrow = t($eyebrow);
+    $title = t($title);
+    $lead = t($lead);
     ?>
 <section class="page-hero">
     <div class="wrap page-hero__inner">
         <?php if ($eyebrow !== ''): ?><p class="eyebrow eyebrow--gold"><?= e($eyebrow) ?></p><?php endif; ?>
-        <h1 class="page-hero__title"><?= e($title) ?></h1>
-        <?php if ($titleAm !== ''): ?><p class="page-hero__am" lang="am"><?= e($titleAm) ?></p><?php endif; ?>
-        <?php if ($lead !== ''): ?><p class="page-hero__lead"><?= e($lead) ?></p><?php endif; ?>
-        <?php if ($leadAm !== ''): ?><p class="page-hero__lead-am" lang="am"><?= e($leadAm) ?></p><?php endif; ?>
+        <h1 class="page-hero__title"<?= site_lang_is_am() ? ' lang="am"' : '' ?>><?= e($title) ?></h1>
+        <?php if ($lead !== ''): ?><p class="page-hero__lead"<?= site_lang_is_am() ? ' lang="am"' : '' ?>><?= e($lead) ?></p><?php endif; ?>
     </div>
 </section>
 <?php
 }
 
-function site_cta_band(string $title = '', string $text = ''): void
+function site_cta_band($title = '', $text = ''): void
 {
-    $content = site_content();
-    $title = $title !== '' ? $title : 'Begin with a conversation';
-    $text = $text !== '' ? $text : 'Send a registration request — for a child or for yourself — and the school office will contact you about the right class. Any age is welcome.';
+    $title = t($title !== '' && $title !== null ? $title : ui('cta_title'));
+    $text = t($text !== '' && $text !== null ? $text : ui('cta_text'));
     ?>
 <section class="cta-band">
     <div class="wrap cta-band__inner">
         <div>
-            <p class="eyebrow eyebrow--gold">Admissions</p>
+            <p class="eyebrow eyebrow--gold"><?= e(ui('register_request')) ?></p>
             <h2><?= e($title) ?></h2>
             <p><?= e($text) ?></p>
         </div>
         <div class="cta-band__actions">
-            <a class="btn btn--gold" href="<?= e(site_page('/admissions')) ?>">Registration request <?= site_icon('arrow') ?></a>
-            <a class="btn btn--ghost" href="<?= e(site_page('/contact')) ?>">Contact the office</a>
+            <a class="btn btn--gold" href="<?= e(site_page('/admissions')) ?>"><?= e(ui('register_request')) ?> <?= site_icon('arrow') ?></a>
+            <a class="btn btn--ghost" href="<?= e(site_page('/contact')) ?>"><?= e(ui('cta_contact')) ?></a>
         </div>
     </div>
 </section>
@@ -494,12 +535,11 @@ function site_footer(): void
             <a class="brand brand--footer" href="<?= e(site_page('/')) ?>">
                 <img class="brand__mark" src="<?= e(site_page(SCHOOL_LOGO_PATH)) ?>" alt="" width="56" height="56" decoding="async">
                 <span class="brand__text">
-                    <span class="brand__name" lang="am"><?= e(SCHOOL_NAME_AMHARIC) ?></span>
-                    <span class="brand__sub"><?= e(SCHOOL_TRANSLATION_EN . ' ' . SCHOOL_TYPE) ?></span>
+                    <span class="brand__name"<?= site_lang_is_am() ? ' lang="am"' : '' ?>><?= e(site_school_name()) ?></span>
+                    <span class="brand__sub"><?= e(site_parish_name()) ?></span>
                 </span>
             </a>
-            <p class="site-footer__blurb"><?= e($content['footer']['blurb']) ?></p>
-            <p class="site-footer__parish" lang="am"><?= e(PARISH_NAME_AM) ?></p>
+            <p class="site-footer__blurb"><?= e(t($content['footer']['blurb'])) ?></p>
             <?php if ($social): ?>
             <ul class="site-footer__social">
                 <?php foreach ($social as $link): ?>
@@ -513,21 +553,21 @@ function site_footer(): void
             <?php endif; ?>
         </div>
         <?php foreach ($content['footer']['columns'] as $column): ?>
-        <nav class="site-footer__col" aria-label="<?= e($column['title']) ?>">
-            <h2><?= e($column['title']) ?></h2>
+        <nav class="site-footer__col" aria-label="<?= e(t($column['title'])) ?>">
+            <h2><?= e(t($column['title'])) ?></h2>
             <ul>
                 <?php foreach ($column['paths'] as $path): ?>
                 <?php if (!isset($pages[$path])) continue; ?>
-                <li><a href="<?= e(site_page($path)) ?>"><?= e($pages[$path]['title']) ?></a></li>
+                <li><a href="<?= e(site_page($path)) ?>"><?= e(t($pages[$path]['title'])) ?></a></li>
                 <?php endforeach; ?>
             </ul>
         </nav>
         <?php endforeach; ?>
         <div class="site-footer__col">
-            <h2>Visit and contact</h2>
+            <h2><?= e(ui('visit_contact')) ?></h2>
             <address>
                 <?php foreach ($contact['address_lines'] as $line): ?>
-                <span><?= e($line) ?></span>
+                <span><?= e(t($line)) ?></span>
                 <?php endforeach; ?>
                 <?php if (!empty($contact['phone_primary']['value'])): ?>
                 <span><?= site_icon('phone') ?><?= e($contact['phone_primary']['value']) ?></span>
@@ -538,21 +578,21 @@ function site_footer(): void
             </address>
             <p class="site-footer__hours">
                 <?php foreach ($contact['office_hours'] as $hours): ?>
-                <span><?= e($hours['day']) ?>: <?= e($hours['time']) ?></span>
+                <span><?= e(t($hours['day'])) ?>: <?= e(t($hours['time'])) ?></span>
                 <?php endforeach; ?>
             </p>
         </div>
     </div>
     <div class="site-footer__bar">
         <div class="wrap site-footer__bar-inner">
-            <p>&copy; <?= e(COPYRIGHT_YEAR) ?> <?= e(SCHOOL_NAME_AMHARIC) ?> · <?= e(SCHOOL_TRANSLATION_EN . ' ' . SCHOOL_TYPE) ?>. <?= e(DENOMINATION_EN) ?>.</p>
+            <p>&copy; <?= e(COPYRIGHT_YEAR) ?> <?= e(site_school_name()) ?><?= site_lang_is_am() ? '' : ' · ' . e(SCHOOL_NAME_AMHARIC) ?></p>
             <ul>
-                <li><a href="<?= e(site_page('/privacy')) ?>">Privacy and safeguarding</a></li>
-            </ul>            </ul>
+                <li><a href="<?= e(site_page('/privacy')) ?>"><?= e(ui('privacy_link')) ?></a></li>
+            </ul>
         </div>
     </div>
 </footer>
-<button type="button" class="to-top" id="to-top" hidden aria-label="Back to top"><?= site_icon('chevron') ?></button>
+<button type="button" class="to-top" id="to-top" hidden aria-label="<?= e(ui('back_to_top')) ?>"><?= site_icon('chevron') ?></button>
 <script src="<?= e(site_asset('/js/wbss-site.js')) ?>" defer></script>
 <?php if (!empty($GLOBALS['WBSS_PAGE_GALLERY'])): ?>
 <script src="<?= e(site_asset('/js/public_gallery.js')) ?>" defer></script>
@@ -569,61 +609,65 @@ function site_footer(): void
  *      'enquiry'      posts a general message from the contact page.
  * Both post to the existing, already-validated public endpoint.
  */
-function site_form(string $mode = 'registration', string $title = ''): void
+function site_form(string $mode = 'registration', $title = ''): void
 {
     $content = site_content();
     $levels = $content['admissions']['form']['levels'] ?? [];
     $isEnquiry = $mode === 'enquiry';
     $endpoint = site_url('/register_submit.php');
+    $prefix = $isEnquiry ? 'enq' : 'reg';
+    $heading = $title !== '' ? t($title) : ($isEnquiry ? ui('enquiry_title') : t($content['admissions']['form']['title']));
+    $note = $isEnquiry ? ui('enquiry_note') : t($content['admissions']['form']['note']);
     ?>
 <form class="site-form" id="<?= $isEnquiry ? 'contact-form' : 'registration-form' ?>" method="post" action="<?= e($endpoint) ?>"
       data-endpoint="<?= e($endpoint) ?>" novalidate>
     <div class="site-form__head">
-        <h2><?= e($title !== '' ? $title : ($isEnquiry ? 'Send an enquiry' : $content['admissions']['form']['title'])) ?></h2>
-        <p><?= e($isEnquiry ? 'Tell us how we can help and the office will reply.' : $content['admissions']['form']['note']) ?></p>
+        <h2><?= e($heading) ?></h2>
+        <p><?= e($note) ?></p>
     </div>
     <div class="form-status" data-form-status role="status" aria-live="polite" hidden></div>
+    <input type="hidden" name="lang" value="<?= e(site_lang()) ?>">
     <div class="field-row">
         <div class="field">
-            <label for="<?= $isEnquiry ? 'enq' : 'reg' ?>-name"><?= $isEnquiry ? 'Your name' : 'Your name (parent, guardian or adult member)' ?> <span aria-hidden="true">*</span></label>
-            <input id="<?= $isEnquiry ? 'enq' : 'reg' ?>-name" type="text" name="full_name" required maxlength="150" autocomplete="name">
+            <label for="<?= $prefix ?>-name"><?= e($isEnquiry ? ui('your_name') : ui('your_name_full')) ?> <span aria-hidden="true">*</span></label>
+            <input id="<?= $prefix ?>-name" type="text" name="full_name" required maxlength="150" autocomplete="name">
         </div>
         <div class="field">
-            <label for="<?= $isEnquiry ? 'enq' : 'reg' ?>-phone">Phone number <span aria-hidden="true">*</span></label>
-            <input id="<?= $isEnquiry ? 'enq' : 'reg' ?>-phone" type="tel" name="phone" required maxlength="30" autocomplete="tel" placeholder="+251 …">
+            <label for="<?= $prefix ?>-phone"><?= e(ui('phone')) ?> <span aria-hidden="true">*</span></label>
+            <input id="<?= $prefix ?>-phone" type="tel" name="phone" required maxlength="30" autocomplete="tel" placeholder="+251 …">
         </div>
     </div>
     <?php if (!$isEnquiry): ?>
     <div class="field-row">
         <div class="field">
-            <label for="reg-child">Name of the person joining <span aria-hidden="true">*</span></label>
+            <label for="reg-child"><?= e(ui('joining_name')) ?> <span aria-hidden="true">*</span></label>
             <input id="reg-child" type="text" name="child_name" required maxlength="150" autocomplete="off"
                    aria-describedby="reg-child-hint">
-            <p class="field__hint" id="reg-child-hint">A child, a young person, or yourself — any age.</p>
+            <p class="field__hint" id="reg-child-hint"><?= e(ui('joining_hint')) ?></p>
         </div>
         <div class="field">
-            <label for="reg-age">Age of the person joining</label>
+            <label for="reg-age"><?= e(ui('age')) ?></label>
             <input id="reg-age" type="number" name="age" min="1" max="120" step="1" inputmode="numeric"
-                   placeholder="Any age" aria-describedby="reg-age-hint">
-            <p class="field__hint" id="reg-age-hint">No age limit — children and adults are both welcome.</p>
+                   aria-describedby="reg-age-hint">
+            <p class="field__hint" id="reg-age-hint"><?= e(ui('age_hint')) ?></p>
         </div>
     </div>
     <div class="field-row">
         <div class="field">
-            <label for="reg-program">Who is joining?</label>
+            <label for="reg-program"><?= e(ui('join_heading')) ?></label>
             <select id="reg-program" name="program_interest">
-                <option value="">Select one</option>
+                <option value=""><?= e(ui('select_one')) ?></option>
                 <?php foreach ($levels as $level): ?>
-                <option value="<?= e($level) ?>"><?= e($level) ?></option>
+                <option value="<?= e((string) ($level['value'] ?? '')) ?>"><?= e(t($level['label'] ?? '')) ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
         <div class="field">
-            <label for="reg-gender">Gender (optional)</label>
+            <label for="reg-gender"><?= e(ui('gender')) ?></label>
             <select id="reg-gender" name="gender">
-                <option value="">Prefer not to say</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
+                <option value=""><?= e(ui('prefer_not_say')) ?></option>
+                <option value="male"><?= e(ui('male')) ?></option>
+                <option value="female"><?= e(ui('female')) ?></option>
             </select>
         </div>
     </div>
@@ -632,40 +676,36 @@ function site_form(string $mode = 'registration', string $title = ''): void
     <?php endif; ?>
     <div class="field-row">
         <div class="field">
-            <label for="<?= $isEnquiry ? 'enq' : 'reg' ?>-email">Email</label>
-            <input id="<?= $isEnquiry ? 'enq' : 'reg' ?>-email" type="email" name="email" maxlength="120" autocomplete="email">
+            <label for="<?= $prefix ?>-email"><?= e(ui('email')) ?></label>
+            <input id="<?= $prefix ?>-email" type="email" name="email" maxlength="120" autocomplete="email">
         </div>
         <div class="field">
-            <label for="<?= $isEnquiry ? 'enq' : 'reg' ?>-address">Area / address</label>
-            <input id="<?= $isEnquiry ? 'enq' : 'reg' ?>-address" type="text" name="address" maxlength="255" autocomplete="address-level2">
+            <label for="<?= $prefix ?>-address"><?= e(ui('area')) ?></label>
+            <input id="<?= $prefix ?>-address" type="text" name="address" maxlength="255" autocomplete="address-level2">
         </div>
     </div>
     <div class="field">
-        <label for="<?= $isEnquiry ? 'enq' : 'reg' ?>-message"><?= $isEnquiry ? 'Message' : 'Questions or special needs' ?> <span aria-hidden="true">*</span></label>
-        <textarea id="<?= $isEnquiry ? 'enq' : 'reg' ?>-message" name="message" rows="4"<?= $isEnquiry ? ' required' : '' ?> maxlength="5000"
-            placeholder="<?= $isEnquiry ? 'How can the school office help?' : 'Tell us about the person joining, their previous class, or anything the teacher should know.' ?>"></textarea>
+        <label for="<?= $prefix ?>-message"><?= e($isEnquiry ? ui('message') : ui('questions_notes')) ?><?= $isEnquiry ? ' <span aria-hidden="true">*</span>' : '' ?></label>
+        <textarea id="<?= $prefix ?>-message" name="message" rows="4"<?= $isEnquiry ? ' required' : '' ?> maxlength="5000"
+            placeholder="<?= e(ui('message_placeholder')) ?>"></textarea>
     </div>
     <div class="honeypot" aria-hidden="true">
-        <label for="<?= $isEnquiry ? 'enq' : 'reg' ?>-website">Leave this field empty</label>
-        <input id="<?= $isEnquiry ? 'enq' : 'reg' ?>-website" type="text" name="website" tabindex="-1" autocomplete="off">
+        <label for="<?= $prefix ?>-website"><?= e(ui('honeypot')) ?></label>
+        <input id="<?= $prefix ?>-website" type="text" name="website" tabindex="-1" autocomplete="off">
     </div>
     <div class="site-form__foot">
         <button type="submit" class="btn btn--primary" data-submit>
-            <span data-submit-label><?= $isEnquiry ? 'Send enquiry' : 'Send registration request' ?></span>
+            <span data-submit-label data-sent-label="<?= e(ui('sent')) ?>"><?= e($isEnquiry ? ui('send_enquiry') : ui('send_request')) ?></span>
             <?= site_icon('arrow') ?>
         </button>
         <p class="site-form__privacy">
-            We use these details only to answer your request. See <a href="<?= e(site_page('/privacy')) ?>">privacy and safeguarding</a>.
+            <?= e(ui('form_privacy')) ?>
+            <a href="<?= e(site_page('/privacy')) ?>"><?= e(ui('privacy_link')) ?></a>.
         </p>
     </div>
     <noscript>
-        <p class="site-form__noscript">
-            JavaScript is switched off in your browser. You can still send this form, but the confirmation
-            message will appear as plain text. Please write the name of the person joining at the start of the
-            message so the office receives it with your request.
-            To speak to someone instead, call the school office<?php if (!empty($content['contact']['phone_primary']['value'])): ?> on <?= e($content['contact']['phone_primary']['value']) ?><?php endif; ?>
-            or email<?php if (!empty($content['contact']['email_primary']['value'])): ?> <a href="<?= e($content['contact']['email_primary']['href']) ?>"><?= e($content['contact']['email_primary']['value']) ?></a><?php endif; ?>.
-        </p>
+        <p class="site-form__noscript"><?= e(ui('noscript')) ?><?php if (!empty($content['contact']['email_primary']['value'])): ?>
+            <a href="<?= e($content['contact']['email_primary']['href']) ?>"><?= e($content['contact']['email_primary']['value']) ?></a><?php endif; ?></p>
     </noscript>
 </form>
 <?php
@@ -676,10 +716,10 @@ function site_contact_cards(): void
 {
     $contact = site_content()['contact'];
     $items = [
-        ['icon' => 'pin', 'label' => 'Where we are', 'lines' => $contact['address_lines'], 'link' => ['label' => 'Open in maps', 'href' => $contact['map_url'], 'external' => true]],
-        ['icon' => 'phone', 'label' => $contact['phone_primary']['label'] ?? 'Phone', 'lines' => array_filter([(string) ($contact['phone_primary']['value'] ?? '')]), 'link' => null],
-        ['icon' => 'mail', 'label' => $contact['email_primary']['label'] ?? 'Email', 'lines' => [$contact['email_primary']['value']], 'link' => ['label' => 'Send an email', 'href' => $contact['email_primary']['href'], 'external' => false]],
-        ['icon' => 'clock', 'label' => 'Office hours', 'lines' => array_map(static fn($h) => $h['day'] . ': ' . $h['time'], $contact['office_hours']), 'link' => null],
+        ['icon' => 'pin', 'label' => ui('where_we_are'), 'lines' => array_map('t', $contact['address_lines']), 'link' => ['label' => ui('open_maps'), 'href' => $contact['map_url'], 'external' => true]],
+        ['icon' => 'phone', 'label' => t($contact['phone_primary']['label'] ?? ui('office_phone')), 'lines' => array_filter([(string) ($contact['phone_primary']['value'] ?? '')]), 'link' => null],
+        ['icon' => 'mail', 'label' => t($contact['email_primary']['label'] ?? ui('email')), 'lines' => [$contact['email_primary']['value']], 'link' => ['label' => ui('send_email'), 'href' => $contact['email_primary']['href'], 'external' => false]],
+        ['icon' => 'clock', 'label' => ui('office_hours'), 'lines' => array_map(static fn($h) => t($h['day']) . ': ' . t($h['time']), $contact['office_hours']), 'link' => null],
     ];
     ?>
 <ul class="contact-cards">
@@ -721,10 +761,9 @@ function site_programs(): array
                 }
             }
             $programs[] = [
-                'title'     => trim((string)($row['title'] ?? '')) ?: 'Programme',
-                'title_am'  => trim((string)($row['title_am'] ?? '')),
+                'title'     => cms_text($row, 'title') ?: ui('kind_programme'),
                 'ages'      => '',
-                'summary'   => trim((string)($row['description'] ?? '')),
+                'summary'   => cms_text($row, 'description') ?: '',
                 'features'  => $features,
                 'icon'      => 'book',
                 'source'    => 'cms',
@@ -749,10 +788,8 @@ function site_teachers(): array
     foreach (site_cms()['teachers'] as $row) {
         $teachers[] = [
             'name'    => (string)($row['name'] ?? ''),
-            'name_am' => (string)($row['name_am'] ?? ''),
-            'role'    => (string)($row['role_title'] ?? ''),
-            'role_am' => (string)($row['role_title_am'] ?? ''),
-            'bio'     => (string)($row['bio'] ?? ''),
+            'role'    => cms_text($row, 'role_title'),
+            'bio'     => cms_text($row, 'bio'),
             'photo'   => (string)($row['photo_path'] ?? ''),
         ];
     }
@@ -775,16 +812,14 @@ function site_news_items(): array
             // Only same-site, root-relative links are rendered, so a stored
             // value can never inject a javascript: or off-site target.
             $link = [
-                'label' => trim((string)($row['link_label'] ?? '')) ?: 'Read more',
+                'label' => cms_text($row, 'link_label') ?: ui('read_more'),
                 'path'  => $linkUrl,
             ];
         }
         $items[] = [
             'kind'     => 'announcement',
-            'title'    => (string)($row['title'] ?? ''),
-            'title_am' => (string)($row['title_am'] ?? ''),
-            'text'     => (string)($row['body'] ?? ''),
-            'text_am'  => (string)($row['body_am'] ?? ''),
+            'title'    => cms_text($row, 'title'),
+            'text'     => cms_text($row, 'body'),
             'date'     => $timestamp ? date('j F Y', $timestamp) : '',
             'date_iso' => $timestamp ? date('c', $timestamp) : '',
             'link'     => $link,
@@ -796,8 +831,7 @@ function site_news_items(): array
     foreach (site_content()['news']['items'] as $item) {
         $item['date'] = '';
         $item['date_iso'] = '';
-        $item['text_am'] = $item['text_am'] ?? '';
-        $item['image'] = site_media_url((string)($item['image'] ?? ''));
+        $item['image'] = site_media_url((string) ($item['image'] ?? ''));
         $item['image_alt'] = (string)($item['image_alt'] ?? '');
         $items[] = $item;
     }
@@ -840,7 +874,7 @@ function site_news_media(array $item): void
     }
     ?>
     <figure class="news-media">
-        <img src="<?= e(site_page($src)) ?>" alt="<?= e((string) ($item['image_alt'] ?? '')) ?>"
+        <img src="<?= e(site_page($src)) ?>" alt="<?= e(t($item['image_alt'] ?? '')) ?>"
              width="1672" height="941" loading="lazy" decoding="async">
     </figure>
     <?php

@@ -38,7 +38,8 @@ clean URL for document navigation by `BrowserPageRoutes::navigationRedirect`.
 |---|---|
 | `index.php` and the page files | Markup for each page; each sets a `$page` array (slug, title, description, breadcrumbs) and calls the shared layout |
 | `public_site.php` | Bootstrap and layout: content loading, read-only CMS access, SEO/JSON-LD head, header, drawer, breadcrumbs, call to action, footer, shared form and contact cards. Refuses direct requests |
-| `site_content.php` | All editorial copy as plain PHP data — the only file a non-developer needs to edit for wording |
+| `site_content.php` | All editorial copy as plain PHP data, written as `L('English', 'አማርኛ')` pairs — the only file a non-developer needs to edit for wording |
+| `site_lang.php` | Language layer: `site_lang()` (Amharic by default), `L()` pairs, `t()` resolution, `cms_text()` for CMS rows and `site_lang_url()` for the switch |
 | `css/wbss-site.css` | Design system: WBSS green `#004820` and gold `#F0B818`, typography, components, responsive and print rules |
 | `js/wbss-site.js` | Progressive enhancement: sticky header state, accessible drawer, reveal animation, form submission, back-to-top |
 | `css/public_gallery.css`, `js/public_gallery.js` | Existing gallery component, restyled to the WBSS palette for this site |
@@ -51,6 +52,36 @@ hand cross and a kebero drum — and contain no baked-in lettering, so the schoo
 name is always set as HTML text rather than as picture text. This keeps the site fast on
 mobile connections, avoids third-party tracking and keeps it inside the
 site's own Content-Security-Policy.
+
+## 2a. Languages — Amharic first, English one click away
+
+The site is fully bilingual and **Amharic is the default**: a first-time visitor
+gets Amharic, and the `አማ / EN` control in the header (and inside the mobile
+drawer) switches to English.
+
+- `?lang=am` / `?lang=en` are the only accepted values; anything else falls back
+  to Amharic. The choice is remembered in the first-party cookie `wbss_lang`
+  for a year (SameSite=Lax), never in a session and never server-side.
+- Every visible string is a pair written with `L('English', 'አማርኛ')` and printed
+  through `t()`. Interface text (buttons, labels, `aria-label`s, form
+  messages) lives in the `ui` dictionary of `site_content.php`. When an Amharic
+  value is missing, `t()` shows the English text rather than an empty element.
+- `<html lang>` follows the visitor, `hreflang` alternates (`am`, `en`,
+  `x-default`) and the Open Graph locale are declared on every page, and the
+  JSON-LD `inLanguage` matches.
+- CMS rows are read with `cms_text()`, which prefers `title_am` / `body_am`
+  style columns in Amharic and the plain column in English.
+- Search indexes **both** languages, so an Amharic query finds English content
+  and the matched sentence is shown in the language it was written in.
+- The registration endpoint answers in the language the form was submitted in
+  (`lang` field); anything else gets the English message it has always sent.
+- Typography: `--font-am` (Noto Serif Ethiopic → Nyala → Abyssinica SIL →
+  Ebrima) with `html[lang="am"]` rules that add leading, never uppercase, and
+  cap heading sizes — Ethiopic sets wider than Latin. No web font is loaded, so
+  the site still has no third-party request.
+- Copy is deliberately short: one lead line per page and one sentence per card.
+  Long explanatory paragraphs are what make a school website look
+  unprofessional, and they double the translation burden.
 
 ## 3. Content sources
 
@@ -96,6 +127,10 @@ redesign did not add a second write path:
 - Per-page title, description, canonical URL, Open Graph/Twitter tags and
   JSON-LD (`EducationalOrganization`, `WebSite` with `SearchAction`,
   `BreadcrumbList`).
+- Layout gutters belong to `.wrap`; hero and call-to-action bands set
+  `padding-block` only, so text keeps its 16 px gutter down to 320 px wide.
+  There is no horizontal scrolling at 320, 360, 390, 430, 768 or 1024 px in
+  either language.
 - `robots.txt` disallows `/admin/`, `/api/`, `/monitor/`, `/app/`, `/uploads/`
   and `/search`. It advertises no sitemap: the XML sitemap and its
   `/sitemap.xml` route were withdrawn at the school's request, and the footer
