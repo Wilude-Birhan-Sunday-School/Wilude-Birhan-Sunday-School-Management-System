@@ -47,21 +47,8 @@ site_header($page);
                     <?= e(t($home['secondary_cta']['label'])) ?>
                 </a>
             </div>
-            <?php $cd = $home['countdown']; ?>
             <div class="hero__meta">
                 <p><?= site_icon('pin') ?><?= e(t($content['contact']['address_lines'][0])) ?></p>
-                <?php if (!empty($cd['enabled'])): ?>
-                <ul class="countdown" data-countdown
-                    data-weekday="<?= (int) ($cd['weekday'] ?? 0) ?>"
-                    data-hour="<?= (int) ($cd['hour'] ?? 9) ?>"
-                    data-minute="<?= (int) ($cd['minute'] ?? 0) ?>">
-                    <li class="countdown__label"><?= e(ui('cd_label')) ?></li>
-                    <li class="countdown__unit"><span class="countdown__value" data-cd="days">00</span><small><?= e(ui('cd_days')) ?></small></li>
-                    <li class="countdown__unit"><span class="countdown__value" data-cd="hours">00</span><small><?= e(ui('cd_hours')) ?></small></li>
-                    <li class="countdown__unit"><span class="countdown__value" data-cd="minutes">00</span><small><?= e(ui('cd_minutes')) ?></small></li>
-                    <li class="countdown__unit"><span class="countdown__value" data-cd="seconds">00</span><small><?= e(ui('cd_seconds')) ?></small></li>
-                </ul>
-                <?php endif; ?>
             </div>
         </div>
     </div>

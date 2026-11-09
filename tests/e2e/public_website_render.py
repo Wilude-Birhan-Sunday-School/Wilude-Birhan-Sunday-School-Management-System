@@ -15,8 +15,8 @@ reflection, and on a missing escaped highlight.
 
 It also checks that the motion layer is actually served and wired: the local
 stylesheet and script on every page, reveal hooks on every template, the
-countdown and the once-per-session popup on the home page only, and the photo
-lightbox on the news page — in both languages.
+once-per-session popup on the home page only (and no withdrawn countdown), and
+the photo lightbox on the news page — in both languages.
 
 Amharic is the default language, so `/index.php` and `/index.php?lang=am` must
 render the same text, and `?lang=en` must render English.
@@ -114,13 +114,14 @@ def main():
                 if token not in body:
                     failures.append(f'{url}: motion layer missing {token}')
 
-    # Home: the countdown to the next Sunday session, and the popup.
+    # Home: the once-per-session popup, and no countdown (withdrawn).
     for lang in ('am', 'en'):
         _, body = fetch(base, with_lang('/index.php', lang))
-        for token in ('data-countdown', 'data-cd="days"', 'data-cd="seconds"',
-                      'data-popup', 'data-store-key="wbss-welcome-2026"'):
+        for token in ('data-popup', 'data-store-key="wbss-welcome-2026"'):
             if token not in body:
                 failures.append(f'home {lang}: missing {token}')
+        if 'data-countdown' in body or 'countdown' in body:
+            failures.append(f'home {lang}: the withdrawn countdown is still rendered')
     _, body = fetch(base, '/about.php')
     if 'data-popup' in body:
         failures.append('about: the popup must stay on the home page only')

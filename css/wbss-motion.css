@@ -8,7 +8,7 @@
      is set by an inline script in the head), so a scripting failure can never
      leave a page blank.
    - `prefers-reduced-motion: reduce` turns every transform, animation and
-     transition off, including the countdown flip, the popup and the lightbox.
+     transition off, including the popup and the lightbox.
    - Animations use transform/opacity only, so they stay on the compositor and
      do not cause layout work on a slow phone.
    ========================================================================== */
@@ -136,32 +136,7 @@ body.nav-open .site-header.is-hidden { transform: none; }
 }
 .scroll-progress[hidden] { display: none; }
 
-/* ── 6. Countdown to the next Sunday session ───────────────────────────── */
-.countdown {
-    display: flex; flex-wrap: wrap; align-items: flex-end; gap: .5rem 1.15rem;
-    margin: 0; padding: 0; list-style: none;
-}
-.countdown__label {
-    flex: 1 0 100%; font-size: .74rem; font-weight: 700; letter-spacing: .12em;
-    text-transform: uppercase; color: var(--gold-300); margin-bottom: .15rem;
-}
-html[lang="am"] .countdown__label { text-transform: none; letter-spacing: .02em; font-family: var(--font-am); }
-.countdown__unit { display: flex; flex-direction: column; align-items: center; min-width: 2.9rem; }
-.countdown__value {
-    font-variant-numeric: tabular-nums; font-weight: 800; line-height: 1;
-    font-size: clamp(1.25rem, 1.1rem + .8vw, 1.7rem); color: #fff;
-    display: block; overflow: hidden;
-}
-.countdown__value.is-tick { animation: m-flip .5s var(--m-ease); }
-.countdown__unit small {
-    font-size: .68rem; letter-spacing: .08em; text-transform: uppercase;
-    color: #b9d2c3; margin-top: .25rem;
-}
-html[lang="am"] .countdown__unit small { text-transform: none; letter-spacing: 0; font-family: var(--font-am); }
-.hero__meta .countdown { margin-top: .2rem; }
-.hero .countdown__label { color: var(--gold-300); }
-
-/* ── 7. Mobile drawer: slide + staggered items ─────────────────────────── */
+/* ── 6. Mobile drawer: slide + staggered items ─────────────────────────── */
 .js .drawer:not([hidden]) .drawer__panel { animation: m-drawer-in .34s var(--m-ease-out) both; }
 .js .drawer:not([hidden])::before { animation: m-fade .3s ease both; }
 .js .drawer:not([hidden]) .drawer__nav li { animation: m-slide-out .38s var(--m-ease-out) both; }
@@ -173,13 +148,13 @@ html[lang="am"] .countdown__unit small { text-transform: none; letter-spacing: 0
 .js .drawer:not([hidden]) .drawer__nav li:nth-child(6) { animation-delay: .25s; }
 .js .drawer:not([hidden]) .drawer__nav li:nth-child(7) { animation-delay: .29s; }
 
-/* ── 8. Accordion (FAQ) height animation ───────────────────────────────── */
+/* ── 7. Accordion (FAQ) height animation ───────────────────────────────── */
 .accordion details > p { margin: 0; }
 .js .accordion details > p { overflow: hidden; transition: height .3s var(--m-ease-out), opacity .3s ease; }
 .accordion summary .ico { transition: transform var(--m-fast) var(--m-ease); }
 .accordion details[open] summary .ico { transform: rotate(180deg); }
 
-/* ── 9. Modal sheet used by the popup and the photo lightbox ───────────── */
+/* ── 8. Modal sheet used by the popup and the photo lightbox ───────────── */
 .modal {
     position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;
     padding: 1.1rem; background: rgba(2, 20, 10, .62);
@@ -210,7 +185,7 @@ html[lang="am"] .countdown__unit small { text-transform: none; letter-spacing: 0
 .popup-note { font-size: .8rem; color: var(--muted); margin: .8rem 0 0; }
 body.modal-open { overflow: hidden; }
 
-/* ── 10. Photo lightbox trigger ────────────────────────────────────────── */
+/* ── 9. Photo lightbox trigger ────────────────────────────────────────── */
 .js .news-media { position: relative; cursor: zoom-in; }
 .js .news-media::after {
     content: ""; position: absolute; inset: 0; background: rgba(2, 20, 10, .0);
@@ -226,21 +201,21 @@ body.modal-open { overflow: hidden; }
 .lightbox-counter { align-self: center; min-width: 3.6rem; text-align: center; color: #cfe3d6; font-size: .85rem; }
 .js .news-media:focus-visible { outline: 3px solid var(--gold-500); outline-offset: 3px; }
 
-/* ── 11. Form feedback ─────────────────────────────────────────────────── */
+/* ── 10. Form feedback ─────────────────────────────────────────────────── */
 .js .form-status:not([hidden]) { animation: m-rise .34s var(--m-ease-out) both; }
 .site-form .btn[disabled] { transform: none; }
 
-/* ── 12. Back to top ───────────────────────────────────────────────────── */
+/* ── 11. Back to top ───────────────────────────────────────────────────── */
 .to-top { transition: opacity var(--m-fast) ease, transform var(--m-fast) var(--m-ease); }
 .to-top:not([hidden]) .ico { animation: m-rise .3s var(--m-ease-out) both; }
 .to-top:hover .ico { transform: translateY(-2px); }
 
-/* ── 13. Cross-document page transitions (progressive) ─────────────────── */
+/* ── 12. Cross-document page transitions (progressive) ─────────────────── */
 @view-transition { navigation: auto; }
 ::view-transition-old(root) { animation: m-page-out .22s ease both; }
 ::view-transition-new(root) { animation: m-page-in .3s var(--m-ease-out) both; }
 
-/* ── 14. Reduced motion: everything off, content visible ───────────────── */
+/* ── 13. Reduced motion: everything off, content visible ───────────────── */
 @media (prefers-reduced-motion: reduce) {
     .js [data-reveal],
     .js body:not(.is-ready) .hero__content > * { opacity: 1 !important; transform: none !important; }
@@ -255,12 +230,12 @@ body.modal-open { overflow: hidden; }
     .js .form-status:not([hidden]),
     .js .to-top .ico { animation: none !important; }
     .js .eyebrow::before { transform: none !important; transition: none !important; }
-    .site-header, .card, .news-media img, .link-arrow .ico, .countdown__value { transition: none !important; }
+    .site-header, .card, .news-media img, .link-arrow .ico { transition: none !important; }
     .btn--gold:hover::after { animation: none !important; }
     ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; }
 }
 
-/* ── 15. Print: no motion, no overlays ─────────────────────────────────── */
+/* ── 14. Print: no motion, no overlays ─────────────────────────────────── */
 @media print {
     .scroll-progress, .modal, .to-top { display: none !important; }
     .js [data-reveal], .js .hero__media img { animation: none !important; transform: none !important; opacity: 1 !important; }

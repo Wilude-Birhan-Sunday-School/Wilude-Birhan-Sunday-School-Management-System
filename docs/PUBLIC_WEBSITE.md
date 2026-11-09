@@ -42,7 +42,7 @@ clean URL for document navigation by `BrowserPageRoutes::navigationRedirect`.
 | `site_lang.php` | Language layer: `site_lang()` (Amharic by default), `L()` pairs, `t()` resolution, `cms_text()` for CMS rows and `site_lang_url()` for the switch |
 | `css/wbss-site.css` | Design system: WBSS green `#004820` and gold `#F0B818`, typography, components, responsive and print rules |
 | `js/wbss-site.js` | Progressive enhancement: sticky header state, accessible drawer, reveal animation, form submission, back-to-top |
-| `css/wbss-motion.css`, `js/wbss-motion.js` | Motion layer: scroll reveals, header slide, reading progress, countdown, popup, photo lightbox, accordion height animation. Additive only — see §5a |
+| `css/wbss-motion.css`, `js/wbss-motion.js` | Motion layer: scroll reveals, header slide, reading progress, popup, photo lightbox, accordion height animation. Additive only — see §5a |
 | `css/public_gallery.css`, `js/public_gallery.js` | Existing gallery component, restyled to the WBSS palette for this site |
 
 No external CDN, icon font or web font is loaded. Icons are inline SVG and the
@@ -160,7 +160,7 @@ Nothing new is downloaded — no animation library, no web font, no CDN.
 | Every page | Sections and cards fade/slide in once as they reach the viewport, staggered within a row. `reveal('up', $index)` in the templates; the helper only emits the five variants the stylesheet defines (`up`, `left`, `right`, `zoom`, `pop`) |
 | Page heroes | The eyebrow, title and lead rise in sequence; the home hero photograph zooms slowly and drifts a little on scroll (transform only) |
 | Top of the page | A gold reading-progress bar follows the scroll position; the header slides away when reading down and returns on the first upward scroll |
-| Home | A countdown to the next Sunday session (`countdown` in `site_content.php`: weekday, hour, minute) counts days, hours, minutes and seconds in the visitor's own browser, so it never goes stale. The welcome sheet (`popup`) appears once per session, 9 s after load, and never over an open menu or lightbox |
+| Home | The welcome sheet (`popup`) appears once per session, 9 s after load, and never over an open menu or lightbox |
 | News | Photographs open in a keyboard-operable lightbox: Enter or Space opens, arrows step through the set, Escape closes, and focus returns to the photograph |
 | Admissions | The FAQ answers animate open instead of snapping |
 | Menu | The mobile drawer slides in and its items follow, one behind the other |
@@ -172,9 +172,8 @@ than the page after its slide — sideways reveals live inside
 `overflow-x: clip` sections, and nothing scrolls horizontally at 320–1024 px in
 either language.
 
-The strings the motion layer adds — close, photo viewer, previous/next photo,
-countdown labels — are bilingual pairs in `site_content.php` like every other
-word on the site.
+The strings the motion layer adds — close, photo viewer, previous/next photo —
+are bilingual pairs in `site_content.php` like every other word on the site.
 
 ## 6. Published copy and the remaining office input
 
