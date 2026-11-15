@@ -2,7 +2,7 @@
 /**
  * School API v1 — Members
  * GET    /members                 — paginated list (Info/Admin: +phones; Education: name/code only)
- * GET    /members/{id}            — one member (field set depends on role)
+ * GET    /members/{id}            — one member (field set depends on role; parents: own verified-linked children only)
  * POST   /members                 — register (Info / School Admin / Super Admin)
  * PUT    /members/{id}            — update (same roles)
  * GET    /members/{id}/attendance — attendance history (assigned class or PII role)
@@ -101,12 +101,16 @@ if ($method === 'GET' && is_int($id) && $sub === null) {
     $canPii = apiCanViewMemberPii($auth);
     $canEdu = apiRoleIs($auth, apiRolesEducation());
     $canTeacher = apiIsClassRestricted($auth);
+    $canParent = apiRoleIs($auth, ['parent']);
 
-    if (!$canPii && !$canEdu && !$canTeacher) {
+    if (!$canPii && !$canEdu && !$canTeacher && !$canParent) {
         err('You cannot open member records.', 403);
     }
     if ($canTeacher && !$canPii && !$canEdu && !apiTeacherCanSeeMember($conn, $auth, $id, $yearId)) {
         err('You can only open students in your assigned classes.', 403);
+    }
+    if ($canParent && !$canPii && !$canEdu && !$canTeacher && !apiParentCanSeeMember($conn, $auth, $id)) {
+        err('You can only open your own linked children.', 403);
     }
 
     $stmt = $conn->prepare(

@@ -2,6 +2,8 @@
 /**
  * School API v1 — Auth Routes
  * POST /auth/login          — Login with username + password, get tokens
+ *                             (+ optional S4 device assertion:
+ *                             installation_id + device_fingerprint)
  * POST /auth/refresh-token  — Rotate refresh token and get a new token pair
  * POST /auth/logout         — Revoke the presented refresh-token family
  * GET  /auth/verify         — Verify current token is valid
@@ -9,6 +11,7 @@
 
 require_once __DIR__ . '/../../../admin/backend/services/RefreshTokenService.php';
 require_once __DIR__ . '/../../../admin/backend/services/ProfileService.php';
+require_once __DIR__ . '/../../../acm/autoload.php';
 
 $action = $ROUTE['id'] ?? '';
 $refreshService = new \App\Services\RefreshTokenService(
@@ -77,14 +80,51 @@ if ($action === 'login' && $method === 'POST') {
     if ((int)$user['is_active'] !== 1) {
         err('Your account is inactive. Contact an administrator.', 403);
     }
-    
+
+    // S4 (D3.8): optional device assertion links the new refresh
+    // family to a registered device. S5: a RESOLVED assertion now
+    // issues a BOUND family (DPoP proof required at every refresh).
+    // Best-effort by design: absent or unusable assertions yield a
+    // legacy unlinked family (login still succeeds). Only a MISSING 084
+    // table reads as absent (pre-migration probe); every other
+    // failure propagates loudly (fail closed, never silently
+    // unlinked on a migrated database).
+    $acmDeviceId = null;
+    $assertInstall = isset($input['installation_id']) && is_string($input['installation_id'])
+        ? $input['installation_id'] : '';
+    $assertFp = isset($input['device_fingerprint']) && is_string($input['device_fingerprint'])
+        ? $input['device_fingerprint'] : '';
+    if ($assertInstall !== '' && $assertFp !== '' && isset($pdo) && $pdo instanceof PDO) {
+        $acmPersonsForLogin = new \SSMS\Acm\Identity\AcmPersonService($pdo);
+        $acmDevicesForLogin = new \SSMS\Acm\Device\DeviceService(
+            $pdo,
+            new \SSMS\Acm\Accounts\AcmTicketService($pdo, $acmPersonsForLogin)
+        );
+        try {
+            $acmDeviceId = $acmDevicesForLogin->findActiveForAssertion(
+                (int)$user['id'], $assertInstall, $assertFp
+            );
+        } catch (\PDOException $e) {
+            if ($e->getCode() !== '42S02') {
+                throw $e;
+            }
+            $acmDeviceId = null;
+        }
+    }
+
     try {
-        $refreshToken = $refreshService->issue($user, $clientIp, $userAgent);
+        $refreshToken = $refreshService->issue($user, $clientIp, $userAgent, $acmDeviceId, $acmDeviceId !== null);
         $accessFamily = apiRefreshAccessBinding($refreshToken, (int)$user['id']);
     } catch (Throwable $error) {
         error_log('API refresh session creation failed. Apply migrations 010 and 048.');
         err('Authentication service is temporarily unavailable.', 503,
             ['code' => 'AUTH_SERVICE_UNAVAILABLE']);
+    }
+
+    if ($acmDeviceId !== null && isset($acmDevicesForLogin)) {
+        // Best-effort (never throws): keeps the device list's
+        // last-seen truthful for revoke-this-device UX.
+        $acmDevicesForLogin->touchLastSeen($acmDeviceId);
     }
 
     $conn->query("UPDATE users SET last_login = NOW() WHERE id = " . (int)$user['id']);
@@ -108,6 +148,13 @@ if ($action === 'login' && $method === 'POST') {
         ),
         'refresh_token' => $refreshToken,
         'expires_in' => $accessTokenExpiry,
+        // S5: true when this family is device-bound (the app must
+        // attach a DPoP proof to every refresh of this family).
+        // S9: bound families ALSO attach a per-request DPoP proof
+        // (method + path + token hash) to every API call made with
+        // this family's access tokens (missing/invalid/replayed ->
+        // ACCESS_PROOF_REQUIRED / ACCESS_PROOF_INVALID, 401).
+        'device_bound' => $acmDeviceId !== null,
         'user' => [
             'id' => (int)$user['id'],
             'username' => $user['username'],
@@ -157,7 +204,17 @@ if ($action === 'refresh-token' && $method === 'POST') {
             ['code' => 'INVALID_REFRESH_TOKEN']);
     }
 
-    $rotation = $refreshService->rotate($refreshToken, $payload, $clientIp, $userAgent);
+    // S5 (D3.8): bound families require a DPoP proof. The header is
+    // read unconditionally but USED only when the loaded session row
+    // is bound; unbound sessions ignore it entirely (legacy path,
+    // byte-identical). The verifier (seed read) is built only when a
+    // proof is present, so legacy traffic pays nothing.
+    $dpopProof = isset($_SERVER['HTTP_DPOP']) && is_string($_SERVER['HTTP_DPOP'])
+        ? trim($_SERVER['HTTP_DPOP']) : '';
+    $proofVerifier = $dpopProof !== ''
+        ? \SSMS\Acm\Device\DeviceRefreshProofs::rotationVerifier($conn)
+        : null;
+    $rotation = $refreshService->rotate($refreshToken, $payload, $clientIp, $userAgent, $dpopProof, $proofVerifier);
     $rotationState = (string)($rotation['state'] ?? 'invalid');
     if ($rotationState === 'reused') {
         logApiAction((int)($payload['uid'] ?? 0), (string)($payload['usr'] ?? ''),
@@ -180,6 +237,14 @@ if ($action === 'refresh-token' && $method === 'POST') {
     if ($rotationState === 'account_removed') {
         err('This account no longer exists. Please login again.', 401,
             ['code' => 'ACCOUNT_REMOVED']);
+    }
+    if ($rotationState === 'proof_required') {
+        err('This session requires a device proof. Please login again.', 401,
+            ['code' => 'DEVICE_PROOF_REQUIRED']);
+    }
+    if ($rotationState === 'proof_invalid') {
+        err('Invalid device proof. Please login again.', 401,
+            ['code' => 'DEVICE_PROOF_INVALID']);
     }
     if ($rotationState === 'unavailable') {
         error_log('API refresh rotation failed. Apply migrations 010 and 048.');

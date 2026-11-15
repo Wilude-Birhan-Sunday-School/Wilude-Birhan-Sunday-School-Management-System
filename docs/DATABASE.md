@@ -1,6 +1,6 @@
 # Database and migrations
 
-**Status:** maintained migration reference. Original review: `46fbaa7` (2026-10-22); numbered-file count and `CREATE TABLE` targets rechecked at `7e28157` (2026-10-28), excluding SQL comments. **No production database was queried.** Source diagrams and historical table definitions are in the [table-level dictionary](DATA_DICTIONARY.md); neither is a verified live-schema export. Source inventories do not establish applied migrations, column parity or real row counts.
+**Status:** maintained migration reference. Original review: `46fbaa7` (2026-10-22); numbered-file count and `CREATE TABLE` targets rechecked at `7ce13af` (2026-11-03), excluding SQL comments. **No production database was queried.** Source diagrams and historical table definitions are in the [table-level dictionary](DATA_DICTIONARY.md); neither is a verified live-schema export. Source inventories do not establish applied migrations, column parity or real row counts.
 
 ## Source-defined ledger columns
 
@@ -31,7 +31,7 @@ The [Finance/Materials column reference](database/LEDGER_COLUMNS.md), source-rev
 | Runtime DDL | `MezmurSchemaReconciler::apply`, called from `admin/api_mezmur.php`, can create or alter Mezmur tables at request time | Production can drift from `sql/` |
 | `tests/e2e/provision_env.sh` | Encodes the apply order that produces a working test database | The best available **executable** description of the schema; test-only |
 
-At the public-website copy-update commit, the **78 numbered migration files** (`001`–`080`, with gaps) contain **103 distinct `CREATE TABLE` target names**, excluding block/line comments and including archive/quarantine definitions. `079_public_announcements.sql` adds `cms_announcements`; the earlier count of 76 files / 102 targets was recorded at `7e28157` (2026-10-28). This is a lexical source inventory, not the number of active business tables or proof that every conditional statement ran. Legacy PHP/snapshot definitions are outside this count. The former count of 103 incorrectly treated the word `only` in migration 026's comment as a table.
+At `7e28157` (2026-10-28) plus migrations 079 (ACM P0), 080 (Telegram registration), 081 (ACM S1 office model + telegram phase2 interview), 082 (ACM S3 activation ceremony + telegram corrections), 083 (telegram approval), 084 (ACM S4 device registry), 085 (Telegram transfer registration), 086 (ACM S5 refresh binding), 087 (Telegram registration attachments), 088 (ACM S6 recovery events), 089 (ACM S7 suspension history), 090 (ACM S8 deactivation events), 091 (ACM S10 staff enrollment requests + telegram v2 state machine) and 092 (ACM G2 guardian link verification, data-only UPDATE, zero DDL), the **93 numbered migration files** (`001`–`092`, with gaps — `081`, `082` and `091` exist twice: ACM + telegram) contain **131 distinct `CREATE TABLE` target names**, excluding block/line comments and including archive/quarantine definitions. This is a lexical source inventory, not the number of active business tables or proof that every conditional statement ran. Legacy PHP/snapshot definitions are outside this count. The former count of 103 incorrectly treated the word `only` in migration 026's comment as a table. (WBSS website migrations arrived as `079`/`080` and were renumbered to `095`/`096` at the fkss-main port to avoid collision; counts above predate the renumber.)
 
 ## 3. Migration rules in force
 
@@ -137,8 +137,8 @@ The summaries are based on each file's header comment. "Tables created" lists `C
 | `076_attendance_sessions.sql` | 2026-10-19 | Lesson-level Education attendance | attendance_session_records, attendance_sessions |
 | `077_timetable_builder.sql` | 2026-10-20 | Education timetable builder (per-class working days and bell schedule, weekly grid, make-up classes) | timetable_class_days, timetable_makeup_classes |
 | `078_school_calendar.sql` | 2026-10-20 | School calendar: planned holidays and "Day Off" days | school_day_offs, school_holidays |
-| `079_public_announcements.sql` | 2026-11-03 | Optional dated announcements for the public website news page; the site works without it | cms_announcements |
-| `080_announcement_images.sql` | 2026-11-03 | Optional `image_path` / `image_alt` columns so a dated announcement can carry a photograph; no-op when `079` has not been applied; the site works without it | — (adds columns to `cms_announcements`) |
+| `095_public_announcements.sql` | 2026-11-03 | Optional dated announcements for the public website news page; the site works without it | cms_announcements |
+| `096_announcement_images.sql` | 2026-11-03 | Optional `image_path` / `image_alt` columns so a dated announcement can carry a photograph; no-op when `079` has not been applied; the site works without it | — (adds columns to `cms_announcements`) |
 
 ## 6. Recommended next steps (documented, not implemented)
 

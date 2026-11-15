@@ -89,7 +89,8 @@
           kpi('fa-children', 'Families with 2+ children', s.families_multi, 'Siblings linked under one guardian', 'sky', 'multi'),
           kpi('fa-link', 'Members linked', s.members_linked, 'Members with a guardian record', 'indigo', null),
           kpi('fa-link-slash', 'Not linked yet', s.members_unlinked, s.members_unlinked ? 'Have a guardian name but no record — click to link' : 'All legacy guardian data linked', s.members_unlinked ? 'amber' : 'slate', 'unlinked'),
-          kpi('fa-scale-balanced', 'Needs review', s.pending_reviews, s.pending_reviews ? 'Probable duplicate guardians' : 'No duplicates pending', s.pending_reviews ? 'rose' : 'slate', 'review')
+          kpi('fa-scale-balanced', 'Needs review', s.pending_reviews, s.pending_reviews ? 'Probable duplicate guardians' : 'No duplicates pending', s.pending_reviews ? 'rose' : 'slate', 'review'),
+          kpi('fa-shield-halved', 'Unverified links', s.links_unverified, s.links_unverified ? 'Auto-linked children awaiting an office check' : 'Every link is office-verified', s.links_unverified ? 'amber' : 'slate', null)
         ].join('');
       }
       var badge = $('famQueueBadge');
@@ -216,12 +217,15 @@
     // children
     html += '<div class="fam-card"><div class="fam-card-hd"><span><i class="fa-solid fa-children text-sky-500"></i> Children (' + kids.length + ')</span></div>';
     if (!kids.length) html += '<div class="fam-empty fam-empty-sm">No children linked yet. Add one below.</div>';
-    else html += '<table class="fam-table fam-table-sm"><thead><tr><th>Member</th><th>Relation</th><th title="Primary contact: whose phone appears on the member record">Primary</th><th></th></tr></thead><tbody>' + kids.map(function (k) {
+    else html += '<table class="fam-table fam-table-sm"><thead><tr><th>Member</th><th>Relation</th><th title="Primary contact: whose phone appears on the member record">Primary</th><th title="Office-verified links are the only ones a parent account can see">Verified</th><th></th></tr></thead><tbody>' + kids.map(function (k) {
       var mid = parseInt(k.id, 10);
+      var gid = parseInt(g.id, 10);
+      var verified = parseInt(k.is_verified, 10) === 1;
       return '<tr><td><a href="#" onclick="FamilyLink.profile(' + mid + ');return false;" class="font-semibold text-slate-800 hover:text-emerald-600">' + esc(kidName(k)) + '</a><div class="text-[11px] text-slate-400">' + esc(k.member_code || 'no code') + (k.current_section ? ' · ' + esc(k.current_section) : '') + (k.status && k.status !== 'active' ? ' · <span class="text-amber-600">' + esc(k.status) + '</span>' : '') + '</div></td>' +
-        '<td><select class="fam-input fam-input-sm" onchange="FamilyLink.setRelation(' + parseInt(g.id, 10) + ',' + mid + ',this.value,null)">' + ['father', 'mother', 'other'].map(function (r) { return '<option value="' + r + '"' + (k.relation === r ? ' selected' : '') + '>' + relLabel(r) + '</option>'; }).join('') + '</select></td>' +
-        '<td class="text-center">' + (parseInt(k.is_primary, 10) === 1 ? '<span class="fam-pill fam-pill-ok" title="This guardian is the primary contact for ' + esc(kidName(k)) + '">&#9733; Primary</span>' : '<button class="fam-btn fam-btn-sm" title="Make this guardian the primary contact for ' + esc(kidName(k)) + '" onclick="FamilyLink.setRelation(' + parseInt(g.id, 10) + ',' + mid + ',null,1)">Make primary</button>') + '</td>' +
-        '<td class="text-right whitespace-nowrap"><button class="fam-btn fam-btn-sm" title="Open member profile" onclick="FamilyLink.profile(' + mid + ')"><i class="fa-regular fa-id-badge"></i></button> <button class="fam-btn fam-btn-sm fam-btn-danger" title="Unlink from this guardian" onclick="FamilyLink.unlink(' + parseInt(g.id, 10) + ',' + mid + ',' + esc(JSON.stringify(String(kidName(k)))) + ')"><i class="fa-solid fa-link-slash"></i></button></td></tr>';
+        '<td><select class="fam-input fam-input-sm" onchange="FamilyLink.setRelation(' + gid + ',' + mid + ',this.value,null)">' + ['father', 'mother', 'other'].map(function (r) { return '<option value="' + r + '"' + (k.relation === r ? ' selected' : '') + '>' + relLabel(r) + '</option>'; }).join('') + '</select></td>' +
+        '<td class="text-center">' + (parseInt(k.is_primary, 10) === 1 ? '<span class="fam-pill fam-pill-ok" title="This guardian is the primary contact for ' + esc(kidName(k)) + '">&#9733; Primary</span>' : '<button class="fam-btn fam-btn-sm" title="Make this guardian the primary contact for ' + esc(kidName(k)) + '" onclick="FamilyLink.setRelation(' + gid + ',' + mid + ',null,1)">Make primary</button>') + '</td>' +
+        '<td class="text-center whitespace-nowrap">' + (verified ? '<span class="fam-pill fam-pill-ok" title="Office-verified' + (k.verified_at ? ' ' + esc(k.verified_at) : '') + '">&#10003; Verified</span> <button class="fam-btn fam-btn-sm" title="Clear verification (the link stays)" onclick="FamilyLink.unverify(' + gid + ',' + mid + ')">Clear</button>' : '<button class="fam-btn fam-btn-sm fam-btn-primary" title="Confirm this office-checked relationship" onclick="FamilyLink.verify(' + gid + ',' + mid + ')">Verify</button>') + '</td>' +
+        '<td class="text-right whitespace-nowrap"><button class="fam-btn fam-btn-sm" title="Open member profile" onclick="FamilyLink.profile(' + mid + ')"><i class="fa-regular fa-id-badge"></i></button> <button class="fam-btn fam-btn-sm fam-btn-danger" title="Unlink from this guardian" onclick="FamilyLink.unlink(' + gid + ',' + mid + ',' + esc(JSON.stringify(String(kidName(k)))) + ')"><i class="fa-solid fa-link-slash"></i></button></td></tr>';
     }).join('') + '</tbody></table>';
     html += '<div class="mt-3" style="position:relative"><div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Add a child</div><div class="flex gap-2"><input id="famKidQ" autocomplete="off" placeholder="Type member name or code…" class="fam-input flex-1" ' + (merged ? 'disabled' : '') + '><select id="famKidRel" class="fam-input" style="width:auto"><option value="father">Father</option><option value="mother">Mother</option><option value="other" selected>Guardian</option></select></div><div id="famKidL" class="fam-dropdown" style="display:none"></div></div></div>';
 
@@ -264,6 +268,24 @@
     if (rel) p.relation = rel;
     if (prim !== null && prim !== undefined) p.is_primary = prim;
     post('set_relation', p).then(function () { toast('Link updated.'); refresh(); }).catch(function (e) { fail(e); refresh(); });
+  }
+  function verify(gid, mid) {
+    post('verify_link', { guardian_id: gid, member_id: mid }).then(function () { toast('Link verified.'); refresh(); loadStats(); }).catch(fail);
+  }
+  function unverify(gid, mid) {
+    dcAsk({ tier: 'low', title: 'Clear verification for this link?', summary: 'The link stays, but the parent account will no longer see this child until it is verified again.', confirmLabel: 'Clear verification' }).then(function (ok) {
+      if (!ok) return;
+      post('unverify_link', { guardian_id: gid, member_id: mid }).then(function () { toast('Verification cleared.'); refresh(); loadStats(); }).catch(fail);
+    });
+  }
+  function verify(gid, mid) {
+    post('verify_link', { guardian_id: gid, member_id: mid }).then(function () { toast('Link verified.'); refresh(); loadStats(); }).catch(fail);
+  }
+  function unverify(gid, mid) {
+    dcAsk({ tier: 'low', title: 'Clear verification for this link?', summary: 'The link stays, but the parent account will no longer see this child until it is verified again.', confirmLabel: 'Clear verification' }).then(function (ok) {
+      if (!ok) return;
+      post('unverify_link', { guardian_id: gid, member_id: mid }).then(function () { toast('Verification cleared.'); refresh(); loadStats(); }).catch(fail);
+    });
   }
   function unlink(gid, mid, name) {
     dcAsk({ tier: 'medium', title: 'Remove ' + name + ' from this guardian?', object: name,
@@ -517,7 +539,7 @@
 
   window.FamilyLink = {
     init: init, go: go, tab: setTab, page: function (p) { state.page = p; loadFamilies(); }, unlinkedPage: function (p) { state.unlinkedPage = p; loadUnlinked(); },
-    open: open, close: close, refresh: refresh, save: save, addAlias: addAlias, removeAlias: removeAlias, setRelation: setRelation, unlink: unlink,
+    open: open, close: close, refresh: refresh, save: save, addAlias: addAlias, removeAlias: removeAlias, setRelation: setRelation, unlink: unlink, verify: verify, unverify: unverify,
     profile: openProfile, resolve: resolve, runRematch: runRematch, attach: attach, linkAll: linkAll, clearPick: clearPick, loadQueue: loadQueue, loadStats: loadStats
   };
   // legacy names kept for the dashboard nav badge code
