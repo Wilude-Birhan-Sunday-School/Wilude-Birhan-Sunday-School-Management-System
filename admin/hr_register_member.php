@@ -15,6 +15,7 @@ header('Content-Type: application/json; charset=utf-8');
 require __DIR__ . '/config.php';
 require_once __DIR__ . '/backend/services/MemberFileService.php';
 require_once __DIR__ . '/backend/services/MemberCategory.php';
+require_once __DIR__ . '/backend/services/MemberImportService.php';
 require_once __DIR__ . '/backend/services/IdentityCodeService.php';
 require_once __DIR__ . '/backend/services/MemberRegistrationPolicy.php';
 require_once __DIR__ . '/backend/services/MemberDuplicateService.php';
@@ -220,17 +221,51 @@ $dob_month = (int) field('dob_month', 0);
 $dob_year  = (int) field('dob_year', 0);
 $date_of_birth   = null;
 $age             = null;
-// Auto-age sectioning DISABLED by design — section is set explicitly by HR
-$age_group       = field('age_group') ?: null;
-$current_section = $registrationPolicy['current_section'] ?: null;
+// Auto section/age-group assignment — the SAME rule as Excel import and
+// Telegram approval: the exact age from the birth date decides the group
+// via MemberCategory::groupForAge(). Unknown/invalid birth dates are
+// never guessed — group/section stay null (pending code) unless staff
+// posted an explicit canonical value (see fallback below).
+$age_group       = null;
+$current_section = null;
 
-if ($dob_year > 0) {
-    if ($_ethDateLoaded) {
-        try {
+if ($_ethDateLoaded) {
+    try {
+        if ($dob_day > 0 && $dob_month > 0 && $dob_year > 0) {
+            $dobParsed = \App\Services\MemberImportService::parseEcDate(
+                sprintf('%04d-%02d-%02d', $dob_year, $dob_month, $dob_day)
+            );
+            if (!empty($dobParsed['ok'])) {
+                $date_of_birth = (string)$dobParsed['gregorian'];
+                $age = \App\Services\MemberImportService::ageFromGregorian($date_of_birth);
+            }
+        } elseif ($dob_year > 0) {
+            // Year-only birth year: EC year-difference estimate, past years only.
             $currentYearEC = (int) ethio_date_format(new DateTime('now', new DateTimeZone('Africa/Addis_Ababa')), 'Y');
-            $age = max(0, $currentYearEC - $dob_year);
-        } catch (Throwable $e) {
-            error_log('Registration: date calc error: ' . $e->getMessage());
+            if ($dob_year <= $currentYearEC) {
+                $age = max(0, $currentYearEC - $dob_year);
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('Registration: date calc error: ' . $e->getMessage());
+    }
+}
+if ($age !== null) {
+    $age_group = \App\Services\MemberCategory::groupForAge($age);
+    $current_section = \App\Services\MemberCategory::sectionAm($age_group);
+}
+if ($age_group === null) {
+    // No usable birth date: respect an explicitly posted canonical value
+    // (e.g. quick-add section pick); anything unknown stays null.
+    $postedGroup = \App\Services\MemberCategory::normalizeGroup(field('age_group'));
+    if ($postedGroup !== null) {
+        $age_group = $postedGroup;
+        $current_section = \App\Services\MemberCategory::sectionAm($postedGroup);
+    } else {
+        $postedSection = \App\Services\MemberCategory::normalizeSectionAm($registrationPolicy['current_section']);
+        if ($postedSection !== null) {
+            $current_section = $postedSection;
+            $age_group = \App\Services\MemberCategory::ageGroupForSectionAm($postedSection);
         }
     }
 }
@@ -292,7 +327,7 @@ if ($registration_type === 'waiting') {
     $waiting_since = date('Y-m-d');
 } else {
     // Ministry coding: students get {CategoryLetter}{Sequential} (A1, B4,
-    // C12…). The letter derives from the manually assigned age group; the
+    // C12…). The letter derives from the automatically assigned age group; the
     // retired fourth category normalizes onto ህጻናት. Staff codes are issued
     // by the Super Admin Identity hub when positions are assigned — never
     // guessed at registration time.
