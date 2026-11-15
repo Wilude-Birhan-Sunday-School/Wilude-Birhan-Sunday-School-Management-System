@@ -190,6 +190,14 @@ $_isImpersonating = !empty($_SESSION['original_admin_role']);
 </head>
 <body class="<?= e($bodyClass) ?>">
     <script>try{if(localStorage.getItem('school_theme_mode')==='light')document.body.classList.add('light-mode')}catch(e){}</script>
+    <?php if ($_isImpersonating): ?>
+    <!-- Impersonation restore bar: in-flow, first inside <body> — never overlaps content/nav -->
+    <div id="impersonateBar" style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px 10px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;border-bottom:2px solid rgba(255,255,255,0.3)" onclick="window.api.post('impersonate.php',{action:'restore'}).then(function(d){if(d.status==='success')location.href='/frontend/pages/dashboard.php';})" role="button" tabindex="0" title="Stop viewing as this role and return to School Admin">
+        <span style="font-size:16px">🔙</span>
+        <span>Back to School Admin</span>
+        <span style="font-size:10px;opacity:0.7">(Viewing as <?= e(str_replace('_', ' ', $_userRole)) ?>)</span>
+    </div>
+    <?php endif; ?>
     <?= $bodyContent ?>
     
     <!-- Core JS — shared utilities for ALL dashboards -->
@@ -213,13 +221,5 @@ $_isImpersonating = !empty($_SESSION['original_admin_role']);
     <script src="/frontend/js/<?= e($pageScript) ?>.js?v=<?= filemtime(ROOT_PATH . '/frontend/js/' . $pageScript . '.js') ?>"></script>
     <?php endif; ?>
     
-    <?php if ($_isImpersonating): ?>
-    <!-- Impersonation restore button -->
-    <div id="impersonateBar" style="position:fixed;bottom:16px;right:16px;z-index:var(--z-impersonate);display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;padding:8px 16px;border-radius:12px;box-shadow:0 8px 24px rgba(245,158,11,0.4);font-size:12px;font-weight:600;cursor:pointer" onclick="window.api.post('impersonate.php',{action:'restore'}).then(function(d){if(d.status==='success')location.href='/frontend/pages/dashboard.php';})">
-        <span style="font-size:16px">🔙</span>
-        <span>Back to School Admin</span>
-        <span style="font-size:10px;opacity:0.7">(Viewing as <?= e(str_replace('_', ' ', $_userRole)) ?>)</span>
-    </div>
-    <?php endif; ?>
 </body>
 </html>
