@@ -134,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dob_month         = (int) field('dob_month', $cur['dob_ec_month'] ?? 0);
     $dob_year          = (int) field('dob_year', $cur['dob_ec_year'] ?? 0);
     
-    // Age (optional) — Auto-age sectioning DISABLED by design
+    // Age (optional) — auto sectioning runs at registration; this sheet can override it below
     $age = null;
     if ($dob_year > 0) { 
         $now = new DateTime('now', new DateTimeZone('Africa/Addis_Ababa')); 
@@ -155,9 +155,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
-    // Respect explicitly provided values; never auto-override
-    $age_group       = field('age_group', $cur['age_group'] ?? null) ?: null;
-    $current_section = field('current_section', $cur['current_section'] ?? null) ?: null;
+    // Manual section override: the sheet posts the age_group code and the
+    // section name is DERIVED server-side so the pair can never disagree
+    // (same doctrine as class save). '' clears both back to pending.
+    // Callers without the override control keep current values; resolvable
+    // spellings are canonicalized, unknown ones preserved byte-for-byte.
+    if (array_key_exists('age_group', $_POST)) {
+        $postedRaw = $_POST['age_group'];
+        $postedRaw = is_scalar($postedRaw) ? trim((string)$postedRaw) : '';
+        $postedGroup = \App\Services\MemberCategory::normalizeGroup($postedRaw);
+        $age_group = $postedGroup;
+        $current_section = \App\Services\MemberCategory::sectionAm($postedGroup);
+    } else {
+        $age_group = ($cur['age_group'] ?? null) ?: null;
+        $keptSection = field('current_section', $cur['current_section'] ?? null) ?: null;
+        $canonSection = \App\Services\MemberCategory::normalizeSectionAm($keptSection);
+        $current_section = $canonSection ?? $keptSection;
+        if ($canonSection !== null && $age_group === null) {
+            $age_group = \App\Services\MemberCategory::ageGroupForSectionAm($canonSection);
+        }
+    }
     
     $education_level  = field('education_level', $cur['education_level'] ?? '');
     $spiritual_education = field('spiritual_education', $cur['spiritual_education'] ?? '');
@@ -320,6 +337,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $id
                 );
             }
+            $sectionChanged = ((string)($cur['age_group'] ?? '') !== (string)($age_group ?? ''))
+                || ((string)($cur['current_section'] ?? '') !== (string)($current_section ?? ''));
+            if ($sectionChanged) {
+                \App\Services\SecurityAuditService::record(
+                    $conn,
+                    'Member Section Changed',
+                    ['member_id' => (int)$id, 'from_group' => (string)($cur['age_group'] ?? ''), 'to_group' => (string)($age_group ?? ''), 'from_section' => (string)($cur['current_section'] ?? ''), 'to_section' => (string)($current_section ?? ''), 'reason' => substr(trim((string)($_POST['section_change_reason'] ?? '')), 0, 200), 'via' => 'edit_form'],
+                    'member',
+                    $id
+                );
+            }
         }
         $conn->commit();
         // Identity v2: apply submitted positions, re-code if needed and
@@ -395,6 +423,11 @@ $dobDisplay = '';
 if ($m['dob_ec_day'] && $m['dob_ec_month'] && $m['dob_ec_year']) {
     $dobDisplay = $m['dob_ec_day'] . ' ' . ($ethMonths[(int)$m['dob_ec_month']] ?? '') . ' ' . $m['dob_ec_year'] . ' ዓ.ም';
 }
+
+// Auto-section suggestion shown next to the manual-override control.
+$autoAge = \App\Services\MemberAge::years(is_array($m) ? $m : []);
+$autoGroup = \App\Services\MemberCategory::groupForAge($autoAge);
+$autoSection = \App\Services\MemberCategory::sectionAm($autoGroup);
 
 $now = new DateTime('now', new DateTimeZone('Africa/Addis_Ababa'));
 $printDate = ethio_date_format($now, 'F j, Y');
@@ -1133,6 +1166,18 @@ $fullName = trim($m['student_name'] . ' ' . $m['father_name'] . ' ' . $m['grandf
                                 <input type="number" name="dob_month" value="<?= $m['dob_ec_month'] ?>" placeholder="Month" min="1" max="13" class="mm-input">
                                 <input type="number" name="dob_year" value="<?= $m['dob_ec_year'] ?>" placeholder="Year" class="mm-input">
                             </div>
+                        </div>
+                        <div class="mm-form-group">
+                            <label class="mm-label">Section — Manual Override</label>
+                            <select name="age_group" class="mm-input">
+                                <option value="">— Unknown / Pending —</option>
+                                <?php foreach (\App\Services\MemberCategory::sections() as $secCode => $secMeta): ?>
+                                <option value="<?= e($secCode) ?>" <?= sel($m['age_group'] ?? '', $secCode) ?>><?= e($secMeta['am'] . ' (' . $secMeta['en'] . ', age ' . $secMeta['ages'] . ')') ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <p style="margin:6px 0 0;font-size:11px;color:#64748b;">Auto from birth date: <strong><?= $autoSection !== null ? e($autoSection . ' (age ' . $autoAge . ')') : 'unknown (no usable birth date)' ?></strong><?php if (($m['age_group'] ?? null) !== null && ($m['age_group'] ?? '') !== '' && $autoGroup !== null && ($m['age_group'] ?? '') !== $autoGroup): ?> — currently overridden.<?php endif; ?> Picking a section here overrides the automatic assignment; the change is logged with your name.</p>
+                            <label class="mm-label" style="margin-top:8px">Override reason (optional)</label>
+                            <input type="text" name="section_change_reason" value="" maxlength="200" placeholder="Why is this member in a different section?" class="mm-input">
                         </div>
                         <div class="mm-form-group">
                             <label class="mm-label">Profession</label>
