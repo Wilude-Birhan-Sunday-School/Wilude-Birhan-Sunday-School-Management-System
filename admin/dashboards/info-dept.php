@@ -2875,8 +2875,12 @@ $nextMemberCode = isset($conn) ? generate_next_member_code($conn) : '0001';
 
     // Calculate age & section (same value used as school section)
     function calculateAgeSection() {
+        const day = parseInt(document.getElementById('dobDay')?.value || '0', 10);
+        const month = parseInt(document.getElementById('dobMonth')?.value || '0', 10);
         const year = parseInt(document.getElementById('dobYear')?.value || '0', 10);
         const currentYearEC = <?php echo (int) ethio_date_format(new DateTime('now', new DateTimeZone('Africa/Addis_Ababa')), 'Y'); ?>;
+        const currentMonthEC = <?php echo (int) ethio_date_format(new DateTime('now', new DateTimeZone('Africa/Addis_Ababa')), 'n'); ?>;
+        const currentDayEC = <?php echo (int) ethio_date_format(new DateTime('now', new DateTimeZone('Africa/Addis_Ababa')), 'j'); ?>;
 
         if (!year || year > currentYearEC) {
             ['ageDisplay','ageField','sectionDisplay','currentSectionField','ageGroupField'].forEach(id=>{
@@ -2888,11 +2892,33 @@ $nextMemberCode = isset($conn) ? generate_next_member_code($conn) : '0001';
 
         let age = currentYearEC - year;
         if (age < 0) age = 0;
+        // Birthday-aware like the server (MemberAge EC branch): subtract
+        // one when this year's birthday has not occurred yet. The server
+        // re-decides authoritatively at submit; this is a live preview.
+        if (month >= 1 && month <= 13 && day >= 1) {
+            const maxDay = month === 13 ? ((year % 4 === 3) ? 6 : 5) : 30;
+            if (day <= maxDay && (currentMonthEC < month || (currentMonthEC === month && currentDayEC < day))) {
+                age--;
+                if (age < 0) age = 0;
+            }
+        }
 
-        // Age is informational only. Category (ህጻናት/ማዕከላዊያን/ወጣቶች) and
-        // section are assigned manually by staff — no automatic assignment.
+        // Same thresholds as MemberCategory::groupForAge(): <=13 A, <=17 B, else C.
+        let sectionLabel = 'ህጻናት';
+        let ageGroup = '7_13';
+        if (age >= 14 && age <= 17) {
+            sectionLabel = 'ማዕከላዊያን';
+            ageGroup = '14_17';
+        } else if (age >= 18) {
+            sectionLabel = 'ወጣቶች';
+            ageGroup = '18_plus';
+        }
+
         if (document.getElementById('ageDisplay')) document.getElementById('ageDisplay').value = age.toString();
         if (document.getElementById('ageField')) document.getElementById('ageField').value = age.toString();
+        if (document.getElementById('sectionDisplay')) document.getElementById('sectionDisplay').value = sectionLabel;
+        if (document.getElementById('currentSectionField')) document.getElementById('currentSectionField').value = sectionLabel;
+        if (document.getElementById('ageGroupField')) document.getElementById('ageGroupField').value = ageGroup;
     }
 
     // Toggle custom registration date fields
