@@ -1274,6 +1274,16 @@ final class TelegramRegistrationService
         return $this->editOrSend($chatId, $editId, $text, TelegramKeyboard::inline($rows));
     }
 
+    /** True when the draft behind a review screen can still move forward,
+     *  so review and blocker screens may offer the resume button.
+     *  Terminal states (submitted/cancelled/completed/...) get no button. */
+    private function reviewCanContinue(array $session): bool
+    {
+        $st = (string)($session['status'] ?? '');
+        if (in_array($st, ['choosing','duplicate_search','duplicate_review','identity_verification'], true)) return true;
+        return $st === 'collecting' && $this->firstMissingField($session) !== null;
+    }
+
     private function showReview(int $chatId, array $session, ?int $editId = null): array
     {
         $answers = $this->answers((int)$session['id']);
@@ -1300,6 +1310,9 @@ final class TelegramRegistrationService
         if ($row !== []) $rows[] = $row;
         if ($high) {
             $rows[] = [['text'=>'🔍 እጮች ዳግም አሳይ']];
+        }
+        if ($this->reviewCanContinue($session)) {
+            array_unshift($rows, [['text'=>'▶️ ቀጥል']]);
         }
         $rows[] = [['text'=>'✅ ምዝገባውን ላክ']];
         $rows[] = [['text'=>'❌ ሰርዝ'],['text'=>'🏠 ዋና ምናሌ']];
@@ -1507,7 +1520,11 @@ final class TelegramRegistrationService
             $text = TelegramMessageService::get($this->conn,'final_validation_blocked',[
                 'blocker' => implode('; ', $ready['blockers'])
             ]);
-            return TelegramKeyboard::msg($chatId, $text);
+            $rows = [];
+            if ($this->reviewCanContinue($session)) $rows[] = [['text'=>'▶️ ቀጥል']];
+            $rows[] = [['text'=>'📋 መረጃውን አሳይ']];
+            $rows[] = [['text'=>'❌ ሰርዝ'],['text'=>'🏠 ዋና ምናሌ']];
+            return TelegramKeyboard::msg($chatId, $text, TelegramKeyboard::reply($rows, true, false));
         }
         // HR correction mode: a draft with pending correction answers must not
         // dodge them via the mid-collection submit button.
