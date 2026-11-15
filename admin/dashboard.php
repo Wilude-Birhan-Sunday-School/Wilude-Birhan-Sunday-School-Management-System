@@ -26,28 +26,48 @@ if ($roleFeature !== null && !\App\Services\FeatureGate::isEnabled($roleFeature)
     exit;
 }
 
-// If impersonating from school_admin, inject a floating "Back to School Admin" button
+// If impersonating, show an in-flow "Back to School Admin" banner as the FIRST
+// element inside <body> — never floating, so it can never cover content or nav
+// on mobile or desktop. school_admin.php renders its own equivalent bar, so the
+// router skips injection there (avoids a double banner).
 $isImpersonating = !empty($_SESSION['original_admin_role']);
-if ($isImpersonating) {
-    // Register shutdown function to inject the button HTML at the end of the page
-    register_shutdown_function(function() {
-        echo '
-        <div id="impersonateBar" style="position:fixed;bottom:16px;right:16px;z-index:1300;display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;padding:8px 16px;border-radius:12px;box-shadow:0 8px 24px rgba(245,158,11,0.4);font-family:Segoe UI,Arial,sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;border:2px solid rgba(255,255,255,0.3)" onclick="restoreToAdmin()">
-            <span style="font-size:16px">🔙</span>
-            <span>Back to School Admin</span>
-            <span style="font-size:10px;opacity:0.7;margin-left:4px">(Viewing as ' . htmlspecialchars(str_replace("_", " ", $_SESSION["admin_role"] ?? "")) . ')</span>
-        </div>
-        <script>
-        async function restoreToAdmin(){
-            try{
-                const fd=new FormData();fd.append("action","restore");fd.append("csrf_token",' . json_encode(generateCsrfToken()) . ');
-                const r=await fetch("/admin/api_impersonate.php",{method:"POST",body:fd,credentials:"same-origin"});
-                const d=await r.json();
-                if(d.status==="success")window.location.href="/admin/dashboard.php";
-                else alert(d.message||"Failed to restore");
-            }catch(e){alert("Network error");}
+$dashboardHasOwnBar = ($role === 'school_admin' && is_file(__DIR__ . '/dashboards/school_admin.php'));
+if ($isImpersonating && !$dashboardHasOwnBar) {
+    // Buffer the dashboard; the shutdown hook injects the banner right after <body>.
+    // Shutdown hooks run before PHP flushes output buffers, on every path incl. exit.
+    // (No dashboard uses ob_*, so the buffer is untouched until then — verified.)
+    ob_start();
+    $impersonatedRoleLabel = htmlspecialchars(str_replace('_', ' ', (string)($_SESSION['admin_role'] ?? '')), ENT_QUOTES, 'UTF-8');
+    $impersonateCsrf = generateCsrfToken();
+    register_shutdown_function(function() use ($impersonatedRoleLabel, $impersonateCsrf) {
+        if (ob_get_level() === 0) {
+            return;
         }
-        </script>';
+        $html = (string)ob_get_clean();
+        $banner = '
+        <div id="impersonateBar" style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px 10px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;padding:8px 16px;font-family:Segoe UI,Arial,sans-serif;font-size:12px;font-weight:600;cursor:pointer;border-bottom:2px solid rgba(255,255,255,0.3)" onclick="restoreToAdmin()" role="button" tabindex="0" title="Stop viewing as this role and return to School Admin">'
+            . '<span style="font-size:16px">🔙</span>'
+            . '<span>Back to School Admin</span>'
+            . '<span style="font-size:10px;opacity:0.7">(Viewing as ' . $impersonatedRoleLabel . ')</span>'
+            . '</div>'
+            . '<script>'
+            . 'async function restoreToAdmin(){'
+            . 'try{const fd=new FormData();fd.append("action","restore");fd.append("csrf_token",' . json_encode($impersonateCsrf) . ');'
+            . 'const r=await fetch("/admin/api_impersonate.php",{method:"POST",body:fd,credentials:"same-origin"});'
+            . 'const d=await r.json();'
+            . 'if(d.status==="success")window.location.href="/admin/dashboard.php";'
+            . 'else alert(d.message||"Failed to restore");'
+            . '}catch(e){alert("Network error");}'
+            . '}'
+            . '</script>';
+        if (preg_match('/<body[^>]*>/i', $html, $m, PREG_OFFSET_CAPTURE)) {
+            $pos = $m[0][1] + strlen($m[0][0]);
+            $html = substr_replace($html, "\n" . $banner, $pos, 0);
+        } else {
+            // No <body> tag (e.g. redirect or empty response) — prepend harmlessly.
+            $html = $banner . $html;
+        }
+        echo $html;
     });
 }
 
