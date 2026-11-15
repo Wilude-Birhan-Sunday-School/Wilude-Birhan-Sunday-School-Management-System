@@ -203,7 +203,7 @@ class PublicWebsiteStructureTests(unittest.TestCase):
         self.assertIn("str_starts_with($path, '//')", self.bootstrap)
         self.assertIn('str_contains($path, \'..\')', self.bootstrap)
         self.assertIn("'/themes/fkss/assets/wbss-", self.content)
-        sql = read('sql/080_announcement_images.sql')
+        sql = read('sql/096_announcement_images.sql')
         self.assertIn('`image_path` VARCHAR(255)', sql)
         self.assertIn('`image_alt` VARCHAR(255)', sql)
         self.assertNotIn('DROP ', sql.upper())
@@ -262,7 +262,7 @@ class PublicWebsiteStructureTests(unittest.TestCase):
                 self.assertIn(token, self.bootstrap)
         # Stored announcement links must be same-site and root-relative.
         self.assertIn("str_starts_with($linkUrl, '//')", self.bootstrap)
-        sql = read('sql/079_public_announcements.sql')
+        sql = read('sql/095_public_announcements.sql')
         self.assertIn('CREATE TABLE IF NOT EXISTS `cms_announcements`', sql)
         self.assertNotIn('DROP ', sql.upper())
         self.assertNotRegex(sql.upper(), r'^\s*(DELETE\s+FROM|TRUNCATE)')

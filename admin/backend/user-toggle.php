@@ -51,7 +51,7 @@ $currentRole = $_SESSION['admin_role'] ?? '';
 
 // Check permissions - who can toggle which users
 $allowedToToggle = [
-    'super_admin' => ['super_admin', 'school_admin', 'info_dept', 'hr_dept', 'edu_dept', 'finance_dept', 'material_dept', 'mezmur_dept', 'teacher', 'attendance_taker', 'content_editor', 'mezmur_attendance_taker', 'hr_attendance_taker'],
+    'super_admin' => ['super_admin', 'school_admin', 'info_dept', 'hr_dept', 'edu_dept', 'finance_dept', 'material_dept', 'mezmur_dept', 'teacher', 'attendance_taker', 'content_editor', 'mezmur_attendance_taker', 'hr_attendance_taker', 'accounts_office'],
     'school_admin' => ['info_dept', 'hr_dept', 'edu_dept', 'finance_dept', 'material_dept', 'mezmur_dept', 'teacher', 'attendance_taker'],
     'info_dept' => ['attendance_taker'],
     'edu_dept' => ['teacher'],
@@ -95,9 +95,58 @@ if ((int)$targetUser['is_active'] === $newStatus) {
     exit;
 }
 
+// S8: never resurrect a revoked (deactivated) ACM link. All
+// three login gates read only the bit, so a 0→1 flip would
+// let a dead account log in. 1→0 flips stay unguarded
+// (gating is always safe; S7 converges the drift). Re-entry
+// is a FRESH activation ticket, never a revive.
+if ($newStatus === 1) {
+    try {
+        $acmGuard = $pdo->prepare('SELECT status FROM acm_person_accounts WHERE user_id = ? LIMIT 1');
+        $acmGuard->execute([$userId]);
+        if ($acmGuard->fetchColumn() === 'revoked') {
+            echo json_encode(['status' => 'error', 'message' => 'This account was deactivated and cannot be re-enabled; start a fresh activation.']);
+            exit;
+        }
+    } catch (PDOException $e) {
+        // 42S02/42S22: pre-ACM deployment, no link table — proceed.
+        if ($e->getCode() !== '42S02' && $e->getCode() !== '42S22') {
+            echo json_encode(['status' => 'error', 'message' => 'Could not verify account links.']);
+            exit;
+        }
+    }
+}
+
 try {
     $stmt = $pdo->prepare("UPDATE users SET is_active = ? WHERE id = ?");
     $stmt->execute([$newStatus, $userId]);
+
+    // S10 (#38): a 1→0 flip is a staff deactivation — enrolled
+    // devices + refresh sessions + open enrollment requests die
+    // with the bit so nothing usable outlives it (the gate
+    // already fails closed on is_active = 0; this removes the
+    // rows instead of leaving them inert). 0→1 flips revive
+    // NOTHING: re-enrollment is a fresh request (S8 precedent).
+    // Each statement is 42S02/42S22-tolerant so pre-ACM/pre-S10
+    // deployments toggle exactly as before.
+    if ($newStatus === 0) {
+        $s10Closures = [
+            "UPDATE acm_devices SET status = 'revoked' WHERE user_id = ? AND status IN ('pending','active')",
+            'UPDATE api_refresh_sessions SET revoked_at = COALESCE(revoked_at, CURRENT_TIMESTAMP) WHERE user_id = ?',
+            "UPDATE acm_staff_enrollment_requests SET status = 'canceled' WHERE user_id = ? AND status = 'requested'",
+            "UPDATE acm_activation_grants g JOIN acm_staff_enrollment_requests r ON r.grant_id = g.id SET g.revoked_at = COALESCE(g.revoked_at, NOW()), g.revocation_reason = 'staff account deactivated' WHERE r.user_id = ? AND g.revoked_at IS NULL AND g.consumed_at IS NULL",
+        ];
+        foreach ($s10Closures as $sql) {
+            try {
+                $close = $pdo->prepare($sql);
+                $close->execute([$userId]);
+            } catch (PDOException $e) {
+                if ($e->getCode() !== '42S02' && $e->getCode() !== '42S22') {
+                    throw $e;
+                }
+            }
+        }
+    }
 
     echo json_encode([
         'status' => 'success',

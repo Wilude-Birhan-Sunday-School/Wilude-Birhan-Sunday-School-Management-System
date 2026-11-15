@@ -105,6 +105,10 @@ $validRoles = [
     // through api_dept_takers.php; admins may also create them here.
     'mezmur_attendance_taker',
     'hr_attendance_taker',
+    // ACM console seat (S1): super_admin creates these here; member and
+    // parent login roles are deliberately NOT listed — they are
+    // provisioned only by approved activation tickets.
+    'accounts_office',
 ];
 
 // Role-based permissions for creating users
@@ -264,6 +268,25 @@ try {
         $prevRow = $prev->fetch();
         if (!$prevRow) respond('error', 'User not found.');
 
+        // S8: never resurrect a revoked (deactivated) ACM link
+        // via the edit form (same guard as user-toggle.php:
+        // gates read only the bit). Re-entry is a FRESH
+        // activation ticket, never a revive.
+        if ((int)$prevRow['is_active'] === 0 && (int)$isActive === 1) {
+            try {
+                $acmGuard = $pdo->prepare('SELECT status FROM acm_person_accounts WHERE user_id = :uid LIMIT 1');
+                $acmGuard->execute([':uid' => $userId]);
+                if ($acmGuard->fetchColumn() === 'revoked') {
+                    respond('error', 'This account was deactivated and cannot be re-enabled; start a fresh activation.');
+                }
+            } catch (PDOException $e) {
+                // 42S02/42S22: pre-ACM deployment — proceed.
+                if ($e->getCode() !== '42S02' && $e->getCode() !== '42S22') {
+                    respond('error', 'Could not verify account links.');
+                }
+            }
+        }
+
         // One account mutation shared by the ordinary update path and the
         // credential service's transaction-aware administrator reset path.
         // Every statement here uses the same mysqli connection as the
@@ -416,6 +439,30 @@ try {
                 );
                 if ($memberId) {
                     syncMemberTeacherFlag($conn, (int)$memberId, false);
+                }
+            }
+        }
+
+        // S10 (#38): the edit form flips the same is_active bit as
+        // user-toggle — a 1→0 save closes staff devices + sessions
+        // + open requests exactly like the toggle does (same four
+        // statements, same 42S02/42S22 tolerance). 0→1 revives
+        // nothing: re-enrollment is a fresh request.
+        if ($isActive === 0 && $wasActive) {
+            $s10Closures = [
+                "UPDATE acm_devices SET status = 'revoked' WHERE user_id = :uid AND status IN ('pending','active')",
+                'UPDATE api_refresh_sessions SET revoked_at = COALESCE(revoked_at, CURRENT_TIMESTAMP) WHERE user_id = :uid',
+                "UPDATE acm_staff_enrollment_requests SET status = 'canceled' WHERE user_id = :uid AND status = 'requested'",
+                "UPDATE acm_activation_grants g JOIN acm_staff_enrollment_requests r ON r.grant_id = g.id SET g.revoked_at = COALESCE(g.revoked_at, NOW()), g.revocation_reason = 'staff account deactivated' WHERE r.user_id = :uid AND g.revoked_at IS NULL AND g.consumed_at IS NULL",
+            ];
+            foreach ($s10Closures as $sql) {
+                try {
+                    $closeStmt = $pdo->prepare($sql);
+                    $closeStmt->execute([':uid' => (int)$userId]);
+                } catch (PDOException $e) {
+                    if ($e->getCode() !== '42S02' && $e->getCode() !== '42S22') {
+                        throw $e;
+                    }
                 }
             }
         }

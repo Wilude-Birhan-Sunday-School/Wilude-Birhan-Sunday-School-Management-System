@@ -91,8 +91,8 @@ drawer) switches to English.
    sitemap.
 2. **Existing CMS tables** (read-only): `cms_programs`, `cms_teachers`,
    `cms_social_links`, plus the optional `cms_announcements`
-   (`sql/079_public_announcements.sql`, photographs via
-   `sql/080_announcement_images.sql`). When a CMS table
+   (`sql/095_public_announcements.sql`, photographs via
+   `sql/096_announcement_images.sql`). When a CMS table
    has no active rows the site falls back to the standard structure in
    `site_content.php`, so no page is ever empty.
 3. **Photos** — `public_gallery.php` (`action=boot|albums|photos|featured`).
@@ -202,7 +202,7 @@ parish must review it.
 
 ## 7. Publishing announcements
 
-Apply `sql/079_public_announcements.sql` (additive, idempotent) and insert rows
+Apply `sql/095_public_announcements.sql` (additive, idempotent) and insert rows
 with `title`, optional `title_am`, `body`, optional `link_url`/`link_label` and
 `published_on`. Dated rows appear on `/news` and on the home page, newest
 first, and are searchable. `link_url` is rendered only when it is a same-site

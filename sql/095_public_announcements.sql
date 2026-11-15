@@ -1,5 +1,5 @@
 -- ============================================================
--- 079 — Public website announcements
+-- 095 — Public website announcements (renumbered from 079: 079/080 collided with ACM P0 + telegram foundation)
 -- ============================================================
 -- The public website (news.php) lists dated announcements stored in this
 -- table, newest first. The table is OPTIONAL: the website reads it

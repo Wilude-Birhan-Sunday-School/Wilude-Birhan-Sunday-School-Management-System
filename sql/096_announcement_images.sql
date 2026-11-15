@@ -1,5 +1,5 @@
 -- ============================================================
--- 080 — Photographs for public website announcements
+-- 096 — Photographs for public website announcements (renumbered from 080)
 -- ============================================================
 -- The public news page (news.php) can show a photograph with each dated
 -- announcement. The two columns added here are OPTIONAL: the website reads
@@ -16,7 +16,7 @@
 --   Never an absolute URL, a protocol-relative URL or a path containing "..".
 -- ============================================================
 
--- The table belongs to 079. When it is absent this migration is a no-op, so
+-- The table belongs to 095 (renumbered from 079). When it is absent this migration is a no-op, so
 -- the numbered files stay independent and no table is defined twice.
 SET @has_table := (
     SELECT COUNT(*) FROM information_schema.TABLES

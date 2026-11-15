@@ -26,7 +26,7 @@ $role = (string)($_SESSION['admin_role'] ?? '');
 $action = is_scalar($_REQUEST['action'] ?? '') ? (string)($_REQUEST['action'] ?? '') : '';
 
 $__readActions = ['search', 'get', 'get_family', 'list_suggestions', 'score_check', 'stats', 'list_guardians', 'unlinked_members', 'activity'];
-$__writeActions = ['create', 'update', 'link', 'unlink', 'merge', 'merge_suggestion', 'reject_suggestion', 'add_alias', 'run_rematch', 'attach_member', 'attach_batch', 'set_relation', 'remove_alias'];
+$__writeActions = ['create', 'update', 'link', 'unlink', 'merge', 'merge_suggestion', 'reject_suggestion', 'add_alias', 'run_rematch', 'attach_member', 'attach_batch', 'set_relation', 'remove_alias', 'verify_link', 'unverify_link'];
 
 if (in_array($action, $__writeActions, true) && !in_array($role, ['super_admin', 'school_admin', 'hr_dept'], true)) {
     http_response_code(403);
@@ -281,11 +281,37 @@ switch ($action) {
         $prio = max(1, (int)($_POST['contact_priority'] ?? 1));
         $prim = (int)($_POST['is_primary'] ?? 0) === 1;
         try {
-            GuardianService::linkMember($conn, $gid, $mid, $rel, $prio, $prim);
+            GuardianService::linkMember($conn, $gid, $mid, $rel, $prio, $prim, true, true);
             echo json_encode(['status' => 'success', 'message' => 'Member linked to guardian.']);
         } catch (Throwable $e) {
             http_response_code(422);
             echo json_encode(['status' => 'error', 'message' => guardianSafeError($e, 'Member could not be linked.')]);
+        }
+        exit;
+    }
+
+    case 'verify_link': {
+        $gid = (int)($_POST['guardian_id'] ?? 0);
+        $mid = (int)($_POST['member_id'] ?? 0);
+        try {
+            GuardianService::verifyLink($conn, $gid, $mid, (int)$_SESSION['admin_id']);
+            echo json_encode(['status' => 'success', 'message' => 'Link verified.']);
+        } catch (Throwable $e) {
+            http_response_code(422);
+            echo json_encode(['status' => 'error', 'message' => guardianSafeError($e, 'Link could not be verified.')]);
+        }
+        exit;
+    }
+
+    case 'unverify_link': {
+        $gid = (int)($_POST['guardian_id'] ?? 0);
+        $mid = (int)($_POST['member_id'] ?? 0);
+        try {
+            GuardianService::clearVerification($conn, $gid, $mid, (int)$_SESSION['admin_id']);
+            echo json_encode(['status' => 'success', 'message' => 'Verification cleared.']);
+        } catch (Throwable $e) {
+            http_response_code(422);
+            echo json_encode(['status' => 'error', 'message' => guardianSafeError($e, 'Verification could not be cleared.')]);
         }
         exit;
     }

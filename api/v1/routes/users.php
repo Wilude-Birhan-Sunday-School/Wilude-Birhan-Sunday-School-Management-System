@@ -7,6 +7,7 @@
  * GET    /users/me/profile-image
  * POST   /users/me/profile-image
  * DELETE /users/me/profile-image
+ * GET    /users/me/children       (parent accounts: verified-linked children)
  * POST   /users/change-password   (compatibility contract)
  */
 
@@ -488,6 +489,24 @@ if ($action === 'change-password' && $subAction === '' && $method === 'POST') {
     } catch (\Throwable $error) {
         usersApiCredentialError($error);
     }
+}
+
+// ============================================================
+// GET /users/me/children — the caller's verified-linked children.
+// Parent accounts only; ownership is derived from authentication,
+// never from a client-supplied id (same rule as the image routes).
+// ============================================================
+if ($action === 'me' && $subAction === 'children') {
+    if ($method !== 'GET') {
+        err("No handler for {$method} /users/me/children", 404);
+    }
+    if (!apiRoleIs($auth, ['parent'])) {
+        err('Your children list is only for parent accounts.', 403);
+    }
+    if (isApiRateLimited('parent_children', 60)) {
+        err('Too many requests. Please wait a moment.', 429);
+    }
+    ok(['children' => apiParentChildren($conn, $auth)]);
 }
 
 err("No handler for {$method} /users" . ($action ? "/{$action}" : '')

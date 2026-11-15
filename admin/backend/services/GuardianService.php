@@ -208,7 +208,7 @@ class GuardianService
             return ['guardian_id' => 0, 'mode' => 'none'];
         }
         if ($pickedGuardianId > 0) {
-            self::linkMember($conn, $pickedGuardianId, $memberId, 'other', 1, true);
+            self::linkMember($conn, $pickedGuardianId, $memberId, 'other', 1, true, true, true);
             self::audit($conn, 'Guardian Linked', "Member {$memberId} linked to picked guardian {$pickedGuardianId}.");
             return ['guardian_id' => $pickedGuardianId, 'mode' => 'picked'];
         }
@@ -405,7 +405,13 @@ class GuardianService
         return $out;
     }
 
-    public static function linkMember(\mysqli $conn, int $guardianId, int $memberId, string $relation = 'other', int $priority = 1, bool $isPrimary = false, bool $audit = true): void
+    /**
+     * $officeVerified: stamp verified_by/at. TRUE only for explicit human
+     * pair-decisions (console link action, registration picker pick).
+     * Every derived path (auto/auto_family/created/synced, batch, backfill,
+     * mobile reverse-sync) leaves verification NULL for later stamping.
+     */
+    public static function linkMember(\mysqli $conn, int $guardianId, int $memberId, string $relation = 'other', int $priority = 1, bool $isPrimary = false, bool $audit = true, bool $officeVerified = false): void
     {
         if ($guardianId <= 0 || $memberId <= 0) {
             throw new \InvalidArgumentException('Guardian and member are required.');
@@ -440,11 +446,23 @@ class GuardianService
             $conn->query("UPDATE member_guardians SET is_primary = 0 WHERE member_id = " . (int)$memberId);
         }
         $uid = (int)($_SESSION['admin_id'] ?? 0);
-        $stmt = $conn->prepare('INSERT INTO member_guardians (member_id, guardian_id, relation, contact_priority, is_primary, created_by) VALUES (?,?,?,?,?,?) ON DUPLICATE KEY UPDATE relation=VALUES(relation), contact_priority=VALUES(contact_priority), is_primary=VALUES(is_primary)');
+        // Verification stamps only on explicit office decisions with a real
+        // actor. The default (derived) path keeps the historical statement
+        // byte-identical and never clears an existing stamp on re-link.
+        $stamp = $officeVerified && $uid > 0;
+        if ($stamp) {
+            $stmt = $conn->prepare("INSERT INTO member_guardians (member_id, guardian_id, relation, contact_priority, is_primary, created_by, verified_by, verified_at) VALUES (?,?,?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE relation=VALUES(relation), contact_priority=VALUES(contact_priority), is_primary=VALUES(is_primary), verified_by=VALUES(verified_by), verified_at=VALUES(verified_at)");
+        } else {
+            $stmt = $conn->prepare('INSERT INTO member_guardians (member_id, guardian_id, relation, contact_priority, is_primary, created_by) VALUES (?,?,?,?,?,?) ON DUPLICATE KEY UPDATE relation=VALUES(relation), contact_priority=VALUES(contact_priority), is_primary=VALUES(is_primary)');
+        }
         if (!$stmt) {
             throw new \RuntimeException('Link prepare failed: ' . $conn->error);
         }
-        $stmt->bind_param('iisiii', $memberId, $guardianId, $relation, $priority, $pri, $uid);
+        if ($stamp) {
+            $stmt->bind_param('iisiiii', $memberId, $guardianId, $relation, $priority, $pri, $uid, $uid);
+        } else {
+            $stmt->bind_param('iisiii', $memberId, $guardianId, $relation, $priority, $pri, $uid);
+        }
         $ok = $stmt->execute();
         $stmt->close();
         if (!$ok) {
@@ -454,8 +472,64 @@ class GuardianService
             self::syncLegacy($conn, $guardianId, $memberId);
         }
         if ($audit) {
-            self::audit($conn, 'Guardian Linked', "Member {$memberId} linked to guardian {$guardianId} ({$relation}, priority {$priority}" . ($pri ? ', primary' : '') . ').');
+            self::audit($conn, 'Guardian Linked', "Member {$memberId} linked to guardian {$guardianId} ({$relation}, priority {$priority}" . ($pri ? ', primary' : '') . ($stamp ? ', verified' : '') . ').');
         }
+    }
+
+    /** Stamp an existing link as office-verified (audited, re-stampable). */
+    public static function verifyLink(\mysqli $conn, int $guardianId, int $memberId, int $actorId): void
+    {
+        if ($guardianId <= 0 || $memberId <= 0 || $actorId <= 0) {
+            throw new \InvalidArgumentException('Guardian, member and verifier are required.');
+        }
+        // Existence first: re-stamping the same verifier changes no bytes,
+        // so affected_rows cannot distinguish "missing" from "unchanged".
+        $exists = $conn->prepare('SELECT member_id FROM member_guardians WHERE member_id = ? AND guardian_id = ?');
+        if (!$exists) {
+            throw new \RuntimeException('Verify prepare failed: ' . $conn->error);
+        }
+        $exists->bind_param('ii', $memberId, $guardianId);
+        $exists->execute();
+        $found = $exists->get_result()->fetch_assoc();
+        $exists->close();
+        if (!$found) {
+            throw new \InvalidArgumentException('That member is not linked to this guardian.');
+        }
+        $stmt = $conn->prepare('UPDATE member_guardians SET verified_by = ?, verified_at = NOW() WHERE member_id = ? AND guardian_id = ?');
+        if (!$stmt) {
+            throw new \RuntimeException('Verify prepare failed: ' . $conn->error);
+        }
+        $stmt->bind_param('iii', $actorId, $memberId, $guardianId);
+        $stmt->execute();
+        $stmt->close();
+        self::audit($conn, 'Guardian Link Verified', "Member {$memberId} ↔ guardian {$guardianId} verified by actor {$actorId}.");
+    }
+
+    /** Clear verification (officer correction; the link itself stays). */
+    public static function clearVerification(\mysqli $conn, int $guardianId, int $memberId, int $actorId): void
+    {
+        if ($guardianId <= 0 || $memberId <= 0 || $actorId <= 0) {
+            throw new \InvalidArgumentException('Guardian, member and actor are required.');
+        }
+        $exists = $conn->prepare('SELECT member_id FROM member_guardians WHERE member_id = ? AND guardian_id = ?');
+        if (!$exists) {
+            throw new \RuntimeException('Unverify prepare failed: ' . $conn->error);
+        }
+        $exists->bind_param('ii', $memberId, $guardianId);
+        $exists->execute();
+        $found = $exists->get_result()->fetch_assoc();
+        $exists->close();
+        if (!$found) {
+            throw new \InvalidArgumentException('That member is not linked to this guardian.');
+        }
+        $stmt = $conn->prepare('UPDATE member_guardians SET verified_by = NULL, verified_at = NULL WHERE member_id = ? AND guardian_id = ?');
+        if (!$stmt) {
+            throw new \RuntimeException('Unverify prepare failed: ' . $conn->error);
+        }
+        $stmt->bind_param('ii', $memberId, $guardianId);
+        $stmt->execute();
+        $stmt->close();
+        self::audit($conn, 'Guardian Link Unverified', "Member {$memberId} ↔ guardian {$guardianId} verification cleared by actor {$actorId}.");
     }
 
     public static function unlinkMember(\mysqli $conn, int $guardianId, int $memberId): void
@@ -651,7 +725,7 @@ class GuardianService
     public static function childrenOf(\mysqli $conn, int $guardianId, int $limit = 50): array
     {
         $kids = [];
-        $s = $conn->prepare('SELECT m.id, m.member_code, m.student_name, m.full_name_am, m.current_section, m.status, m.gender, mg.relation, mg.contact_priority, mg.is_primary FROM member_guardians mg JOIN members m ON m.id = mg.member_id WHERE mg.guardian_id = ? ORDER BY m.student_name LIMIT ' . max(1, (int)$limit));
+        $s = $conn->prepare('SELECT m.id, m.member_code, m.student_name, m.full_name_am, m.current_section, m.status, m.gender, mg.relation, mg.contact_priority, mg.is_primary, mg.verified_by IS NOT NULL AS is_verified, mg.verified_at FROM member_guardians mg JOIN members m ON m.id = mg.member_id WHERE mg.guardian_id = ? ORDER BY m.student_name LIMIT ' . max(1, (int)$limit));
         if ($s) {
             $s->bind_param('i', $guardianId);
             $s->execute();
@@ -679,6 +753,7 @@ class GuardianService
             'members_unlinked' => (int)$q("SELECT COUNT(*) FROM members m WHERE m.status != 'archived' AND TRIM(COALESCE(m.guardian_name,'')) != '' AND NOT EXISTS (SELECT 1 FROM member_guardians mg WHERE mg.member_id = m.id)"),
             'members_no_guardian' => (int)$q("SELECT COUNT(*) FROM members m WHERE m.status != 'archived' AND TRIM(COALESCE(m.guardian_name,'')) = '' AND NOT EXISTS (SELECT 1 FROM member_guardians mg WHERE mg.member_id = m.id)"),
             'pending_reviews' => (int)$q("SELECT COUNT(*) FROM guardian_link_suggestions WHERE status = 'pending'"),
+            'links_unverified' => (int)$q("SELECT COUNT(*) FROM member_guardians WHERE verified_by IS NULL"),
             'merged' => (int)$q("SELECT COUNT(*) FROM guardians WHERE status = 'merged'"),
             'last_rematch' => $q("SELECT COALESCE(MAX(created_at), '') FROM activity_logs WHERE action = 'Guardian Rematch'"),
         ];

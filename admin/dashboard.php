@@ -111,6 +111,10 @@ switch ($role) {
         require __DIR__ . '/dashboards/content_editor.php';
         break;
 
+    case 'accounts_office':
+        require __DIR__ . '/acm_overview.php';
+        break;
+
     default:
         // Show beautiful error page for unknown roles
         showDashboardNotReady($role, $fullName, $username);
