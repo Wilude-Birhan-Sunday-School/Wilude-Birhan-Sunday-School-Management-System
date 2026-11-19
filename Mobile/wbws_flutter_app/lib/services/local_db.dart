@@ -16,6 +16,7 @@ import 'taxonomy_reconcile.dart';
 import 'hymn_outbox_models.dart';
 import 'legacy_outbox_models.dart';
 import 'local_schema_v34.dart';
+import 'local_schema_v43.dart';
 import 'sync_attempt_models.dart';
 import 'sync_execution.dart';
 import 'session_models.dart';
@@ -131,6 +132,7 @@ class LocalDb {
         await db.execute(attendanceSyncReceiptIndexSql);
         await db.execute(gradesSyncReceiptSql);
         await db.execute(gradesSyncReceiptIndexSql);
+        await _migrateToV43(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -619,6 +621,9 @@ class LocalDb {
             await db.execute(gradesSyncReceiptSql);
             await db.execute(gradesSyncReceiptIndexSql);
           }
+          if (oldVersion < 43) {
+            await _migrateToV43(db);
+          }
         },
       onOpen: (db) async {
         // No HTTP request survives its issuing process. Recover durable claims
@@ -724,6 +729,34 @@ class LocalDb {
     for (final sql in localV34IndexSql) {
       await db.execute(sql);
     }
+  }
+
+  /// Coordinated schema-v43 migration: offline photo outbox + exports +
+  /// per-install device identity + sync-policy row.
+  ///
+  /// Repeat-safe: onCreate and onUpgrade both call this, and each CREATE
+  /// uses IF NOT EXISTS. Seed rows use INSERT OR IGNORE so an interrupted
+  /// migration can resume without collision.
+  Future<void> _migrateToV43(Database db) async {
+    await db.execute(photoDeviceIdentityV43Sql);
+    await db.execute(photoOutboxV43Sql);
+    for (final sql in photoOutboxIndexesV43Sql) {
+      await db.execute(sql);
+    }
+    await db.execute(photoExportBatchesV43Sql);
+    for (final sql in photoExportBatchesIndexV43Sql) {
+      await db.execute(sql);
+    }
+    await db.execute(photoSyncPolicyV43Sql);
+
+    final now = DateTime.now().toUtc().toIso8601String();
+
+    // Seed the sync-policy row with safe defaults (sync OFF, no cellular).
+    await db.rawInsert('''
+      INSERT OR IGNORE INTO photo_sync_policy
+        (id, sync_enabled, allow_cellular, max_concurrency, updated_at)
+      VALUES (1, 0, 0, 2, ?)
+    ''', [now]);
   }
 
   String _legacyBusinessKey(

@@ -869,7 +869,7 @@ class MezmurHymnsScreenState extends State<MezmurHymnsScreen>
             // P30 (item 5): uploaded cover under a dark scrim; the
             // signature gradient shows through while it loads (and
             // forever, for categories without a cover).
-            image: imageUrl != null && imageUrl!.isNotEmpty
+            image: imageUrl != null && imageUrl.isNotEmpty
                 ? DecorationImage(
                     image: NetworkImage(
                         '${AppConfig.apiBaseUrl.replaceFirst(RegExp(r'/api/v1$'), '')}$imageUrl'),

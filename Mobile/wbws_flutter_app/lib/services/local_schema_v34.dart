@@ -2,7 +2,7 @@
 ///
 /// This file intentionally has no Flutter dependency. The runtime SQLite
 /// migration harness reads these declarations as its schema source of truth.
-const localDatabaseSchemaVersion = 42;
+const localDatabaseSchemaVersion = 43;
 
 const attendancePreparationSnapshotSql = '''
   CREATE TABLE IF NOT EXISTS attendance_preparation_snapshot (

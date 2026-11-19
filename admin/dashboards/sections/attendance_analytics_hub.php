@@ -29,9 +29,9 @@ $hubAssetVer = defined('SSMS_ASSET_VER') ? SSMS_ASSET_VER : '1';
         </div>
         <div class="flex items-center gap-2">
             <input id="ihFrom" type="date" onchange="AttendanceHub.reload()" aria-label="From date"
-                   class="px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                   class="px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
             <input id="ihTo" type="date" onchange="AttendanceHub.reload()" aria-label="To date"
-                   class="px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                   class="px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
             <button type="button" onclick="AttendanceHub.exportAll()" class="px-3 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition">
                 <i class="fa-solid fa-download mr-1"></i> Excel
             </button>

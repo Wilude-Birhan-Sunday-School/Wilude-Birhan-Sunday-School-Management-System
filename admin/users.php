@@ -513,6 +513,7 @@ $currentStatus = (int) field_value('is_active', $editUser, $oldForm, 1);
                                 'school_admin'  => 'School Admin',
                                 'hr_dept'       => 'HR Department',
                                 'info_dept'     => 'Information Dept',
+                                'photo_importer' => 'Photo Importer (ZIP & review only)',
                                 'edu_dept'      => 'Education Dept',
                                 'finance_dept'  => 'Finance Dept',
                                 'material_dept' => 'Material Dept',

@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 class SmoothPageRoute<T> extends PageRouteBuilder<T> {
   final Widget page;
 
-  SmoothPageRoute({required this.page})
+  SmoothPageRoute({required this.page, RouteSettings? settings})
       : super(
+          settings: settings,
           pageBuilder: (_, __, ___) => page,
           transitionsBuilder: (_, anim, __, child) {
             return FadeTransition(
@@ -26,17 +27,17 @@ class SmoothPageRoute<T> extends PageRouteBuilder<T> {
 
 /// Extension for easy navigation
 extension NavigatorX on BuildContext {
-  Future<T?> pushSmooth<T>(Widget page) {
-    return Navigator.of(this).push<T>(SmoothPageRoute(page: page));
+  Future<T?> pushSmooth<T>(Widget page, {RouteSettings? settings}) {
+    return Navigator.of(this).push<T>(SmoothPageRoute<T>(page: page, settings: settings));
   }
 
-  void pushReplacementSmooth(Widget page) {
-    Navigator.of(this).pushReplacement(SmoothPageRoute(page: page));
+  void pushReplacementSmooth(Widget page, {RouteSettings? settings}) {
+    Navigator.of(this).pushReplacement(SmoothPageRoute(page: page, settings: settings));
   }
 
-  void pushAndClearSmooth(Widget page) {
+  void pushAndClearSmooth(Widget page, {RouteSettings? settings}) {
     Navigator.of(this).pushAndRemoveUntil(
-      SmoothPageRoute(page: page),
+      SmoothPageRoute(page: page, settings: settings),
       (route) => false,
     );
   }

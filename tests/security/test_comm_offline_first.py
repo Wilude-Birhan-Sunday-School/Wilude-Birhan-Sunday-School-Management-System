@@ -174,12 +174,12 @@ class OfflineFirstClientTests(unittest.TestCase):
         self.assertIn("txn.delete('comm_threads')", replace)
 
     def test_version_is_162_build_28(self):
-        # Bumped for the Mezmur section selector fix (build 42).
+        # Bumped to 1.8.5+48 for offline photo capture & adaptive framing.
         config = (MOBILE / "utils/config.dart").read_text(encoding="utf-8")
         pubspec = (ROOT / "Mobile/wbws_flutter_app/pubspec.yaml").read_text(encoding="utf-8")
-        self.assertIn("appVersion = '1.7.5'", config)
-        self.assertIn("appBuild = 42", config)
-        self.assertIn("version: 1.7.5+42", pubspec)
+        self.assertIn("appVersion = '1.8.5'", config)
+        self.assertIn("appBuild = 48", config)
+        self.assertIn("version: 1.8.5+48", pubspec)
 
 
 if __name__ == "__main__":

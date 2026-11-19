@@ -68,6 +68,13 @@ try {
 
 $tooLargeForWorkbook = $format === 'xlsx'
     && $expectedRows > MemberExportService::MAX_EDITABLE_ROWS;
+// M18: the audit below claims 'started' — so the known XLSX pre-flight
+// (composer autoload present) runs BEFORE it, not after.
+$xlsxAutoload = dirname(__DIR__) . '/vendor/autoload.php';
+if ($format === 'xlsx' && !is_file($xlsxAutoload)) {
+    http_response_code(500);
+    exit('Excel export support is unavailable.');
+}
 $auditRecorded = SecurityAuditService::record($pdo, 'Member Export Requested', [
     'tier' => $tier,
     'format' => $format,
@@ -102,12 +109,7 @@ try {
         );
     }
 
-    $autoload = dirname(__DIR__) . '/vendor/autoload.php';
-    if (!is_file($autoload)) {
-        http_response_code(500);
-        exit('Excel export support is unavailable.');
-    }
-    require_once $autoload;
+    require_once $xlsxAutoload; // pre-flighted above, before the audit claim
     require_once __DIR__ . '/backend/services/ExcelExportService.php';
 
     $classOptions = [];
@@ -146,6 +148,18 @@ try {
     );
 } catch (Throwable $error) {
     reportInternalError('Member export failed', $error);
+    // M18: the pre-stream audit claims 'started', so a failure must append a
+    // 'failed' event — otherwise the trail claims an export nobody received.
+    // Best-effort: never break the 500 response itself.
+    try {
+        SecurityAuditService::record($pdo, 'Member Export Failed', [
+            'tier' => $tier,
+            'format' => $format,
+            'error' => get_class($error),
+        ], 'member_export');
+    } catch (Throwable $auditError) {
+        reportInternalError('Member export failure audit failed', $auditError);
+    }
     if (!headers_sent()) {
         http_response_code(500);
         header('Content-Type: text/plain; charset=utf-8');

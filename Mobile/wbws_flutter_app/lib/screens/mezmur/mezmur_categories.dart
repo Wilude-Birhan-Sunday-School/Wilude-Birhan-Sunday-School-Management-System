@@ -47,13 +47,6 @@ class _MezmurCategoriesState extends State<MezmurCategoriesScreen> {
 
   static const _palettes = BrandPalette.coverPalettes;
 
-  List<Color> _gradientFor(String name) {
-    var h = 0;
-    for (final c in name.codeUnits) {
-      h = ((h << 5) - h + c) & 0x7fffffff;
-    }
-    return _palettes[h % _palettes.length];
-  }
 
   @override
   void initState() {
@@ -130,9 +123,9 @@ class _MezmurCategoriesState extends State<MezmurCategoriesScreen> {
 
   Future<void> _nameDialog({Map<String, dynamic>? category, int? parentId}) async {
     final isEdit = category != null;
-    final isSub = isEdit ? category!['parent_id'] != null : parentId != null;
+    final isSub = isEdit ? category['parent_id'] != null : parentId != null;
     final ctrl =
-        TextEditingController(text: isEdit ? '${category!['name']}' : '');
+        TextEditingController(text: isEdit ? '${category['name']}' : '');
     String? fieldError;
     // P34: guards the double-add. An async onPressed with no in-flight
     // flag lets a double tap (or an impatient second tap during the
@@ -192,12 +185,12 @@ class _MezmurCategoriesState extends State<MezmurCategoriesScreen> {
                   fieldError = null;
                 });
                 final err = await _store.saveCategory({
-                  if (isEdit) 'id': category!['id'],
+                  if (isEdit) 'id': category['id'],
                   'name': ctrl.text,
                   if (!isEdit && isSub) 'parent_id': parentId,
-                  if (isEdit && isSub) 'parent_id': category!['parent_id'],
+                  if (isEdit && isSub) 'parent_id': category['parent_id'],
                   'sort_order': isEdit
-                      ? _asInt(category!['sort_order'])
+                      ? _asInt(category['sort_order'])
                       : (isSub
                           ? _subsOf(parentId!).length + 1
                           : _mains.length + 1),

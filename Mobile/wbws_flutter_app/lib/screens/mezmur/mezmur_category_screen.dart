@@ -370,7 +370,6 @@ class _MezmurSubListScreenState extends State<MezmurSubListScreen> {
     });
   }
 
-  int _asInt(dynamic v) => v is int ? v : int.tryParse('$v') ?? 0;
 
   @override
   Widget build(BuildContext context) {

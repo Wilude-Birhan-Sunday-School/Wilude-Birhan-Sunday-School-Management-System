@@ -259,7 +259,7 @@ class SessionCoordinator extends ChangeNotifier with WidgetsBindingObserver {
             bundle.authorizationVersion == authorizationVersion &&
             bundle.role == ownerRole;
     if (credentialsMatchTarget) {
-      final targetBundle = bundle!;
+      final targetBundle = bundle;
       _api.adoptLoadedCredentials(targetBundle);
       _credentialState = CredentialLoadState.complete;
       await _persistActive(targetBundle);

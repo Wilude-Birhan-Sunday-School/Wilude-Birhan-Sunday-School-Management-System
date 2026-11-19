@@ -69,12 +69,13 @@
             var viewLink = document.createElement('a');
             viewLink.href = '/admin/id_cards/view_id_card.php?member_id=' + encodeURIComponent(id);
             viewLink.target = '_blank'; viewLink.rel = 'noopener noreferrer';
-            viewLink.className = 'inline-flex bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-medium';
+            // P6: canonical row-action recipe (rounded-lg, 11px bold) + blue = view.
+            viewLink.className = 'inline-flex items-center bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg text-[11px] font-bold transition';
             viewLink.textContent = 'View';
             actionsTd.appendChild(viewLink);
-            if (expired) actionsTd.appendChild(actionForm(member, 'renew', 'Renew', 'bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-medium ml-2'));
+            if (expired) actionsTd.appendChild(actionForm(member, 'renew', 'Renew', 'bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold transition ml-2'));
         } else {
-            actionsTd.appendChild(actionForm(member, 'generate', 'Generate', 'bg-emerald-600 text-white px-3 py-1.5 rounded text-xs font-medium'));
+            actionsTd.appendChild(actionForm(member, 'generate', 'Generate', 'bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold transition'));
         }
         row.appendChild(actionsTd);
         return row;

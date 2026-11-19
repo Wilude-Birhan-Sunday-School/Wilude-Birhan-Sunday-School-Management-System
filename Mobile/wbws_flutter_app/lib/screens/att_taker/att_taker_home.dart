@@ -193,17 +193,6 @@ class AttTakerHomeScreenState extends State<AttTakerHomeScreen> {
     );
   }
 
-  Widget _offlineBanner() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(color: AppTheme.warning.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
-      child: Row(children: [
-        Icon(Icons.cloud_off, size: 16, color: AppTheme.warning), const SizedBox(width: 8),
-        Expanded(child: Text('Waiting for network — showing the last numbers saved on this phone.',
-            style: TextStyle(fontSize: 11, color: AppTheme.warning, fontWeight: FontWeight.w500))),
-      ]),
-    );
-  }
 }
 
 

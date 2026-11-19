@@ -9,9 +9,13 @@
     var list = null;
     var rowCounter = 0;
 
+    // M1: keys must match the <select> ids rendered by hr-dept/info-dept.
+    // 'filterType' matched NO element, so the Reg.Type and Member Type
+    // dropdowns were silently dead (the API already supports both params).
     var filterMap = {
         memberSearchInput: 'q',
-        filterType: 'registration_type',
+        filterRegistrationType: 'registration_type',
+        filterMemberType: 'member_type',
         filterStatus: 'status',
         filterGender: 'gender',
         filterAgeGroup: 'age_group'
@@ -55,7 +59,7 @@
             '<span class="text-[9px] text-emerald-600 font-semibold">Permanent</span>';
         row.appendChild(td(
             '<div class="font-semibold text-slate-800">' + esc(name) + '</div>' +
-            '<div class="text-[10px] text-slate-400">' + esc(member.age_group ? sectionLabel(member.age_group) : '') + ' · ' + tier + '</div>'
+            '<div class="text-[10px] text-slate-500">' + esc(member.age_group ? sectionLabel(member.age_group) : '') + ' · ' + tier + '</div>'
         ));
 
         // Code
@@ -76,8 +80,9 @@
         row.appendChild(td('<span class="text-[10px]">' + esc(sectionLabel(member.age_group)) + '</span>'));
 
         // Status
-        var stCls = { active: 'bg-emerald-100 text-emerald-700', warning: 'bg-amber-100 text-amber-700', inactive: 'bg-slate-100 text-slate-600', archived: 'bg-gray-100 text-gray-500' };
-        row.appendChild(td('<span class="px-2 py-0.5 rounded-full text-[9px] font-bold ' + (stCls[member.status] || 'bg-gray-100 text-gray-600') + '">' + esc(text(member.status)) + '</span>'));
+        // P1: canonical status chip (shared with manage/new-members lists + PHP badges).
+        var stCls = { active: 'bg-emerald-100 text-emerald-700', warning: 'bg-amber-100 text-amber-700', inactive: 'bg-slate-100 text-slate-600', archived: 'bg-slate-200 text-slate-600' };
+        row.appendChild(td('<span class="px-2 py-0.5 rounded-full text-[10px] font-bold ' + (stCls[member.status] || 'bg-slate-100 text-slate-600') + '">' + esc(text(member.status)) + '</span>'));
 
         // Phone
         row.appendChild(td('<span class="text-[10px] text-slate-600">' + esc(text(member.phone_number) || '—') + '</span>'));
@@ -91,7 +96,8 @@
         actionsTd.className = 'px-3 py-2 text-right whitespace-nowrap';
         var editBtn = document.createElement('button');
         editBtn.type = 'button';
-        editBtn.className = 'p-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition';
+        // P6: emerald = primary row action (icon-only dense variant for the 11-column table).
+        editBtn.className = 'p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition';
         editBtn.title = 'Edit member';
         editBtn.innerHTML = '<i class="fa-solid fa-pen-to-square text-xs"></i>';
         editBtn.addEventListener('click', function () {
@@ -101,7 +107,8 @@
 
         var cardBtn = document.createElement('button');
         cardBtn.type = 'button';
-        cardBtn.className = 'p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition ml-1';
+        // P6: blue = view (opens the card in a new tab).
+        cardBtn.className = 'p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition ml-1';
         cardBtn.title = 'ID Card';
         cardBtn.innerHTML = '<i class="fa-solid fa-id-card text-xs"></i>';
         cardBtn.addEventListener('click', function () {

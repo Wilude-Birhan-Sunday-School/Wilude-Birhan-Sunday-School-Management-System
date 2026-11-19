@@ -112,22 +112,11 @@ if (!empty($m['is_committee'])) $rolesList[] = 'ኮሚቴ';
 if (!empty($m['is_volunteer'])) $rolesList[] = 'በጎ ፈቃደኛ';
 $rolesDisplay = !empty($rolesList) ? implode('፣ ', $rolesList) : '—';
 
-// Spiritual Education Labels
-$spiritualEduLabels = [
-    'grade_1' => '1ኛ ክፍል', 'grade_2' => '2ኛ ክፍል', 'grade_3' => '3ኛ ክፍል',
-    'grade_4' => '4ኛ ክፍል', 'grade_5' => '5ኛ ክፍል', 'grade_6' => '6ኛ ክፍል',
-    'grade_7' => '7ኛ ክፍል', 'grade_8' => '8ኛ ክፍል', 'grade_9' => '9ኛ ክፍል',
-    'grade_10' => '10ኛ ክፍል', 'grade_11' => '11ኛ ክፍል', 'grade_12' => '12ኛ ክፍል',
-    'diploma' => 'ዲፕሎማ', 'degree' => 'ዲግሪ'
-];
-$spiritualEduDisplay = $spiritualEduLabels[$m['spiritual_education'] ?? ''] ?? ($m['spiritual_education'] ?: '—');
-
-// Education Level Labels
-$eduLabels = [
-    'kg' => 'KG', 'elementary' => 'Elementary', 'high' => 'High School',
-    'diploma' => 'Diploma', 'degree' => 'Degree', 'masters' => 'Masters', 'phd' => 'PhD'
-];
-$eduDisplay = $eduLabels[$m['education_level'] ?? ''] ?? ucfirst(str_replace('_', ' ', $m['education_level'] ?: '—'));
+// M2: one canonical label source for both education vocabularies; unknown
+// (imported) text falls back to the stored value verbatim — never rewritten.
+require_once __DIR__ . '/backend/services/EducationLabels.php';
+$spiritualEduDisplay = \App\Services\EducationLabels::spiritual($m['spiritual_education'] ?? null);
+$eduDisplay = \App\Services\EducationLabels::education($m['education_level'] ?? null);
 
 // Full address builder
 $addressParts = [];
@@ -589,11 +578,11 @@ $fullAddress = !empty($addressParts) ? implode('፣ ', $addressParts) : '—';
                 </div>
                 <div class="info-box">
                     <div class="info-label">የትምህርት ደረጃ</div>
-                    <div class="info-value"><?= $eduDisplay ?></div>
+                    <div class="info-value"><?= e($eduDisplay) ?></div>
                 </div>
                 <div class="info-box" style="background: linear-gradient(135deg, #ecfdf5, #d1fae5); border-color: #10b981;">
                     <div class="info-label" style="color: #059669;">✝ የመንፈሳዊ ትምህርት</div>
-                    <div class="info-value" style="color: #059669; font-weight: 700;"><?= $spiritualEduDisplay ?></div>
+                    <div class="info-value" style="color: #059669; font-weight: 700;"><?= e($spiritualEduDisplay) ?></div>
                 </div>
             </div>
         </div>

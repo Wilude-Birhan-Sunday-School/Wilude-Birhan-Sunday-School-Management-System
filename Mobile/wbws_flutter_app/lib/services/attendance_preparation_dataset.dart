@@ -229,7 +229,7 @@ final class AttendancePreparationDataset {
 
   static Map<String, dynamic> _asMap(Object? value, String ctx) {
     if (value is! Map) throw FormatException('Invalid $ctx: expected object');
-    return Map<String, dynamic>.from(value as Map);
+    return Map<String, dynamic>.from(value);
   }
 
   static List<dynamic> _asList(Object? value, String ctx) {

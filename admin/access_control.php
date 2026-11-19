@@ -161,13 +161,23 @@ if (!defined('ACCESS_CONTROL_LOADED')) {
             // ---- Member management (Information department) ----
             // finance_dept included: the finance dashboard fetches the student
             // roster to assign fees (frontend/js/finance.js → members.php).
-            'hr_register_member.php'  => ['super_admin', 'school_admin', 'hr_dept'],
+            'hr_register_member.php'  => ['super_admin', 'hr_dept'],
             'api_list_members.php'    => ['super_admin', 'school_admin', 'info_dept', 'hr_dept', 'edu_dept', 'finance_dept'],
+            'api_search.php'            => ['super_admin', 'school_admin', 'info_dept', 'hr_dept', 'edu_dept', 'finance_dept'],
             'members.php'             => ['super_admin', 'school_admin', 'info_dept', 'hr_dept', 'edu_dept', 'finance_dept'],
             'api_check_duplicate.php' => ['super_admin', 'school_admin', 'hr_dept'],
             'members_check.php'       => ['super_admin', 'school_admin', 'hr_dept'],
             'info_manage_member.php'        => ['super_admin', 'school_admin', 'info_dept', 'hr_dept'],
             'member_file.php'               => ['super_admin', 'school_admin', 'info_dept', 'hr_dept'],
+            // Photo department: ZIP airlock import and multi-photographer
+            // conflict resolution. photo_dept is the primary role;
+            // photo_importer is kept as a legacy alias for accounts
+            // created before the role was promoted to a full department.
+            'api_photo_candidates.php'      => ['super_admin', 'school_admin', 'info_dept', 'hr_dept', 'photo_dept', 'photo_importer'],
+            'api_photo_zip_import.php'      => ['super_admin', 'school_admin', 'info_dept', 'hr_dept', 'photo_dept', 'photo_importer'],
+            'photo_review.php'              => ['super_admin', 'school_admin', 'info_dept', 'hr_dept', 'photo_dept', 'photo_importer'],
+            'photo_import.php'              => ['super_admin', 'school_admin', 'info_dept', 'hr_dept', 'photo_dept', 'photo_importer'],
+            'photo_dept.php'                => ['super_admin', 'school_admin', 'info_dept', 'hr_dept', 'photo_dept', 'photo_importer'],
             'info_archive_member.php'       => ['super_admin', 'school_admin', 'info_dept', 'hr_dept'],
             'info_restore_member.php'       => ['super_admin', 'school_admin', 'info_dept', 'hr_dept'],
             'info_get_archived_members.php' => ['super_admin', 'school_admin', 'info_dept', 'hr_dept'],
@@ -199,8 +209,9 @@ if (!defined('ACCESS_CONTROL_LOADED')) {
             'reports.php'     => ['super_admin', 'school_admin', 'info_dept', 'hr_dept'],
             'export_pdf.php'  => ['super_admin', 'school_admin', 'info_dept', 'hr_dept'],
             'api_export_members.php' => ['super_admin', 'school_admin', 'info_dept', 'hr_dept'],
-            'api_import_members.php' => ['super_admin', 'school_admin', 'hr_dept'],
+            'api_import_members.php' => ['super_admin', 'hr_dept'],
             'api_test_seed.php'      => ['super_admin'],
+            'api_search_backfill.php'  => ['super_admin'],
 
             // ---- CMS (public website content) ----
             'api_cms.php'        => ['super_admin', 'school_admin', 'info_dept', 'hr_dept', 'content_editor'],

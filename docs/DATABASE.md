@@ -31,13 +31,15 @@ The [Finance/Materials column reference](database/LEDGER_COLUMNS.md), source-rev
 | Runtime DDL | `MezmurSchemaReconciler::apply`, called from `admin/api_mezmur.php`, can create or alter Mezmur tables at request time | Production can drift from `sql/` |
 | `tests/e2e/provision_env.sh` | Encodes the apply order that produces a working test database | The best available **executable** description of the schema; test-only |
 
-At `7e28157` (2026-10-28) plus migrations 079 (ACM P0), 080 (Telegram registration), 081 (ACM S1 office model + telegram phase2 interview), 082 (ACM S3 activation ceremony + telegram corrections), 083 (telegram approval), 084 (ACM S4 device registry), 085 (Telegram transfer registration), 086 (ACM S5 refresh binding), 087 (Telegram registration attachments), 088 (ACM S6 recovery events), 089 (ACM S7 suspension history), 090 (ACM S8 deactivation events), 091 (ACM S10 staff enrollment requests + telegram v2 state machine) and 092 (ACM G2 guardian link verification, data-only UPDATE, zero DDL), the **93 numbered migration files** (`001`–`092`, with gaps — `081`, `082` and `091` exist twice: ACM + telegram) contain **131 distinct `CREATE TABLE` target names**, excluding block/line comments and including archive/quarantine definitions. This is a lexical source inventory, not the number of active business tables or proof that every conditional statement ran. Legacy PHP/snapshot definitions are outside this count. The former count of 103 incorrectly treated the word `only` in migration 026's comment as a table. (WBSS website migrations arrived as `079`/`080` and were renumbered to `095`/`096` at the fkss-main port to avoid collision; counts above predate the renumber.)
+At `7e28157` (2026-10-28) plus migrations 079–099, including WBSS public website announcements (`095`, `096`), member-tier compatibility (`093`), Telegram candidate-decision repair (`094`), and the FKSS-ported member-status archival (`097`), mobile photo uploads (`098`), and photo-device pairing (`099` — renumbered from FKSS `095`–`097` to preserve `095`/`096`), the **100 numbered migration files** (`001`–`099`, with historical duplicate pairs at `081`, `082` and `091`) contain **137 distinct `CREATE TABLE` target names**, excluding block/line comments and including archive/quarantine definitions. This is a lexical source inventory, not the number of active business tables or proof that every conditional statement ran. Legacy PHP/snapshot definitions are outside this count. The former count of 103 incorrectly treated the word `only` in migration 026's comment as a table. (WBSS website migrations arrived as `079`/`080` and were renumbered to `095`/`096` at the earlier fkss-main port; incoming FKSS `095`–`097` were renumbered to `097`–`099`.)
+
+The duplicate prefixes `081`, `082` and `091` are historical filename collisions. Migrations are applied manually and there is no migration ledger, so renaming them could obscure whether a file has already been applied. CI tolerates only these exact existing pairs; new or altered collisions fail.
 
 ## 3. Migration rules in force
 
 - **Shared hosting:** use plain SQL that is safe for MariaDB. Migrations must be additive and idempotent where possible (`IF NOT EXISTS`, information_schema guards). There is no server-side tooling.
 - **CI checks (`backend-checks.yml`):**
-  - *No duplicate migration numbers*;
+  - *No new duplicate migration numbers* (only the exact historical pairs documented above are tolerated);
   - *Migrations are not silently destructive*: it flags lines that start with `TRUNCATE` or `DELETE FROM`.
 - **Preflight queries:** `sql/preflight/` holds read-only checks that are run before some migrations: `auth_outbox_*`, `failure_intelligence_preflight`, `uniqueness_preflight`, `mobile_fleet_telemetry_*`, `guardian_profiling_pack`.
 - **Pre-056 schema in CI:** `tests/security/test_schema_conformance.py` runs tracking endpoints against a deliberately pre-`056` schema (database `ssms_pre056_e2e`). Queries that name columns production may lack therefore fail in CI.
@@ -138,7 +140,10 @@ The summaries are based on each file's header comment. "Tables created" lists `C
 | `077_timetable_builder.sql` | 2026-10-20 | Education timetable builder (per-class working days and bell schedule, weekly grid, make-up classes) | timetable_class_days, timetable_makeup_classes |
 | `078_school_calendar.sql` | 2026-10-20 | School calendar: planned holidays and "Day Off" days | school_day_offs, school_holidays |
 | `095_public_announcements.sql` | 2026-11-03 | Optional dated announcements for the public website news page; the site works without it | cms_announcements |
-| `096_announcement_images.sql` | 2026-11-03 | Optional `image_path` / `image_alt` columns so a dated announcement can carry a photograph; no-op when `079` has not been applied; the site works without it | — (adds columns to `cms_announcements`) |
+| `096_announcement_images.sql` | 2026-11-03 | Optional `image_path` / `image_alt` columns so a dated announcement can carry a photograph; no-op when `095` has not been applied; the site works without it | — (adds columns to `cms_announcements`) |
+| `097_members_status_before_archive.sql` | 2026-11-16 | Preserves `members.status` prior to archive so restore restores the prior active/inactive/warning state (FKSS `095`, renumbered for WBSS) | — (adds `status_before_archive` to `members`) |
+| `098_mobile_photo_uploads.sql` | 2026-11-17 | Mobile offline photo upload receipts, multi-photographer candidates, and ZIP import batches (FKSS `096`, renumbered for WBSS) | member_photo_candidates, photo_import_batches, photo_import_items, photo_upload_receipts |
+| `099_photo_device_pairing.sql` | 2026-11-17 | Per-device HMAC pairing keys for signed ZIP airlock verification (FKSS `097`, renumbered for WBSS) | photo_device_pairing |
 
 ## 6. Recommended next steps (documented, not implemented)
 

@@ -161,9 +161,8 @@ void main() {
   });
 
   tearDownAll(() async {
-    // LocalDb intentionally has no public close/reset API. The process owns
-    // this isolated fixture; remove the un-opened directory entry if possible.
-    await fixtureDirectory.delete(recursive: true).catchError((_) {});
+    await rawDb.close();
+    await fixtureDirectory.delete(recursive: true);
   });
 
   test('runs production migration, claims, settlement, lineage, and integrity',
@@ -173,7 +172,7 @@ void main() {
     expect(columnNames, contains('execution_source'));
 
     final userVersion = await rawDb.rawQuery('PRAGMA user_version');
-    expect(userVersion.single.values.single, 42);
+    expect(userVersion.single.values.single, 43);
 
     final attendanceRef = await db.saveAttendanceLocal(
       42,

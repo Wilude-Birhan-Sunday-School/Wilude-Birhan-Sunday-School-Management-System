@@ -132,7 +132,6 @@ class _MezmurZemariansState extends State<MezmurZemariansScreen> {
   }
 
   Widget _thumb(Map<String, dynamic> z) {
-    final name = '${z['name'] ?? ''}';
     final img = '${z['image_url'] ?? ''}';
     if (_uploadingId == _asInt(z['id'])) {
       return const SizedBox(

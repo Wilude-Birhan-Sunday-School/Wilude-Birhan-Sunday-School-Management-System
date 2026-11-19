@@ -1,7 +1,7 @@
 name: fkss_app
 description: FKSS Sunday School Management System — Mobile App
 publish_to: 'none'
-version: 1.7.5+42
+version: 1.8.5+48
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -61,6 +61,23 @@ dependencies:
   path: ^1.8.0
   crypto: ^3.0.3
 
+  # Offline photo capture & sync (P1 foundation / native camera and JPEG / ZIP export)
+  image: ^4.5.3          # Queued-photo thumbnail decoding
+  camera: ^0.12.2
+  flutter_image_compress: ^2.5.1 # Native JPEG compression; avoids blocking the UI on low-end phones
+  uuid: ^4.5.1           # client_op_id + per-install device_id (UUID v4)
+  archive: ^4.0.9        # ZIP packaging for the airlock export (store-only); pinned for image:^4.5.3 compatibility
+  share_plus: ^10.0.2    # Z1 — system share sheet for USB/AirDrop/email handoff
+
+  # Adaptive photo-capture framing (on-device only, no network):
+  # face landmarks drive the eye/head guide; pose landmarks drive the
+  # shoulder guide. Models are bundled into the APK via the
+  # com.google.mlkit.vision.DEPENDENCIES manifest entry so capture
+  # guidance works fully offline. Pose detection is used opportunistically —
+  # the guide degrades to face-based + manual guidance when unavailable.
+  google_mlkit_face_detection: ^1.0.3
+  google_mlkit_pose_detection: ^1.0.3
+
   # P33 offline downloads: hymn audio is stored under the app-support
   # directory (survives cache sweeps, excluded from cloud backup) so a
   # downloaded mezmur plays with the radio off.
@@ -81,7 +98,6 @@ dependencies:
   # lock-screen transport) unless POST_NOTIFICATIONS is granted at
   # runtime; declaring it in the manifest alone is not enough.
   permission_handler: ^11.3.1
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -127,4 +143,3 @@ flutter_native_splash:
   android_12:
     image: "../splash_logo_android12.png"
     color: "#FFFFFF"
-

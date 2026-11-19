@@ -315,6 +315,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
               threadId: id,
               subject: t['subject']?.toString() ?? '',
               initialMessages: cached,
+              openedFromCache: true,
               // Window state from the last session (receipts + the
               // deepest loaded page); the reconciling poll — fired
               // immediately by openedFromCache — refreshes both.

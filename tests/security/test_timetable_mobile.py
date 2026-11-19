@@ -145,8 +145,10 @@ class TimetableMobileStaticGuards(unittest.TestCase):
         continuous header block instead of AppBar + banner."""
         cfg = read(FLUTTER / "lib/utils/config.dart")
         teacher = cfg.split("case UserRoles.teacher:", 1)[1].split("];", 1)[0]
-        self.assertIn("NavTab(id: 'timetable', label: 'Timetable'", teacher)
-        ids = re.findall(r"NavTab\(id: '([a-z_]+)'", teacher)
+        self.assertRegex(
+            teacher, r"NavTab\(\s*id:\s*'timetable',\s*label:\s*'Timetable'"
+        )
+        ids = re.findall(r"NavTab\(\s*id:\s*'([a-z_]+)'", teacher)
         self.assertEqual(ids, ["home", "attendance", "grades", "timetable", "profile"])
         shell = read(FLUTTER / "lib/screens/shell/app_shell.dart")
         self.assertIn("case 'timetable':", shell)
@@ -171,10 +173,10 @@ class TimetableMobileStaticGuards(unittest.TestCase):
         config = read(FLUTTER / "lib/utils/config.dart")
         notes = read(FLUTTER / "RELEASE_NOTES.md")
         rel = read(ROOT / "api/v1/core/app_release.php")
-        self.assertRegex(pubspec, r"(?m)^version:\s*1\.7\.5\+42\s*$")
-        self.assertIn("appVersion = '1.7.5'", config)
-        self.assertIn("appBuild = 42", config)
-        self.assertIn("## 1.7.5 (build 42)", notes)
+        self.assertRegex(pubspec, r"(?m)^version:\s*1\.8\.5\+48\s*$")
+        self.assertIn("appVersion = '1.8.5'", config)
+        self.assertIn("appBuild = 48", config)
+        self.assertIn("## 1.8.5 (build 48)", notes)
         self.assertIn("My Timetable", notes)
         self.assertRegex(rel, r"'latest_version'\s*=>\s*'1\.7\.4'")
         self.assertRegex(rel, r"'latest_build'\s*=>\s*41")

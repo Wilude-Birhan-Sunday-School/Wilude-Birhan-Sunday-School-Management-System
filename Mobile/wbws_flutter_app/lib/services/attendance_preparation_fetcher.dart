@@ -63,7 +63,7 @@ final class AttendancePreparationFetcher {
     }
     final data = (body['data'] is Map) ? body['data'] as Map : body;
     final envelopeMap = <String, dynamic>{};
-    for (final e in (data as Map).entries) {
+    for (final e in data.entries) {
       envelopeMap[e.key.toString()] = e.value;
     }
     try {

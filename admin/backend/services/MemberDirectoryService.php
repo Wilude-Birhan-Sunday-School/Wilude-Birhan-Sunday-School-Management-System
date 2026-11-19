@@ -8,6 +8,8 @@
 
 namespace App\Services;
 
+require_once __DIR__ . '/EducationLabels.php';
+
 use InvalidArgumentException;
 use PDO;
 use PDOStatement;
@@ -39,6 +41,8 @@ final class MemberDirectoryService
         'guardian_phone2', 'city', 'sub_city', 'woreda', 'mender',
         'block_number', 'house_number', 'work_profession', 'education_level',
         'student_photo_path', 'membership_tier', 'registered_at', 'created_at',
+        // H1: promotion prefill needs the birth date (upgrade keeps it).
+        'dob_ec_day', 'dob_ec_month', 'dob_ec_year',
     ];
 
     private const MANAGER_COLUMNS = [
@@ -209,14 +213,17 @@ final class MemberDirectoryService
             'age_group' => $enum($input['age_group'] ?? '', ['7_13', '14_17', '18_plus']),
             'current_section' => $text($input['current_section'] ?? '', 100),
             'city' => $text($input['city'] ?? '', 100),
-            'education_level' => $enum($input['education_level'] ?? '', [
-                'illiterate', 'elementary', 'high_school', 'certificate',
-                'diploma', 'degree', 'masters', 'phd',
-            ]),
+            // M2: the old 8-value set matched nothing the forms store ('high'
+            // vs 'high_school') — unknown codes were silently unfiltered.
+            // Canonical 12 codes, single-sourced from EducationLabels.
+            'education_level' => $enum($input['education_level'] ?? '', EducationLabels::codes()),
             'archive_type' => $enum($input['archive_type'] ?? '', [
                 'permanent_archive', 'failed_observation',
             ]),
             'membership_tier' => $enum($input['membership_tier'] ?? '', ['temporary', 'permanent']),
+            // P0 search engine: ranked ID set from the cascade (array only,
+            // bounded; strings are ignored so URLs cannot inject junk).
+            'ids' => self::intList($input['ids'] ?? []),
             'eligible_for_promotion' => (string)($input['eligible_for_promotion'] ?? '') === '1',
             'page' => max(1, (int)($input['page'] ?? 1)),
             'limit' => min(self::MAX_PAGE_SIZE, max(1, (int)($input['limit'] ?? self::DEFAULT_PAGE_SIZE))),
@@ -239,6 +246,14 @@ final class MemberDirectoryService
         $where = [];
         $params = [];
 
+        if (($criteria['ids'] ?? []) !== []) {
+            $placeholders = implode(',', array_fill(0, count($criteria['ids']), '?'));
+            $where[] = '`id` IN (' . $placeholders . ')';
+            foreach ($criteria['ids'] as $id) {
+                $params[] = $id;
+            }
+        }
+
         if ($criteria['status'] !== '') {
             $where[] = '`status` = ?';
             $params[] = $criteria['status'];
@@ -249,7 +264,11 @@ final class MemberDirectoryService
         }
 
         if ($criteria['eligible_for_id_card']) {
-            $where[] = "(`registration_type` IN ('direct', 'transfer') OR `member_type` = 'honorary')";
+            // H4 (updated 2026-11-18): promotions now flip waiting→direct,
+            // but legacy permanent+waiting rows were never backfilled by
+            // decision — the tier=permanent clause covers them. Keep in
+            // sync with generate_id_card.php.
+            $where[] = "(`registration_type` IN ('direct', 'transfer') OR `member_type` = 'honorary' OR `membership_tier` = 'permanent')";
         }
 
         if ($criteria['membership_tier'] !== '') {
@@ -288,8 +307,33 @@ final class MemberDirectoryService
                 $columnSql = implode(', ', array_map(static function (string $column): string {
                     return '`' . $column . '`';
                 }, $searchColumns));
-                $where[] = "MATCH ({$columnSql}) AGAINST (? IN BOOLEAN MODE)";
-                $params[] = self::booleanSearch($criteria['q']);
+                $ftWhere = "MATCH ({$columnSql}) AGAINST (? IN BOOLEAN MODE)";
+                $ftParams = [self::booleanSearch($criteria['q'])];
+                // M19: tolerate separators in phone/code queries. Boolean mode
+                // splits '0911-23' into +0911* +23* (the second token kills the
+                // match) and 'A 71045' never equals stored 'A-71045' — so also
+                // try the digits-only phone prefix and the separator-stripped
+                // code prefix. Gated at 3+ chars like the FULLTEXT branch.
+                $digits = (string)preg_replace('/\D+/', '', $criteria['q']);
+                $alnum = (string)preg_replace('/[^A-Za-z0-9]+/', '', $criteria['q']);
+                $extraWhere = [];
+                $extraParams = [];
+                if (strlen($digits) >= 3) {
+                    $extraWhere[] = "`phone_number` LIKE ? ESCAPE '='";
+                    $extraParams[] = self::escapeLike($digits) . '%';
+                }
+                if (strlen($alnum) >= 3) {
+                    $extraWhere[] = "REPLACE(`member_code`, '-', '') LIKE ? ESCAPE '='";
+                    $extraParams[] = self::escapeLike($alnum) . '%';
+                }
+                if ($extraWhere !== []) {
+                    $ftWhere = '(' . $ftWhere . ' OR ' . implode(' OR ', $extraWhere) . ')';
+                    $ftParams = array_merge($ftParams, $extraParams);
+                }
+                $where[] = $ftWhere;
+                foreach ($ftParams as $fp) {
+                    $params[] = $fp;
+                }
             } else {
                 // Short terms use indexable prefixes. SQLite uses this branch in
                 // integration tests because it has no MariaDB FULLTEXT syntax.
@@ -306,6 +350,25 @@ final class MemberDirectoryService
         }
 
         return [implode(' AND ', $where), $params];
+    }
+
+    /** @return int[] */
+    private static function intList($value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+        $ids = [];
+        foreach ($value as $raw) {
+            $id = filter_var($raw, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if ($id !== false && !in_array((int)$id, $ids, true)) {
+                $ids[] = (int)$id;
+            }
+            if (count($ids) >= 500) {
+                break;
+            }
+        }
+        return $ids;
     }
 
     private function count(string $whereSql, array $params): int

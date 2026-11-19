@@ -244,7 +244,7 @@ class _EduTeachersScreenState extends State<EduTeachersScreen>
       page++;
     }
 
-    if (expectedTotal == null || rows.length != expectedTotal) {
+    if (rows.length != expectedTotal) {
       throw const _TeacherRefreshFailure(
           'Teacher pagination changed during refresh.');
     }

@@ -27,7 +27,12 @@ H  018 and 031 add a UNIQUE key only when the data is already clean and
 from pathlib import Path
 import re
 import sqlite3
+import tempfile
 import unittest
+
+from scripts.check_migration_numbering import (
+    unapproved_duplicate_migration_numbers,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 SQL = ROOT / "sql"
@@ -148,15 +153,19 @@ class AttendanceRecencySemantics(unittest.TestCase):
 class MigrationNumbersAreUnique(unittest.TestCase):
     """Finding F."""
 
-    def test_no_two_migrations_share_a_number(self):
-        seen = {}
-        for path in sorted(SQL.glob("*.sql")):
-            number = path.name.split("_", 1)[0]
-            if not number.isdigit():
-                continue
-            seen.setdefault(number, []).append(path.name)
-        clashes = {n: f for n, f in seen.items() if len(f) > 1}
-        self.assertEqual(clashes, {}, f"duplicate migration numbers: {clashes}")
+    def test_no_unapproved_migrations_share_a_number(self):
+        clashes = unapproved_duplicate_migration_numbers(SQL)
+        self.assertEqual(clashes, {}, f"unapproved duplicate migration numbers: {clashes}")
+
+    def test_new_duplicate_number_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            sql_dir = Path(temp_dir)
+            (sql_dir / "098_first.sql").touch()
+            (sql_dir / "098_second.sql").touch()
+            self.assertEqual(
+                unapproved_duplicate_migration_numbers(sql_dir),
+                {"098": ("098_first.sql", "098_second.sql")},
+            )
 
     def test_old_duplicate_filename_is_gone_everywhere(self):
         self.assertFalse((SQL / "030_roster_scale_indexes.sql").exists())
@@ -180,13 +189,14 @@ class MigrationNumbersAreUnique(unittest.TestCase):
                          ".json", ".sql", ".txt"}
         stale = []
         for path in ROOT.rglob("*"):
-            if not path.is_file() or ".git/" in str(path):
+            posix_path = path.as_posix()
+            if not path.is_file() or ".git/" in posix_path:
                 continue
             if path.suffix.lower() not in code_suffixes:
                 continue
-            if "docs/audits/production-2026-09-07/" in str(path):
+            if "docs/audits/production-2026-09-07/" in posix_path:
                 continue  # immutable historical inventory
-            rel = str(path.relative_to(ROOT))
+            rel = path.relative_to(ROOT).as_posix()
             if rel in allowed:
                 continue
             try:

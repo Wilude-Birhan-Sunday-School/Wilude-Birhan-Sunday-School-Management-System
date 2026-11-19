@@ -138,7 +138,13 @@ echo "== 7. seed test world =="
 # error_reporting=24575 = E_ALL & ~E_DEPRECATED. PHP 8.4 deprecates
 # session.sid_bits_per_character (config.php:120); the error monitor
 # renders a friendly crash page for unmasked errors, killing the seed.
-php -d error_reporting=24575 tests/e2e/seed.php
+# SKIP_SEED=1 leaves a pristine schema (migrations only): the Telegram
+# walkthrough asserts on empty members and seeds everything it needs.
+if [ "${SKIP_SEED:-0}" != "1" ]; then
+  php -d error_reporting=24575 tests/e2e/seed.php
+else
+  echo "(seed skipped: pristine schema for telegram walkthrough)"
+fi
 
 echo "== done =="
 echo "start the app with:"

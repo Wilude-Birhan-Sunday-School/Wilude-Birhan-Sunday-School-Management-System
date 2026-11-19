@@ -7,12 +7,20 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <!-- Target SDK 34+: media playback foreground-service type. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
+    <!-- P7 photo sync: dataSync foreground-service type (Android 14+). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <!-- Android 13+: media-session notifications are exempt, but declaring
          the runtime-notification permission keeps the shutter visible on
          devices where the exemption is not applied. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <!-- QR-scan attendance taking (Phase 8): camera is used only by the
          in-app scanner (on-device decode, no images leave the phone). -->
+    <!-- Pre-Android-10 only: the MediaStore Downloads insert needs this
+         on API 28 and below. API 29+ saves to Downloads/WBSS with no
+         permission at all. -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.CAMERA" />
     <!-- App Lock: fingerprint/face unlock (local_auth) -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
@@ -82,6 +90,26 @@
             </intent-filter>
         </receiver>
         <!--
+            P7 — photo sync foreground service. Holds the process in the
+            "started" state while the Dart PhotoSyncWorker drains the
+            outbox so Android doesn't kill multi-megabyte uploads when
+            the screen is off. Exported=false so only this app can
+            bind/start it.
+        -->
+        <service
+            android:name=".PhotoSyncForegroundService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false"
+            tools:ignore="Instantiatable" />
+        <receiver
+            android:name=".PhotoSyncActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.arkeonethiopia.fkss.action.STOP_PHOTO_SYNC" />
+            </intent-filter>
+        </receiver>
+
+        <!--
             S3 A.8 — the background sync wake-up.
 
             exported="false": nothing outside this app may trigger a sync.
@@ -99,6 +127,16 @@
                 <action android:name="com.arkeonethiopia.fkss.action.BACKGROUND_SYNC" />
             </intent-filter>
         </receiver>
+
+        <!--
+            Adaptive photo-capture framing: bundle the ML Kit face and
+            pose models into the APK at build time so the framing guide
+            works fully offline (no Google Play model download at first
+            use, which requires connectivity the field does not have).
+        -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="face,pose" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

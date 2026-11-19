@@ -23,6 +23,7 @@ require_once __DIR__ . '/backend/services/AmharicIdentityNormalizer.php';
 require_once __DIR__ . '/backend/services/MemberCanonicalIdentityService.php';
 require_once __DIR__ . '/backend/services/ApiIdempotencyService.php';
 require_once __DIR__ . '/backend/services/SecurityAuditService.php';
+require_once __DIR__ . '/backend/services/MemberSearchService.php';
 
 $_ethDateLoaded = false;
 if (file_exists(__DIR__ . '/backend/ethiopian_date.php')) {
@@ -152,8 +153,9 @@ if (function_exists('recordAttempt')) recordAttempt('hr_register');
 if (!isset($conn) || $conn->connect_error) {
     jsonExit(['status' => 'error', 'message' => 'Database connection error.'], 503);
 }
-// Role gating: registration/promotion is HR-only (plus super_admin/school_admin).
-$allowedRegRoles = ['super_admin', 'school_admin', 'hr_dept'];
+// Role gating: registration/promotion is HR-only (plus super_admin).
+// School-admin registration was removed entirely on 2026-11-18.
+$allowedRegRoles = ['super_admin', 'hr_dept'];
 if (!hasRole($allowedRegRoles)) {
     jsonExit(['status' => 'error', 'message' => 'You do not have permission to register members.'], 403);
 }
@@ -256,8 +258,17 @@ if ($age !== null) {
 }
 if ($age_group === null) {
     // No usable birth date: respect an explicitly posted canonical value
-    // (e.g. quick-add section pick); anything unknown stays null.
-    $postedGroup = \App\Services\MemberCategory::normalizeGroup(field('age_group'));
+    // (e.g. quick-add section pick). M4: a posted value that is not a known
+    // code used to be silently stored as NULL (success-yet-no-group); reject
+    // it instead so the caller fixes the value.
+    $postedGroupRaw = trim((string)field('age_group'));
+    $postedGroup = \App\Services\MemberCategory::normalizeGroup($postedGroupRaw);
+    if ($postedGroupRaw !== '' && $postedGroup === null) {
+        // Pre-try guard: jsonExit directly like the other guards above
+        // (the InvalidArgumentException→422 mapping try starts later).
+        jsonExit(['status' => 'error',
+            'message' => 'Unknown age group "' . $postedGroupRaw . '". Use one of: 7_13, 14_17, 18_plus.'], 422);
+    }
     if ($postedGroup !== null) {
         $age_group = $postedGroup;
         $current_section = \App\Services\MemberCategory::sectionAm($postedGroup);
@@ -269,6 +280,13 @@ if ($age_group === null) {
         }
     }
 }
+
+// Promotion safety (H1): remember whether the caller supplied a complete
+// usable birth date or an explicit canonical group, so the upgrade branch
+// can keep the stored values instead of wiping them with nulls. Partial
+// dates (e.g. year-only) never overwrite a stored full birth date.
+$dobFullSubmitted = ($dob_day > 0 && $dob_month > 0 && $dob_year > 0 && $date_of_birth !== null);
+$postedGroupExplicit = \App\Services\MemberCategory::normalizeGroup(field('age_group'));
 
 // Address & Education
 $education_level     = field('education_level');
@@ -528,13 +546,68 @@ try {
         unset($data['registered_at']);
         unset($data['waiting_since']);
         unset($data['member_code']);
-        unset($data['registration_type']);
+        // PROMOTION CONSISTENCY (2026-11-18): a member promoted to
+        // permanent leaves the waiting pool everywhere — dashboards,
+        // lists, badges and reports all key off registration_type.
+        // Temporary is always waiting (M8), so read the STORED type
+        // (never the POST): stored waiting becomes direct; a stored
+        // transfer background is preserved; anything unexpected also
+        // becomes direct (a permanent tier is never waiting type).
+        // Non-promotion upgrades (tier stays temporary) also keep stored.
+        if (($data['membership_tier'] ?? '') === 'permanent') {
+            $storedType = null;
+            $typeStmt = $conn->prepare('SELECT registration_type FROM members WHERE id = ?');
+            if ($typeStmt) {
+                $typeStmt->bind_param('i', $upgrade_id);
+                $typeStmt->execute();
+                $typeRow = $typeStmt->get_result()->fetch_assoc();
+                $typeStmt->close();
+                if (is_array($typeRow)) $storedType = (string)($typeRow['registration_type'] ?? '');
+            }
+            if ($storedType === 'transfer') {
+                unset($data['registration_type']);
+            } else {
+                $data['registration_type'] = 'direct';
+            }
+        } else {
+            unset($data['registration_type']);
+        }
         // The registration default is only for new records. An upgrade
         // without an explicit manual selection must retain its stored type.
         if (!array_key_exists('member_type', $_POST)) {
             unset($data['member_type']);
         }
-        
+
+        // H1: a promotion form that carries no birth date (prefill leaves
+        // DOB empty when unknown) must NOT wipe the stored birth date/age.
+        // Likewise the stored group/section survive unless a canonical
+        // group was explicitly posted. A failed lookup keeps the computed
+        // values (previous behaviour) rather than failing the promotion.
+        $keepStmt = $conn->prepare(
+            'SELECT date_of_birth, dob_ec_day, dob_ec_month, dob_ec_year, age,
+                    age_group, current_section
+             FROM members WHERE id = ?'
+        );
+        if ($keepStmt) {
+            $keepStmt->bind_param('i', $upgrade_id);
+            $keepStmt->execute();
+            $kept = $keepStmt->get_result()->fetch_assoc();
+            $keepStmt->close();
+            if (is_array($kept)) {
+                if (!$dobFullSubmitted) {
+                    $data['date_of_birth'] = $kept['date_of_birth'] ?? null;
+                    $data['dob_ec_day']   = $kept['dob_ec_day'] !== null ? (int)$kept['dob_ec_day'] : null;
+                    $data['dob_ec_month'] = $kept['dob_ec_month'] !== null ? (int)$kept['dob_ec_month'] : null;
+                    $data['dob_ec_year']  = $kept['dob_ec_year'] !== null ? (int)$kept['dob_ec_year'] : null;
+                    $data['age']          = $kept['age'] ?? null;
+                }
+                if ($postedGroupExplicit === null) {
+                    $data['age_group'] = ($kept['age_group'] ?? null) ?: null;
+                    $data['current_section'] = ($kept['current_section'] ?? null) ?: null;
+                }
+            }
+        }
+
         $setClauses = [];
         $vals = [];
         $types = '';
@@ -633,7 +706,13 @@ try {
     // positions, issue the member code, derive legacy flags and refresh
     // the QR. Never fails the registration itself — worst case the code
     // stays pending and the Identity hub completes it later.
-    if ($upgrade_id === 0 && $newId > 0) {
+    // M8: waiting registrations NEVER mint here — applyPositions() would
+    // otherwise undo the waiting=>null above and hand a code to a member
+    // the doctrine keeps pending until promotion (the position picker is
+    // permanent-only in the UI, so waiting rows hold no positions anyway).
+    // This also silences the M17 no-op 'Member Positions Synced' audit for
+    // the waiting path.
+    if ($upgrade_id === 0 && $newId > 0 && $registration_type !== 'waiting') {
         try {
             require_once __DIR__ . '/backend/services/PositionSyncService.php';
             $posRes = \App\Services\PositionSyncService::applyPositions(
@@ -648,6 +727,69 @@ try {
         } catch (Throwable $posErr) {
             error_log('Registration position sync error: ' . $posErr->getMessage());
         }
+    }
+
+    // H4: a promoted member without a code gets one now — the promotion
+    // dialog promises this. Existing codes are NEVER recomputed here:
+    // applyPositions() would churn the code and wipe position links, so
+    // only computeCode() plus a guarded UPDATE are used, and only when
+    // the code is empty. Position assignments are left untouched.
+    if ($upgrade_id > 0 && $newId > 0) {
+        try {
+            require_once __DIR__ . '/backend/services/PositionSyncService.php';
+            $codeStmt = $conn->prepare('SELECT member_code, age_group FROM members WHERE id = ?');
+            $codeStmt->bind_param('i', $newId);
+            $codeStmt->execute();
+            $codeRow = $codeStmt->get_result()->fetch_assoc();
+            $codeStmt->close();
+            $haveCode = trim((string)($codeRow['member_code'] ?? ''));
+            if (is_array($codeRow) && $haveCode === '') {
+                $freshCode = \App\Services\PositionSyncService::computeCode(
+                    $conn,
+                    $newId,
+                    (string)($codeRow['age_group'] ?? '')
+                );
+                if (is_string($freshCode) && $freshCode !== '') {
+                    $setStmt = $conn->prepare(
+                        'UPDATE members SET member_code = ? WHERE id = ?
+                         AND (member_code IS NULL OR member_code = "")'
+                    );
+                    $setStmt->bind_param('si', $freshCode, $newId);
+                    $setStmt->execute();
+                    $setStmt->close();
+                    $member_code = $freshCode;
+                    \App\Services\SecurityAuditService::record(
+                        $conn,
+                        'Member Code Issued',
+                        ['member_code_status' => 'assigned', 'via' => 'promotion'],
+                        'member',
+                        $newId
+                    );
+                    try {
+                        require_once __DIR__ . '/id_cards/libs/qr_loader.php';
+                        if (class_exists('QRcode')) {
+                            \App\Services\IdentityCodeService::regenerateQr($conn, $newId);
+                        }
+                    } catch (Throwable $qrErr) {
+                        error_log('Promotion QR refresh error: ' . $qrErr->getMessage());
+                    }
+                }
+            } elseif ($haveCode !== '') {
+                // M10: report the kept code instead of "Pending".
+                $member_code = $haveCode;
+            }
+        } catch (Throwable $codeErr) {
+            error_log('Promotion code issue error: ' . $codeErr->getMessage());
+        }
+    }
+
+    // P0 search engine: write-through index AFTER Identity v2, so the row
+    // is indexed with its final member code. Never fatal to registration;
+    // the backfill endpoint catches up on any failure.
+    try {
+        \App\Services\MemberSearchService::indexMember($conn, (int)$newId);
+    } catch (\Throwable $searchError) {
+        error_log('Search write-through failed for member ' . $newId . ': ' . $searchError->getMessage());
     }
 
     // Optional class assignment — never fail the registration if this misses.
@@ -689,9 +831,11 @@ try {
         }
     } catch (Throwable $e) { error_log("Registration workflow error: " . $e->getMessage()); }
 
+    // M11: promotions say "promoted", not "registered".
+    $doneVerb = $upgrade_id > 0 ? 'Member promoted to permanent successfully!' : 'Member registered successfully!';
     jsonExit([
         'status'      => 'success',
-        'message'     => 'Member registered successfully! Code: ' . ($member_code ?? 'Pending') . $enrollNote,
+        'message'     => $doneVerb . ' Code: ' . ($member_code ?? 'Pending') . $enrollNote,
         'member_id'   => $newId,
         'member_code' => $member_code
     ]);

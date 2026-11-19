@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../services/api_service.dart';
 import '../../services/attendance_calendar_cache.dart';
 import '../../utils/attendance_calendar.dart';
 import '../../utils/config.dart';
@@ -15,7 +14,6 @@ import '../../services/api_service.dart';
 import '../../services/attendance_preparation_adapter.dart';
 import '../../services/attendance_preparation_envelope.dart';
 import '../../services/attendance_preparation_fetcher.dart';
-import '../../services/attendance_preparation_readiness.dart';
 import '../../services/attendance_preparation_store.dart';
 import '../../widgets/sync_attention.dart';
 import '../../services/sync_service.dart';
@@ -98,22 +96,6 @@ class AttendanceScreenState extends State<AttendanceScreen> with WidgetsBindingO
   // Preparation-based offline readiness (inactive UI hook, truthful banners).
   AttendancePreparationResolution? _prepResolution;
   final _prepAdapter = AttendancePreparationAdapter();
-  String? get _prepBanner {
-    final r = _prepResolution;
-    if (r == null) return null;
-    switch (r.reason) {
-      case AttendanceReadinessReason.ready:
-        return null; // No banner when ready; offline is honest.
-      case AttendanceReadinessReason.missing:
-        return 'No offline preparation yet — connect and refresh to download your classes and roster.';
-      case AttendanceReadinessReason.staleSession:
-        return 'Your sign-in changed — refresh your preparation before taking attendance offline.';
-      case AttendanceReadinessReason.expired:
-        return 'Your offline preparation expired — connect and refresh to renew it.';
-      case AttendanceReadinessReason.clockSkew:
-        return 'Your phone clock looks wrong — fix the date/time, then refresh.';
-    }
-  }
 
   Map<String, dynamic>? get _effectiveDateStatus {
     final today = AttendanceCalendar.addisToday(DateTime.now());

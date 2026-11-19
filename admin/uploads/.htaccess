@@ -27,6 +27,8 @@
 # Private member documents and guardian photos are streamed only by the
 # authenticated /admin/member_file.php controller. Student photos retain their
 # legacy URL contract for browser/mobile compatibility.
+# NOTE (L2): these rules are Apache-only. Nginx deployments MUST replicate
+# them — see docs/OPERATIONS.md section 2.4 — or private files go public.
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteRule ^members/(docs|guardian_photos)/ - [F,L,NC]

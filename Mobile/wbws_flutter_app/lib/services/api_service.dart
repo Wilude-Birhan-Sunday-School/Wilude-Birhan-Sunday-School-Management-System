@@ -2145,4 +2145,112 @@ class ApiService {
   /// thread without a refetch).
   Future<ApiResponse> markThreadRead(int id) =>
       post('/notifications/thread-read', body: {'id': id});
+
+  // ------------------------------------------------------------------
+  // P4: offline photo upload (multipart, idempotent, with retry in the
+  // PhotoSyncWorker). This method does ONE transmission; the worker owns
+  // retries/backoff. Returns an ApiResponse whose `data` includes:
+  //   { path, replayed:bool, conflict:bool } on 200
+  // or a structured error otherwise.
+  // ------------------------------------------------------------------
+  Future<ApiResponse> uploadMemberPhoto({
+    required int memberId,
+    required PhotoUploadPayload payload,
+  }) async {
+    final generation = _requestGeneration;
+    final sentToken = _token;
+    try {
+      Future<http.Response> send() async {
+        final uri = Uri.parse('${AppConfig.apiBaseUrl}/members/$memberId/photo');
+        final req = http.MultipartRequest('POST', uri);
+        // payload.format is 'webp' | 'jpeg' (a plain String, not an enum).
+        final ext = payload.format == 'jpeg' ? 'jpg' : payload.format;
+        req.files.add(await http.MultipartFile.fromPath(
+          'photo',
+          payload.localPath,
+          filename: 'photo_${memberId}_${payload.field}.$ext',
+        ));
+        final hs = _headers(withAuth: true);
+        hs.remove('Content-Type'); // multipart writer sets boundary
+        hs['Idempotency-Key'] = payload.clientOpId;
+        hs['X-Photo-Field'] = payload.field;
+        hs['X-Photo-SHA256'] = payload.sha256;
+        hs['X-Photo-Taken-At'] = payload.takenAt.toUtc().toIso8601String();
+        hs['X-Photo-Device-Id'] = payload.deviceId;
+        hs['X-Photo-Format'] = payload.format;
+        hs['X-Photo-Width'] = '${payload.width}';
+        hs['X-Photo-Height'] = '${payload.height}';
+        if (payload.operatorAdminId != null) {
+          hs['X-Photo-Operator-Id'] = '${payload.operatorAdminId}';
+        }
+        req.headers.addAll(hs);
+        final streamed = await _http.send(req).timeout(
+              Duration(seconds: payload.timeoutSeconds),
+            );
+        return http.Response.fromStream(streamed);
+      }
+
+      var response = await send();
+      if (!_generationIsCurrent(generation)) {
+        return ApiResponse.superseded(generation);
+      }
+      AuthRefreshOutcome? refreshOutcome;
+      if (response.statusCode == 401) {
+        refreshOutcome = await _refreshAfterUnauthorized(sentToken);
+        if (!_generationIsCurrent(generation) ||
+            refreshOutcome == AuthRefreshOutcome.scopeChanged ||
+            refreshOutcome == AuthRefreshOutcome.superseded) {
+          return ApiResponse.superseded(generation);
+        }
+        if (refreshOutcome == AuthRefreshOutcome.sameScope) {
+          response = await send();
+        } else if (refreshOutcome == AuthRefreshOutcome.rejected) {
+          await _notifyIfRefreshRejected();
+        }
+      }
+      if (!_generationIsCurrent(generation)) {
+        return ApiResponse.superseded(generation);
+      }
+      return _handleResponse(response)
+          .withRefreshOutcome(refreshOutcome)
+          .withGeneration(generation);
+    } catch (e) {
+      if (!_generationIsCurrent(generation)) {
+        return ApiResponse.superseded(generation);
+      }
+      return _handleError(e).withGeneration(generation);
+    }
+  }
+}
+
+/// Input payload for uploadMemberPhoto — mirrors what the PhotoSyncWorker
+/// reads from a photo_outbox row.
+class PhotoUploadPayload {
+  final String clientOpId;
+  final int memberId;
+  final String field; // 'student_photo' | 'guardian_photo'
+  final String localPath;
+  final String sha256;
+  final String format; // 'webp' | 'jpeg'
+  final int width;
+  final int height;
+  final DateTime takenAt;
+  final String deviceId;
+  final int? operatorAdminId;
+  final int timeoutSeconds;
+
+  const PhotoUploadPayload({
+    required this.clientOpId,
+    required this.memberId,
+    required this.field,
+    required this.localPath,
+    required this.sha256,
+    required this.format,
+    required this.width,
+    required this.height,
+    required this.takenAt,
+    required this.deviceId,
+    this.operatorAdminId,
+    this.timeoutSeconds = 90,
+  });
 }

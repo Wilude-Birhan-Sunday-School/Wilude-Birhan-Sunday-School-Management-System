@@ -384,13 +384,6 @@ class TeacherGradesScreenState extends State<TeacherGradesScreen> {
         GradeClass? cl; for (final x in ds.classes) if (x.classId == _selectedClassId) { cl = x; break; }
         if (cl != null) {
           final clNonNull = cl;
-          bool termMatchPrep(dynamic a) {
-            final atid = a is Map ? (a['term_id'] is int ? a['term_id'] as int : int.tryParse('${a['term_id'] ?? ''}')) : null;
-            // Preparation assessments don't carry term_id; they are write_year scoped.
-            // Use them as current-semester working set when viewing current.
-            if (_selectedTermId == null) return true;
-            return atid == _selectedTermId;
-          }
           // Prefer boot prep assessments (already term-filtered for this class) else filter class assessments by subject.
           var src = _bootAssessments.isNotEmpty ? _bootAssessments.where((a) => (a['subject_id'] is int ? a['subject_id'] : int.tryParse('${a['subject_id']}')) == sid).toList()
                 : clNonNull.assessments.where((a) => a.subjectId == sid).map((a) => {
@@ -528,10 +521,6 @@ class TeacherGradesScreenState extends State<TeacherGradesScreen> {
     );
   }
 
-  Widget _offlineBanner() {
-    // Kept for API compat but no longer used — global OfflineBanner is the single source of truth.
-    return const SizedBox.shrink();
-  }
 
   Widget _buildClassSelector() {
     return Column(

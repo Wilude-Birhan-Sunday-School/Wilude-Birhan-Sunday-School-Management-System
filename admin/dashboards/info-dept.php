@@ -554,6 +554,22 @@ $nextMemberCode = isset($conn) ? generate_next_member_code($conn) : '0001';
                 <span class="font-semibold">Exports & Reports</span>
             </button>
 
+            <a href="/admin/photo_import.php"
+               class="mobile-touch-target flex items-center gap-3 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 transition text-white">
+                <span class="w-8 h-8 rounded-xl bg-amber-500/25 flex items-center justify-center">
+                    <i class="fa-solid fa-file-zipper text-sm text-amber-300"></i>
+                </span>
+                <span class="font-semibold">Photo Import (ZIP)</span>
+            </a>
+
+            <a href="/admin/photo_review.php"
+               class="mobile-touch-target flex items-center gap-3 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 transition text-white">
+                <span class="w-8 h-8 rounded-xl bg-amber-500/25 flex items-center justify-center">
+                    <i class="fa-solid fa-camera-retro text-sm text-amber-300"></i>
+                </span>
+                <span class="font-semibold">Photo Review</span>
+            </a>
+
             <button data-section="settings"
                     class="mobile-touch-target flex items-center gap-3 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 transition">
                 <span class="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center">
@@ -2875,12 +2891,8 @@ $nextMemberCode = isset($conn) ? generate_next_member_code($conn) : '0001';
 
     // Calculate age & section (same value used as school section)
     function calculateAgeSection() {
-        const day = parseInt(document.getElementById('dobDay')?.value || '0', 10);
-        const month = parseInt(document.getElementById('dobMonth')?.value || '0', 10);
         const year = parseInt(document.getElementById('dobYear')?.value || '0', 10);
         const currentYearEC = <?php echo (int) ethio_date_format(new DateTime('now', new DateTimeZone('Africa/Addis_Ababa')), 'Y'); ?>;
-        const currentMonthEC = <?php echo (int) ethio_date_format(new DateTime('now', new DateTimeZone('Africa/Addis_Ababa')), 'n'); ?>;
-        const currentDayEC = <?php echo (int) ethio_date_format(new DateTime('now', new DateTimeZone('Africa/Addis_Ababa')), 'j'); ?>;
 
         if (!year || year > currentYearEC) {
             ['ageDisplay','ageField','sectionDisplay','currentSectionField','ageGroupField'].forEach(id=>{
@@ -2892,33 +2904,11 @@ $nextMemberCode = isset($conn) ? generate_next_member_code($conn) : '0001';
 
         let age = currentYearEC - year;
         if (age < 0) age = 0;
-        // Birthday-aware like the server (MemberAge EC branch): subtract
-        // one when this year's birthday has not occurred yet. The server
-        // re-decides authoritatively at submit; this is a live preview.
-        if (month >= 1 && month <= 13 && day >= 1) {
-            const maxDay = month === 13 ? ((year % 4 === 3) ? 6 : 5) : 30;
-            if (day <= maxDay && (currentMonthEC < month || (currentMonthEC === month && currentDayEC < day))) {
-                age--;
-                if (age < 0) age = 0;
-            }
-        }
 
-        // Same thresholds as MemberCategory::groupForAge(): <=13 A, <=17 B, else C.
-        let sectionLabel = 'ህጻናት';
-        let ageGroup = '7_13';
-        if (age >= 14 && age <= 17) {
-            sectionLabel = 'ማዕከላዊያን';
-            ageGroup = '14_17';
-        } else if (age >= 18) {
-            sectionLabel = 'ወጣቶች';
-            ageGroup = '18_plus';
-        }
-
+        // Age is informational only. Category (ህጻናት/ማዕከላዊያን/ወጣቶች) and
+        // section are assigned manually by staff — no automatic assignment.
         if (document.getElementById('ageDisplay')) document.getElementById('ageDisplay').value = age.toString();
         if (document.getElementById('ageField')) document.getElementById('ageField').value = age.toString();
-        if (document.getElementById('sectionDisplay')) document.getElementById('sectionDisplay').value = sectionLabel;
-        if (document.getElementById('currentSectionField')) document.getElementById('currentSectionField').value = sectionLabel;
-        if (document.getElementById('ageGroupField')) document.getElementById('ageGroupField').value = ageGroup;
     }
 
     // Toggle custom registration date fields
@@ -3402,27 +3392,27 @@ $nextMemberCode = isset($conn) ? generate_next_member_code($conn) : '0001';
 
         if (!previewBtn || !editBtn || !viewPreview || !editForm) return;
 
-        if (tab === 'preview') {
-            previewBtn.classList.add('border-emerald-600', 'text-emerald-700');
-            previewBtn.classList.remove('border-transparent', 'text-slate-500');
-            editBtn.classList.remove('border-emerald-600', 'text-emerald-700');
-            editBtn.classList.add('border-transparent', 'text-slate-500');
-            
-            viewPreview.classList.remove('hidden');
-            viewPreview.style.display = 'block';
-            editForm.classList.add('hidden');
-            editForm.style.display = 'none';
-        } else {
-            editBtn.classList.add('border-emerald-600', 'text-emerald-700');
-            editBtn.classList.remove('border-transparent', 'text-slate-500');
-            previewBtn.classList.remove('border-emerald-600', 'text-emerald-700');
-            previewBtn.classList.add('border-transparent', 'text-slate-500');
-            
-            editForm.classList.remove('hidden');
-            editForm.style.display = 'block';
-            viewPreview.classList.add('hidden');
-            viewPreview.style.display = 'none';
-        }
+        const showPrev = (tab === 'preview');
+        previewBtn.classList.toggle('active', showPrev);
+        previewBtn.classList.toggle('border-emerald-600', showPrev);
+        previewBtn.classList.toggle('text-emerald-700', showPrev);
+        previewBtn.classList.toggle('border-transparent', !showPrev);
+        previewBtn.classList.toggle('text-slate-500', !showPrev);
+        editBtn.classList.toggle('active', !showPrev);
+        editBtn.classList.toggle('border-emerald-600', !showPrev);
+        editBtn.classList.toggle('text-emerald-700', !showPrev);
+        editBtn.classList.toggle('border-transparent', showPrev);
+        editBtn.classList.toggle('text-slate-500', showPrev);
+
+        viewPreview.classList.toggle('hidden', !showPrev);
+        viewPreview.style.display = showPrev ? 'block' : 'none';
+        editForm.classList.toggle('hidden', showPrev);
+        editForm.style.display = showPrev ? 'none' : 'block';
+
+        try {
+            var c = document.getElementById('manageSheetContent');
+            if (c) c.scrollTop = 0;
+        } catch(e){}
     }
 
     // In-page Image Viewer Logic
@@ -3524,38 +3514,58 @@ $nextMemberCode = isset($conn) ? generate_next_member_code($conn) : '0001';
         e.preventDefault();
         const form = e.target;
         const formData = new FormData(form);
-        formData.append('csrf_token', CSRF_TOKEN);
+        if (!formData.has('csrf_token') && typeof CSRF_TOKEN !== 'undefined') formData.append('csrf_token', CSRF_TOKEN);
         const btn = form.querySelector('button[type="submit"]');
-        
+        const alertBox = document.getElementById('mm-alert');
+
         if(btn) {
             btn.disabled = true;
-            btn.textContent = 'Saving...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
         }
+        if (alertBox){ alertBox.style.display='none'; alertBox.className='mm-alert'; alertBox.innerHTML=''; }
 
         fetch('/admin/info_manage_member.php', {
             method: 'POST',
             body: formData
         })
-        .then(r => r.json())
+        .then(r => r.json().catch(() => ({status:'error',message:'Invalid server response'})))
         .then(data => {
             if(data.status === 'success') {
-                alert('Saved successfully!');
-                closeManageSheet();
-                window.location.reload(); // Refresh to see changes
+                if (alertBox){
+                    alertBox.className = 'mm-alert ok';
+                    alertBox.innerHTML = '<i class="fas fa-check-circle"></i> ' + (data.message || 'Saved successfully.');
+                    alertBox.style.display = 'flex';
+                }
+                const id = parseInt(form.querySelector('input[name="id"]').value, 10);
+                setTimeout(() => {
+                    if (id && typeof openManageSheet === 'function') openManageSheet(id);
+                    else { closeManageSheet(); try { window.location.reload(); } catch(e2){} }
+                }, 700);
             } else {
-                alert('Error: ' + data.message);
+                const msg = (data && data.message) ? data.message : 'Unable to save.';
+                if (alertBox){
+                    alertBox.className = 'mm-alert err';
+                    alertBox.innerHTML = '<i class="fas fa-triangle-exclamation"></i> ' + msg;
+                    alertBox.style.display = 'flex';
+                } else {
+                    alert('Error: ' + msg);
+                }
+                if(btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Save Changes'; }
             }
         })
         .catch(err => {
-            alert('Network error');
-            console.error(err);
-        })
-        .finally(() => {
-            if(btn) {
-                btn.disabled = false;
-                btn.textContent = 'Save Changes';
+            const msg = 'Network error. Please try again.';
+            if (alertBox){
+                alertBox.className = 'mm-alert err';
+                alertBox.innerHTML = '<i class="fas fa-triangle-exclamation"></i> ' + msg;
+                alertBox.style.display = 'flex';
+            } else {
+                alert(msg);
             }
+            console.error(err);
+            if(btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Save Changes'; }
         });
+        return false;
     }
 </script>
 

@@ -55,7 +55,7 @@
 		<key>NSFaceIDUsageDescription</key>
 		<string>Unlock the $(SCHOOL_APP_NAME) app with Face ID instead of your passcode.</string>
 		<key>NSCameraUsageDescription</key>
-		<string>Scan member QR codes to take attendance. Codes are decoded on the device and no images leave the phone.</string>
+		<string>Take member ID photos and scan attendance QR codes. Captured photos stay in the app's private queue until you choose to sync or export them.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
 	<string>The app uses your photo library to set category cover images.</string>
 </dict>

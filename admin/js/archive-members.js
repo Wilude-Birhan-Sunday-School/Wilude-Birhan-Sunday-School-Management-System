@@ -57,7 +57,8 @@
                 window.restoreMember(member.id, [member.student_name, member.father_name].filter(Boolean).join(' '));
         });
         actions.appendChild(restoreBtn);
-        var viewBtn = node('button', 'px-3 py-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg text-xs font-bold transition', 'View');
+        // P6: blue = view (card-CTA shape kept: archive cards are their own component).
+        var viewBtn = node('button', 'px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-bold transition', 'View');
         viewBtn.type = 'button';
         viewBtn.addEventListener('click', function () {
             if (typeof window.openManageSheet === 'function' && member.id > 0) window.openManageSheet(member.id);

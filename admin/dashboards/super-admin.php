@@ -182,7 +182,7 @@ $departments = [
     ['name' => 'Mezmur Dept', 'icon' => 'fa-music', 'color' => '#06b6d4', 'amharic' => 'መዝሙር ክፍል'],
 ];
 
-$roles = ['super_admin' => 'Super Admin', 'school_admin' => 'School Admin', 'hr_dept' => 'HR Dept', 'info_dept' => 'Info Dept', 'edu_dept' => 'Edu Dept', 'finance_dept' => 'Finance Dept', 'material_dept' => 'Material Dept', 'mezmur_dept' => 'Mezmur Dept', 'teacher' => 'Teacher', 'attendance_taker' => 'Attendance Taker', 'content_editor' => 'Content Editor (Website)', 'accounts_office' => 'Accounts Office (ACM)'];
+$roles = ['super_admin' => 'Super Admin', 'school_admin' => 'School Admin', 'hr_dept' => 'HR Dept', 'info_dept' => 'Info Dept', 'photo_dept' => 'Photo Dept (ZIP, review, analytics)', 'edu_dept' => 'Edu Dept', 'finance_dept' => 'Finance Dept', 'material_dept' => 'Material Dept', 'mezmur_dept' => 'Mezmur Dept', 'teacher' => 'Teacher', 'attendance_taker' => 'Attendance Taker', 'content_editor' => 'Content Editor (Website)', 'accounts_office' => 'Accounts Office (ACM)'];
 
 $checks = [
     ['name' => 'PHP', 'status' => version_compare($phpVersion, '7.4', '>=') ? 'good' : 'warning', 'value' => $phpVersion],
@@ -429,7 +429,7 @@ if (isset($conn) && !$conn->connect_error) {
     // Check key table relationships
     $integrityChecks = [
         ['name' => 'Members with valid status', 'sql' => "SELECT COUNT(*) as c FROM members WHERE status IN ('active','inactive','archived','waiting')"],
-        ['name' => 'Users with valid roles', 'sql' => "SELECT COUNT(*) as c FROM users WHERE role IN ('super_admin','school_admin','hr_dept','info_dept','edu_dept','finance_dept','material_dept','mezmur_dept','teacher','attendance_taker')"],
+        ['name' => 'Users with valid roles', 'sql' => "SELECT COUNT(*) as c FROM users WHERE role IN ('super_admin','school_admin','hr_dept','info_dept','photo_dept','photo_importer','edu_dept','finance_dept','material_dept','mezmur_dept','teacher','attendance_taker','content_editor','accounts_office','mezmur_attendance_taker','hr_attendance_taker')"],
         ['name' => 'Group members with valid groups', 'sql' => "SELECT COUNT(*) as c FROM wbws_group_members gm LEFT JOIN wbws_groups g ON gm.group_id=g.id WHERE g.id IS NOT NULL", 'total_sql' => "SELECT COUNT(*) as c FROM wbws_group_members"],
         ['name' => 'Group leaders with valid groups', 'sql' => "SELECT COUNT(*) as c FROM wbws_group_leaders gl LEFT JOIN wbws_groups g ON gl.group_id=g.id WHERE g.id IS NOT NULL", 'total_sql' => "SELECT COUNT(*) as c FROM wbws_group_leaders"],
     ];
@@ -648,6 +648,9 @@ if (!in_array($activeSection, $saAllowedSections, true)) {
                 <li><button class="nav-link <?= $activeSection === 'failure_intelligence' ? 'active' : '' ?>" data-section="failure_intelligence"><i class="fa-solid fa-triangle-exclamation"></i> Failure Intelligence</button></li>
                 <li><button class="nav-link <?= $activeSection === 'health' ? 'active' : '' ?>" data-section="health"><i class="fa-solid fa-heart-pulse"></i> Site Health</button></li>
                 <li><a href="/admin/telegram_registration.php" class="nav-link" style="text-decoration:none"><i class="fa-brands fa-telegram"></i> Telegram Registration</a></li>
+                <li><a href="/admin/dashboards/photo_dept.php" class="nav-link" style="text-decoration:none"><i class="fa-solid fa-camera-retro" style="color:#F0C000"></i> Photo Dept Dashboard</a></li>
+                <li><a href="/admin/photo_import.php" class="nav-link" style="text-decoration:none"><i class="fa-solid fa-file-zipper" style="color:#F0C000"></i> Photo Import (ZIP)</a></li>
+                <li><a href="/admin/photo_review.php" class="nav-link" style="text-decoration:none"><i class="fa-solid fa-images" style="color:#F0C000"></i> Photo Review</a></li>
                 <li><button class="nav-link <?= $activeSection === 'settings' ? 'active' : '' ?>" data-section="settings"><i class="fa-solid fa-gear"></i> Settings</button></li>
                 <li><button class="nav-link <?= $activeSection === 'branding' ? 'active' : '' ?>" data-section="branding"><i class="fa-solid fa-palette"></i> Branding</button></li>
             </ul>

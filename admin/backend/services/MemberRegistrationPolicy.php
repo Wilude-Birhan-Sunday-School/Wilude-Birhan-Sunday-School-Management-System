@@ -23,8 +23,14 @@ final class MemberRegistrationPolicy
      */
     public static function prepare(array $input, string $role): array
     {
-        // quick_add is a role capability, never triggered by a POST flag (security).
-        $quickAdd = $role === 'school_admin';
+        // School-admin registration (quick_add) was removed entirely on
+        // 2026-11-18: the school dashboard no longer registers members.
+        if ($role === 'school_admin') {
+            throw new InvalidArgumentException('School administrators cannot register members.');
+        }
+        // quick_add is now always false (capability removed); the contract
+        // keys stay so existing callers keep working unchanged.
+        $quickAdd = false;
         $fullName = self::text($input['full_name_am'] ?? '', 150, 'Full name');
         if ($fullName === '') {
             throw new InvalidArgumentException('Full name is required.');
@@ -42,11 +48,27 @@ final class MemberRegistrationPolicy
             throw new InvalidArgumentException('Gender is required.');
         }
         $gender = self::enum($genderRaw === '' ? 'male' : $genderRaw, self::GENDERS, 'gender');
-        $registrationType = self::enum(
-            trim((string)($input['registration_type'] ?? 'waiting')),
-            self::REGISTRATION_TYPES,
-            'registration type'
-        );
+        // M8: temporary tier is ALWAYS waiting type (import coerces the same
+        // way; the HR form locks it client-side). A crafted temp+direct POST
+        // used to slip through and mint a code immediately, contradicting the
+        // codes-pending doctrine for waiting members.
+        $tierEarly = $quickAdd
+            ? 'permanent'
+            : self::enum($input['membership_tier'] ?? 'permanent', self::TIERS, 'membership tier');
+        $registrationType = ($tierEarly === 'temporary')
+            ? 'waiting'
+            : self::enum(
+                trim((string)($input['registration_type'] ?? 'waiting')),
+                self::REGISTRATION_TYPES,
+                'registration type'
+            );
+        // PROMOTION CONSISTENCY (2026-11-18, mirror of M8 above): a
+        // permanent tier is never waiting type. permanent+waiting can only
+        // arrive from a legacy row, the HR form's untouched default, or a
+        // crafted POST — coerce to direct. Transfer keeps its background.
+        if ($tierEarly === 'permanent' && $registrationType === 'waiting') {
+            $registrationType = 'direct';
+        }
         $phone = self::text($input['phone_number'] ?? '', 30, 'Phone number');
         if ($phone !== '' && !preg_match('/^[0-9+()\- .]+$/', $phone)) {
             throw new InvalidArgumentException('Phone number contains unsupported characters.');
@@ -65,9 +87,7 @@ final class MemberRegistrationPolicy
                 ? 'active'
                 : self::enum($input['status'] ?? 'active', self::STATUSES, 'status'),
             'gender' => $gender,
-            'membership_tier' => $quickAdd
-                ? 'permanent'
-                : self::enum($input['membership_tier'] ?? 'permanent', self::TIERS, 'membership tier'),
+            'membership_tier' => $tierEarly,
             'phone_number' => $phone,
             'current_section' => self::text($input['current_section'] ?? '', 100, 'Section'),
         ];

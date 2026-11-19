@@ -165,7 +165,8 @@
         var cell = document.createElement('td');
         var table = this.body.closest ? this.body.closest('table') : null;
         cell.colSpan = table ? table.querySelectorAll('thead th').length || 4 : 4;
-        cell.className = 'p-4 text-center text-sm ' + (isError ? 'text-red-500' : 'text-slate-400');
+        // P4: list states get room to breathe; slate-500 floor, rose-600 errors.
+        cell.className = 'p-8 text-center text-sm ' + (isError ? 'text-rose-600' : 'text-slate-500');
         cell.textContent = msg;
         row.appendChild(cell);
         this.body.appendChild(row);

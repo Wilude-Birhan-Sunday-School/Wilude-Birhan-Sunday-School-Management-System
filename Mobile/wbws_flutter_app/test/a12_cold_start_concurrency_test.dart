@@ -35,11 +35,20 @@ Future<void> _workerMain(Map<String, Object?> message) async {
   final reply = message['reply'] as SendPort;
   final directory = '${message['directory']}';
   final mode = '${message['mode']}';
+  sqflite.Database? raw;
+
+  Future<void> closeDatabase() async {
+    final opened = raw;
+    raw = null;
+    if (opened != null) await opened.close();
+  }
+
   try {
     sqfliteFfiInit();
     await databaseFactoryFfi.setDatabasesPath(directory);
     sqflite.databaseFactory = databaseFactoryFfi;
     final db = LocalDb();
+    raw = await db.database;
 
     if (mode == 'hold') {
       await db.persistLocalSession(
@@ -71,6 +80,7 @@ Future<void> _workerMain(Map<String, Object?> message) async {
         executionSource: SyncExecutionSource.foreground,
       );
       if (claim == null) {
+        await closeDatabase();
         reply.send(
             <String, Object?>{'ok': false, 'error': 'holder did not claim'});
         return;
@@ -102,11 +112,14 @@ Future<void> _workerMain(Map<String, Object?> message) async {
           ),
           now: DateTime.now().toUtc(),
         );
+        await closeDatabase();
         reply.send(<String, Object?>{
           'ok': true,
           'phase': 'stale_settlement',
           'result': stale.name,
         });
+      } else {
+        await closeDatabase();
       }
       return;
     }
@@ -119,9 +132,10 @@ Future<void> _workerMain(Map<String, Object?> message) async {
       executionSource: SyncExecutionSource.background,
     );
     if (claim == null) {
-      final raw = await db.database;
-      final rows = await raw.query('pending_attendance');
-      final attempts = await raw.query('sync_attempts');
+      final opened = raw!;
+      final rows = await opened.query('pending_attendance');
+      final attempts = await opened.query('sync_attempts');
+      await closeDatabase();
       reply.send(<String, Object?>{
         'ok': false,
         'error': 'competitor did not claim',
@@ -143,7 +157,7 @@ Future<void> _workerMain(Map<String, Object?> message) async {
       ),
       now: DateTime.now().toUtc(),
     );
-    await (await db.database).close();
+    await closeDatabase();
     reply.send(<String, Object?>{
       'ok': true,
       'phase': 'competitor_settlement',
@@ -152,6 +166,7 @@ Future<void> _workerMain(Map<String, Object?> message) async {
       'source': SyncExecutionSource.background.storageValue,
     });
   } catch (error, stack) {
+    await closeDatabase();
     reply.send(<String, Object?>{
       'ok': false,
       'error': '$error\n$stack',
@@ -173,12 +188,13 @@ Future<Map<Object?, Object?>> _inspectDatabase(String directory) async {
 
 Future<void> _inspectWorker(Map<String, Object?> message) async {
   final reply = message['reply'] as SendPort;
+  sqflite.Database? raw;
   try {
     sqfliteFfiInit();
     await databaseFactoryFfi.setDatabasesPath('${message['directory']}');
     sqflite.databaseFactory = databaseFactoryFfi;
     final db = LocalDb();
-    final raw = await db.database;
+    raw = await db.database;
     final rows = await raw.query(
       'pending_attendance',
       columns: ['sync_state', 'synced', 'attempt_count'],
@@ -198,6 +214,8 @@ Future<void> _inspectWorker(Map<String, Object?> message) async {
       orderBy: 'attempt_number',
     );
     final integrity = await raw.rawQuery('PRAGMA integrity_check');
+    await raw.close();
+    raw = null;
     reply.send(<String, Object?>{
       'ok': true,
       'rows': rows,
@@ -205,6 +223,10 @@ Future<void> _inspectWorker(Map<String, Object?> message) async {
       'integrity': integrity.single.values.single,
     });
   } catch (error, stack) {
+    if (raw != null) {
+      await raw.close();
+      raw = null;
+    }
     reply.send(<String, Object?>{'ok': false, 'error': '$error\n$stack'});
   }
 }
@@ -213,22 +235,30 @@ void main() {
   test('production LocalDb safely arbitrates foreground and cold-start claims',
       () async {
     final directory = await Directory.systemTemp.createTemp('a12-concurrency-');
+    final holderReplies = ReceivePort();
+    final holderMessages = StreamIterator<dynamic>(holderReplies);
+    final holderExit = ReceivePort();
+    final holderExitFuture = holderExit.first;
+    SendPort? holderControl;
+    var holderSpawned = false;
+    var holderExited = false;
     try {
-      final holderReplies = ReceivePort();
-      final holderMessages = StreamIterator<dynamic>(holderReplies);
-      final holderIsolate = await Isolate.spawn<Map<String, Object?>>(
+      await Isolate.spawn<Map<String, Object?>>(
         _workerMain,
         <String, Object?>{
           'directory': p.normalize(directory.path),
           'mode': 'hold',
           'reply': holderReplies.sendPort,
         },
+        onExit: holderExit.sendPort,
       );
+      holderSpawned = true;
       expect(
         await holderMessages.moveNext().timeout(const Duration(seconds: 30)),
         isTrue,
       );
       final holder = Map<Object?, Object?>.from(holderMessages.current as Map);
+      holderControl = holder['control'] as SendPort?;
       expect(holder['ok'], true, reason: '${holder['error']}');
       expect(holder['phase'], 'claimed');
       expect(holder['attempt'], 1);
@@ -252,8 +282,7 @@ void main() {
       expect(competitor['source'], 'background');
       expect(competitor['attempt'], 2);
 
-      final control = holder['control'] as SendPort;
-      control.send('settle');
+      holderControl!.send('settle');
       expect(
         await holderMessages.moveNext().timeout(const Duration(seconds: 30)),
         isTrue,
@@ -262,9 +291,8 @@ void main() {
           Map<Object?, Object?>.from(holderMessages.current as Map);
       expect(staleResult['ok'], true, reason: '${staleResult['error']}');
       expect(staleResult['result'], 'supersededLocal');
-      await holderMessages.cancel();
-      holderReplies.close();
-      holderIsolate.kill(priority: Isolate.immediate);
+      await holderExitFuture.timeout(const Duration(seconds: 30));
+      holderExited = true;
 
       // The inspector is a third production LocalDb instance. It proves the
       // durable result after both isolate-level owners have completed.
@@ -294,7 +322,14 @@ void main() {
       expect(attempts[1]['retry_decision'], 'COMPLETED');
       expect(inspected['integrity'], 'ok');
     } finally {
-      await directory.delete(recursive: true).catchError((_) {});
+      if (holderControl != null) holderControl.send('close');
+      if (holderSpawned && !holderExited) {
+        await holderExitFuture.timeout(const Duration(seconds: 30));
+      }
+      await holderMessages.cancel();
+      holderReplies.close();
+      holderExit.close();
+      await directory.delete(recursive: true);
     }
   });
 }

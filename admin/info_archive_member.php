@@ -62,13 +62,16 @@ $archiveType = ($reason === 'failed_observation') ? 'failed_observation' : 'perm
 $archivedBy = (string)$_SESSION['admin_username'];
 
 // Archive the member and preserve a reviewable reason trail.
+// M7: keep the pre-archive status (migration 095) so restore can put a
+// warning/inactive member back where they were instead of always 'active'.
+$priorStatus = (string)($member['status'] ?? '');
 $sql = "UPDATE members
-        SET status='archived', archived_at=NOW(), archived_by=?, archive_reason=?,
+        SET status='archived', status_before_archive=?, archived_at=NOW(), archived_by=?, archive_reason=?,
             archive_notes=?, archive_type=?
         WHERE id=?";
 $stmt = $conn->prepare($sql);
 if ($stmt) {
-    $stmt->bind_param('ssssi', $archivedBy, $reason, $notes, $archiveType, $id);
+    $stmt->bind_param('sssssi', $priorStatus, $archivedBy, $reason, $notes, $archiveType, $id);
     if ($stmt->execute()) {
         $memberName = $member['student_name'] . ' ' . $member['father_name'];
         
@@ -79,7 +82,26 @@ if ($stmt) {
         } catch (Exception $e) {
             error_log("Workflow notification error: " . $e->getMessage());
         }
-        
+
+        // H5: archiving must leave an audit trail (actor + reason + type).
+        // Best-effort: the UPDATE above already committed (no transaction
+        // here), so a logging failure is reported, not user-facing.
+        try {
+            require_once __DIR__ . '/backend/services/SecurityAuditService.php';
+            $auditOk = \App\Services\SecurityAuditService::record(
+                $conn,
+                'Member Archived',
+                ['archive_reason' => $reason, 'archive_type' => $archiveType],
+                'member',
+                $id
+            );
+            if (!$auditOk) {
+                error_log('Member archive audit recording failed for member ' . $id . '.');
+            }
+        } catch (Throwable $auditErr) {
+            error_log('Member archive audit error: ' . $auditErr->getMessage());
+        }
+
         echo json_encode([
             'status' => 'success', 
             'message' => $memberName . ' has been moved to archive successfully'

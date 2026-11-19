@@ -22,7 +22,7 @@ final class GradesPreparationFetcher {
     }
     final body = res.data; if (body is! Map) throw const GradesPreparationFetchException('GRADES_PREPARATION_MALFORMED','Preparation response is not an object.');
     final data = (body['data'] is Map) ? body['data'] as Map : body;
-    final envelopeMap = <String,dynamic>{}; for (final e in (data as Map).entries) envelopeMap[e.key.toString()]=e.value;
+    final envelopeMap = <String,dynamic>{}; for (final e in data.entries) envelopeMap[e.key.toString()]=e.value;
     try {
       final envelope = GradesPreparationEnvelope.decode(envelopeMap, expected: expectedScope ?? GradesPreparationScope(ownerUserId: session.ownerUserId, authorizationVersion: session.authorizationVersion, role: 'teacher', familyId: '00'*32, serverIdentity: AppConfig.apiBaseUrl), maxPayloadBytes: maxPayloadBytes);
       final dataset = GradesPreparationDataset.decode(envelope.payloadUtf8);

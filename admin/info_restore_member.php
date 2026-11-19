@@ -33,7 +33,7 @@ if ($id <= 0) {
 }
 
 // Verify member exists and is archived
-$checkStmt = $conn->prepare("SELECT id, student_name, father_name, status FROM members WHERE id = ?");
+$checkStmt = $conn->prepare("SELECT id, student_name, father_name, status, status_before_archive FROM members WHERE id = ?");
 $checkStmt->bind_param("i", $id);
 $checkStmt->execute();
 $result = $checkStmt->get_result();
@@ -51,20 +51,45 @@ if ($member['status'] !== 'archived') {
 }
 
 // Archive metadata columns are deployment-managed by migration 013.
+// M7: restore the pre-archive status kept by migration 095. NULL (rows
+// archived before 095) or anything unexpected falls back to 'active',
+// which was the old unconditional behavior — no regression either way.
+$restoreTo = (string)($member['status_before_archive'] ?? '');
+if (!in_array($restoreTo, ['active', 'warning', 'inactive'], true)) {
+    $restoreTo = 'active';
+}
 $restoredBy = (string)$_SESSION['admin_username'];
 $stmt = $conn->prepare(
     "UPDATE members
-     SET status='active', archived_at=NULL, archived_by=NULL, archive_reason=NULL,
+     SET status=?, status_before_archive=NULL, archived_at=NULL, archived_by=NULL, archive_reason=NULL,
          archive_notes=NULL, archive_type=NULL, restored_at=NOW(), restored_by=?
      WHERE id=?"
 );
 if ($stmt) {
-    $stmt->bind_param('si', $restoredBy, $id);
+    $stmt->bind_param('ssi', $restoreTo, $restoredBy, $id);
     if ($stmt->execute()) {
         $memberName = $member['student_name'] . ' ' . $member['father_name'];
+        // H5: restoring must leave an audit trail. Best-effort: the UPDATE
+        // above already committed (no transaction here), so a logging
+        // failure is reported, not user-facing.
+        try {
+            require_once __DIR__ . '/backend/services/SecurityAuditService.php';
+            $auditOk = \App\Services\SecurityAuditService::record(
+                $conn,
+                'Member Restored',
+                ['restored_to' => $restoreTo],
+                'member',
+                $id
+            );
+            if (!$auditOk) {
+                error_log('Member restore audit recording failed for member ' . $id . '.');
+            }
+        } catch (Throwable $auditErr) {
+            error_log('Member restore audit error: ' . $auditErr->getMessage());
+        }
         echo json_encode([
-            'status' => 'success', 
-            'message' => $memberName . ' has been restored to active members'
+            'status' => 'success',
+            'message' => $memberName . ' has been restored to ' . $restoreTo . ' members'
         ]);
     } else {
         error_log('Member restore update failed.');

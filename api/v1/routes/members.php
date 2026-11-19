@@ -489,4 +489,107 @@ if ($method === 'GET' && is_int($id) && $sub === 'attendance-risk') {
     ]);
 }
 
+
+// ============================================================
+// POST /members/{id}/photo  — mobile offline photo upload (P3)
+// ============================================================
+if ($method === 'POST' && is_int($id) && $sub === 'photo') {
+    require_once __DIR__ . '/../../../admin/backend/services/PhotoUploadService.php';
+    require_once __DIR__ . '/../../../admin/backend/services/PhotoDevicePairing.php';
+
+    if (!apiCanManageMembers($auth)) {
+        err('Only Information, HR, or Admin staff can upload member photos.', 403,
+            ['code' => 'FORBIDDEN']);
+    }
+    // Bulk-photo workflow: one authenticated request per photo; a school
+    // intake run is thousands of photos, often behind one NAT'd IP.
+    // 120/min/IP with client 429+Retry-After backoff keeps abuse bounded
+    // while letting legit bulk syncs finish the same day.
+    if (isApiRateLimited('member_photo_upload', 120)) {
+        err('Too many photo uploads. Please wait a moment.', 429);
+    }
+
+    $headers = function_exists('getallheaders') ? getallheaders() : [];
+    if (!is_array($headers)) $headers = [];
+    $header = function (string $name) use ($headers): string {
+        $try = [
+            $name,
+            strtolower($name),
+            str_replace(' ', '-', ucwords(str_replace('-', ' ', strtolower($name)))),
+            'HTTP_' . strtoupper(str_replace('-', '_', $name)),
+        ];
+        foreach ($try as $k) {
+            if (isset($headers[$k]) && is_string($headers[$k])) return trim($headers[$k]);
+        }
+        // Fall back to $_SERVER for $_SERVER['HTTP_*']
+        $srvKey = 'HTTP_' . strtoupper(str_replace('-', '_', $name));
+        if (isset($_SERVER[$srvKey]) && is_string($_SERVER[$srvKey])) {
+            return trim($_SERVER[$srvKey]);
+        }
+        return '';
+    };
+
+    $deviceId = $header('X-Photo-Device-Id');
+    $operatorId = (int)($auth['uid'] ?? 0);
+
+    // P7 pairing: look up or create the per-device HMAC key for this
+    // (operator, device_id) pair. We do this BEFORE ingest so the key
+    // header is returned even for replays (the client needs it on
+    // every response until it acknowledges storage).
+    $pairingKey = null;
+    $isNewPairing = false;
+    if ($deviceId !== '' && $operatorId > 0) {
+        $pairingKey = \App\Services\PhotoDevicePairing::getOrCreateKey(
+            $conn, $operatorId, $deviceId, $isNewPairing);
+        if ($pairingKey !== null) {
+            header('X-Photo-Pairing-Key: ' . $pairingKey);
+            header('X-Photo-Pairing-New: ' . ($isNewPairing ? '1' : '0'));
+        }
+    }
+
+    $result = \App\Services\PhotoUploadService::ingest($conn, [
+        'member_id'         => (int)$id,
+        'operator_admin_id' => $operatorId,
+        'device_id'         => $deviceId,
+        'client_op_id'      => $header('Idempotency-Key'),
+        'field'             => strtolower($header('X-Photo-Field') ?: 'student_photo'),
+        'sha256'            => strtolower($header('X-Photo-SHA256')),
+        'taken_at'          => $header('X-Photo-Taken-At'),
+        'width'             => (int)$header('X-Photo-Width'),
+        'height'            => (int)$header('X-Photo-Height'),
+        'format'            => strtolower($header('X-Photo-Format') ?: 'jpeg'),
+        'file_field'        => 'photo',
+    ]);
+
+    http_response_code((int)$result['status']);
+    header('Content-Type: application/json; charset=utf-8');
+    if (empty($result['ok'])) {
+        $payload = [
+            'status'  => 'error',
+            'message' => $result['error'],
+            'code'    => $result['code'],
+        ];
+        if (!empty($result['extra'])) {
+            $payload = array_merge($payload, $result['extra']);
+        }
+        echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $responsePayload = [
+        'status'   => 'success',
+        'path'     => $result['path'],
+        'replayed' => !empty($result['replayed']),
+        'conflict' => !empty($result['conflict']),
+    ];
+    // Echo pairing key in body too, for HTTP clients that don't read
+    // response headers reliably.
+    if ($pairingKey !== null) {
+        $responsePayload['photo_hmac_key'] = $pairingKey;
+        $responsePayload['photo_pairing_new'] = $isNewPairing;
+    }
+    echo json_encode($responsePayload, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 err("No handler for {$method} /members" . ($id ? "/{$id}" : '') . ($sub ? "/{$sub}" : ''), 404);

@@ -424,18 +424,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: No duplicate migration numbers
-        run: |
-          set -euo pipefail
-          dupes=$(ls sql/[0-9][0-9][0-9]_*.sql \
-                    | xargs -n1 basename \
-                    | cut -d_ -f1 \
-                    | sort | uniq -d)
-          if [ -n "$dupes" ]; then
-            echo "::error::Duplicate migration number(s): ${dupes}"
-            exit 1
-          fi
-          echo "Migration numbers are unique."
+      - name: No new duplicate migration numbers
+        run: python3 scripts/check_migration_numbering.py
 
       - name: Migrations are not silently destructive
         run: |

@@ -52,8 +52,9 @@
         var sc = document.createElement('td');
         sc.className = 'px-4 py-3';
         var stSpan = document.createElement('span');
-        var stCls = { active: 'bg-emerald-100 text-emerald-700', warning: 'bg-amber-100 text-amber-700', inactive: 'bg-slate-100 text-slate-600' };
-        stSpan.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold border border-white shadow-sm ' + (stCls[member.status] || 'bg-gray-100 text-gray-600');
+        // P1: canonical status chip (shared with all-members/new-members lists + PHP badges).
+        var stCls = { active: 'bg-emerald-100 text-emerald-700', warning: 'bg-amber-100 text-amber-700', inactive: 'bg-slate-100 text-slate-600', archived: 'bg-slate-200 text-slate-600' };
+        stSpan.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold ' + (stCls[member.status] || 'bg-slate-100 text-slate-600');
         stSpan.textContent = text(member.status);
         sc.appendChild(stSpan);
         row.appendChild(sc);
@@ -65,7 +66,8 @@
 
         var editBtn = document.createElement('button');
         editBtn.type = 'button';
-        editBtn.className = 'px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-bold text-[11px] transition';
+        // P6: emerald = primary row action.
+        editBtn.className = 'px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-bold text-[11px] transition';
         editBtn.innerHTML = '<i class="fa-solid fa-pen-to-square mr-1" aria-hidden="true"></i> Manage';
         editBtn.addEventListener('click', function () {
             if (typeof window.openManageSheet === 'function') window.openManageSheet(id);

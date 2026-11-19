@@ -396,7 +396,7 @@ class HymnStore extends ChangeNotifier {
       // matches one stored with ጸ.
       final score = _similarity(
           amharic.normalize(query), amharic.normalize(name),
-          amharic.normalize(nameAm ?? ''));
+          amharic.normalize(nameAm));
       if (score <= 0) continue;
       hits.add({...r, 'similarity': score});
     }

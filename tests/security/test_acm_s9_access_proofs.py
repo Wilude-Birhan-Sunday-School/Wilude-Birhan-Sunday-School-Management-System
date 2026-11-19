@@ -170,7 +170,5 @@ def test_s9_login_refresh_and_logout_never_gate():
 
 def test_s9_web_sessions_and_schema_untouched():
     assert "ACCESS_PROOF_" not in read(ROOT / "admin" / "api_acm.php")
-    # S9 added zero DDL. Re-based at S10 (legit: S10 owns 091 by
-    # plan §3B build order), re-based again at G2 (legit: G2 owns 092,
-    # a data-only grandfather UPDATE) — the pin now guards NEXT number.
-    assert not list(ROOT.glob("sql/093_*.sql"))  # zero DDL beyond G2 (absence pinned)
+    # S9 owns no migration, regardless of unrelated migration numbering.
+    assert not list(ROOT.glob("sql/*acm_s9*.sql"))

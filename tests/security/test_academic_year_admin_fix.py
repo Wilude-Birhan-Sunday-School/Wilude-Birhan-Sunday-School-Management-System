@@ -74,9 +74,12 @@ class ZScaleFallbackPinned(unittest.TestCase):
 
     def test_impersonate_bar_no_longer_depends_on_the_token(self):
         # admin/dashboard.php injects the bar via register_shutdown_function;
-        # it must not rely on a token defined in the (possibly stale) head.
-        self.assertNotIn("var(--z-impersonate)", read("admin/dashboard.php"))
-        self.assertIn("z-index:1300", read("admin/dashboard.php"))
+        # it stays in-flow at the top of <body> so it never depends on --z-impersonate
+        # or floats over content.
+        dash = read("admin/dashboard.php")
+        self.assertNotIn("var(--z-impersonate)", dash)
+        self.assertIn('id="impersonateBar"', dash)
+        self.assertNotIn("position:fixed", dash)
 
 
 class AssetCacheBustingPinned(unittest.TestCase):

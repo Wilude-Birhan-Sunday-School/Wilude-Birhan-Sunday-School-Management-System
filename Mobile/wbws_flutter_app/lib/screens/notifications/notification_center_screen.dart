@@ -458,32 +458,6 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen>
     }
   }
 
-  Future<void> _markAnnouncementRead(Map<String, dynamic> a) async {
-    final id = (a['id'] as num?)?.toInt() ?? 0;
-    if (id <= 0 || a['is_unread'] != 1) return;
-    final optimistic = applyReadOptimistic(_announcements, id);
-    if (!optimistic.changed) return;
-    setState(() {
-      _announcements
-        ..clear()
-        ..addAll(optimistic.rows);
-    });
-    NotificationService.instance.decrement('announcements');
-    // P1-B: persist the optimistic read state (see _markRead).
-    await _db.markCachedAnnouncementRead(id);
-    final res = await _api.markAnnouncementRead(id);
-    if (!mounted) return;
-    if (res.success) {
-      await NotificationService.instance.refresh();
-    } else {
-      await _loadAnnouncements();
-      await NotificationService.instance.refresh();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not mark as read.')));
-      }
-    }
-  }
 
   Future<void> _markAll() async {
     final scope = _tabs.index == 1 ? 'announcements' : 'alerts';

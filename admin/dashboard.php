@@ -131,6 +131,19 @@ switch ($role) {
         require __DIR__ . '/dashboards/content_editor.php';
         break;
 
+    case 'photo_dept':
+        // Full Photo Department dashboard (ZIP import, review/conflicts,
+        // capture coverage analytics, import-history audit, profile).
+        require __DIR__ . '/dashboards/photo_dept.php';
+        break;
+
+    case 'photo_importer':
+        // Legacy alias — accounts created before the role was promoted
+        // to a full department still land here. Redirect to the proper
+        // photo department dashboard (access_control allows both roles).
+        require __DIR__ . '/dashboards/photo_dept.php';
+        break;
+
     case 'accounts_office':
         require __DIR__ . '/acm_overview.php';
         break;

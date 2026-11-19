@@ -8,7 +8,7 @@ void main() {
   late Directory dir;
   setUpAll(() async {
     sqfliteFfiInit();
-    dir = await Directory.systemTemp.createTemp('receipt-v40-');
+    dir = await Directory.systemTemp.createTemp('receipt-v43-');
     await databaseFactoryFfi.setDatabasesPath(dir.path);
     sqflite.databaseFactory = databaseFactoryFfi;
   });
@@ -17,11 +17,11 @@ void main() {
     await dir.delete(recursive: true);
   });
 
-  test('v41 creates attendance_sync_receipt with correct schema', () async {
+  test('v43 retains attendance_sync_receipt with correct schema', () async {
     final db = LocalDb();
     final raw = await db.database;
     final ver = await raw.rawQuery('PRAGMA user_version');
-    expect(ver.single.values.single, 42);
+    expect(ver.single.values.single, 43);
     final info = await raw.rawQuery("PRAGMA table_info('attendance_sync_receipt')");
     final cols = info.map((r) => r['name'] as String).toSet();
     expect(cols, contains('client_op_id'));

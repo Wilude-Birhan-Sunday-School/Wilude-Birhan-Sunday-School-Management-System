@@ -345,7 +345,7 @@ final class TelegramRegistrationService
                 $offset = $action==='cand_next' ? 1 : -1;
                 $newIndex = max(0, ((int)($session['current_candidate_index'] ?? 0)) + $offset);
                 $candidates = $this->loadCandidateList($session);
-                if ($newIndex >= count($candidates)) $newIndex = count($candidates)-1;
+                if ($newIndex >= count($candidates)) $newIndex = max(0, count($candidates)-1);
                 $this->updateField((int)$session['id'], 'current_candidate_index', $newIndex);
                 $session = $this->session((int)$session['id']);
                 return $this->renderSession($chatId, $session, $messageId);
@@ -386,7 +386,7 @@ final class TelegramRegistrationService
                 return $this->renderSession($chatId, $session, $messageId);
             case 'verify_different':
                 if (!$session) return null;
-                $candId = (int)($session['selected_candidate_id'] ?? (int)$arg1);
+                $candId = $this->resolveDecisionCandidateId($session, $arg1);
                 $this->recordCandidateDecision($session, $candId, 'different');
                 $candidates = $this->loadCandidateList($session);
                 $idx = (int)($session['current_candidate_index'] ?? 0);
@@ -1203,11 +1203,14 @@ final class TelegramRegistrationService
         $rows = [];
         $navRow = [];
         if ($idx > 0) $navRow[] = ['⬅️ ያለፈው', 'cand_prev'];
-        $navRow[] = ['🔍 ይህንን አረጋግጥ', 'cand_verify:'.(int)$cand['id']];
         if ($idx+1 < count($candidates)) $navRow[] = ['ቀጣይ ➡️', 'cand_next'];
-        $rows[] = $navRow;
-        $rows[] = [['❌ ይህ አባል አይደለም', 'cand_not_match:'.(int)$cand['id']]];
-        $rows[] = [['✅ አዲስ አባል ነው - ቀጥል', 'continue_reg']];
+        if ($navRow !== []) $rows[] = $navRow;
+        // Decide directly on the candidate card: same callbacks as the
+        // identity screen, so no verify-then-decide round trip.
+        $candId = (int)$cand['id'];
+        $rows[] = [['✅ ይህ አንድ አባል ነው', 'verify_same:'.$candId]];
+        $rows[] = [['❌ የተለያዩ ሰዎች ናቸው', 'verify_different:'.$candId]];
+        $rows[] = [['❓ ገና ማረጋገጥ አልቻልኩም', 'verify_uncertain']];
         $rows[] = [['❌ ሰርዝ', 'cancel'], ['🏠 ዋና ምናሌ', 'home']];
         return $this->editOrSend($chatId, $editId, $text, TelegramKeyboard::inline($rows));
     }
@@ -1768,6 +1771,16 @@ final class TelegramRegistrationService
         $sid=(int)$session['id'];
         $q = $this->conn->prepare('UPDATE telegram_registration_sessions SET duplicate_state=?,duplicate_summary=?,lock_version=lock_version+1 WHERE id=?');
         $q->bind_param('ssi',$state,$summary,$sid); $q->execute(); $q->close();
+    }
+
+    /** Candidate id for a decision press: the button's own id wins
+     *  (the card on screen); the stored selection is only a fallback
+     *  for old messages whose buttons carry no id. */
+    private function resolveDecisionCandidateId(array $session, string $arg): int
+    {
+        $fromButton = (int)$arg;
+        if ($fromButton !== 0) return $fromButton;
+        return (int)($session['selected_candidate_id'] ?? 0);
     }
 
     private function recordCandidateDecision(array $session, int $candidateId, string $decision): void
