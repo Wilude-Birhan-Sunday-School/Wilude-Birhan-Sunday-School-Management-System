@@ -157,8 +157,8 @@ $_isImpersonating = !empty($_SESSION['original_admin_role']);
             'memberPrefix' => defined('MEMBER_CODE_PREFIX') ? MEMBER_CODE_PREFIX : 'WB',
             'adminTitle' => defined('ADMIN_PANEL_TITLE') ? ADMIN_PANEL_TITLE : '',
             'icon' => defined('ADMIN_LOGO_ICON') ? ADMIN_LOGO_ICON : '⛪',
-            'logo' => $_themeBase . '/assets/logos/school_logo.png',
-            'seal' => $_themeBase . '/assets/seals/school_seal.png',
+            'logo' => function_exists('ssms_school_logo_url') ? ssms_school_logo_url() : ($_themeBase . '/assets/logos/school_logo.png'),
+            'seal' => function_exists('ssms_school_seal_url') ? ssms_school_seal_url() : ($_themeBase . '/assets/seals/school_seal.png'),
             'features' => [
                 'ai' => feature_enabled('ai'), 'finance' => feature_enabled('finance'),
                 'mezmur' => feature_enabled('mezmur'), 'material' => feature_enabled('material'),

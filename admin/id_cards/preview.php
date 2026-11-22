@@ -21,43 +21,11 @@ $ID_CARD_LAYOUT = $layout;
 $ID_CARD_SIDE = $side;
 
 $CONFIG = [
-    'logo'      => '/admin/id_cards/assets/logos/school_logo.png',
-    'seal'      => '',
-    'sig_head'  => '',
-    'sig_admin' => '',
+    'logo'      => \App\Services\BrandingAssetService::assetUrl($conn, 'logo', '', true),
+    'seal'      => \App\Services\BrandingAssetService::assetUrl($conn, 'seal', '', true),
+    'sig_head'  => \App\Services\BrandingAssetService::assetUrl($conn, 'sig_head', '', true),
+    'sig_admin' => \App\Services\BrandingAssetService::assetUrl($conn, 'sig_admin', '', true),
 ];
-$docRoot = rtrim((string)($_SERVER['DOCUMENT_ROOT'] ?? dirname(__DIR__, 2)), '/');
-$assetOnDisk = static function (string $web) use ($docRoot): bool {
-    if ($web === '' || $web[0] !== '/') {
-        return false;
-    }
-    foreach ([$docRoot . $web, dirname(__DIR__, 2) . $web] as $disk) {
-        if (is_file($disk) && filesize($disk) > 32) {
-            return true;
-        }
-    }
-    return false;
-};
-if ($conn && !$conn->connect_error) {
-    try {
-        $br = $conn->query("SELECT asset_key, file_path FROM system_branding");
-        if ($br) {
-            while ($row = $br->fetch_assoc()) {
-                $key = (string)($row['asset_key'] ?? '');
-                $path = (string)($row['file_path'] ?? '');
-                if (isset($CONFIG[$key]) && $path !== '' && $assetOnDisk($path)) {
-                    $CONFIG[$key] = $path;
-                }
-            }
-        }
-    } catch (Throwable $error) {
-        error_log('ID card preview branding lookup failed.');
-    }
-}
-if (!$assetOnDisk($CONFIG['logo'])) {
-    $themeLogo = defined('SCHOOL_LOGO_PATH') ? SCHOOL_LOGO_PATH : '/themes/fkss/assets/logos/school_logo.png';
-    $CONFIG['logo'] = $assetOnDisk($themeLogo) ? $themeLogo : '';
-}
 
 $member = [
     'gender' => 'male',

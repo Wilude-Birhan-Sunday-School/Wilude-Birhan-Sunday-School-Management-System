@@ -2324,7 +2324,9 @@ class ReportCardService
             'parish_am' => defined('PARISH_NAME_AM') ? PARISH_NAME_AM : '',
             'parish_en' => defined('PARISH_NAME_EN') ? PARISH_NAME_EN : '',
             'invocation' => defined('RELIGIOUS_INVOCATION') ? RELIGIOUS_INVOCATION : '',
-            'logo' => defined('SCHOOL_LOGO_PATH') ? SCHOOL_LOGO_PATH : '/themes/fkss/assets/logos/school_logo.png',
+            'logo' => function_exists('ssms_school_logo_url')
+                ? ssms_school_logo_url()
+                : (defined('SCHOOL_LOGO_PATH') ? SCHOOL_LOGO_PATH : '/themes/fkss/assets/logos/school_logo.png'),
             'primary' => defined('THEME_PRIMARY') ? THEME_PRIMARY : '#600000',
             'accent' => defined('THEME_ACCENT') ? THEME_ACCENT : '#F0C000',
             'sig_head' => defined('ID_CARD_SIG_HEAD_AM') ? ID_CARD_SIG_HEAD_AM : 'የሰንበት ት/ቤቱ ሃላፊ ስምና ፊርማ',

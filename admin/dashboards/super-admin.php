@@ -1129,7 +1129,7 @@ if (!in_array($activeSection, $saAllowedSections, true)) {
             <section id="section-branding" class="section <?= $activeSection === 'branding' ? 'active' : '' ?>"<?= $activeSection === 'branding' ? '' : ' hidden' ?>>
                 <div class="sec-header">
                     <h2 class="sec-title"><i class="fa-solid fa-palette"></i> Branding & ID Card Assets</h2>
-                    <p class="sec-desc">Upload pictures, then design the real front and back. Save applies to every member card.</p>
+                    <p class="sec-desc">Click any image card to upload or replace (PNG, JPG, GIF, or WebP, max 5 MB). The School Logo updates across the website, login, verification, reports, and ID cards.</p>
                 </div>
                 
                 <!-- Error banner placeholder -->
@@ -1152,8 +1152,8 @@ if (!in_array($activeSection, $saAllowedSections, true)) {
                             <i class="fa-solid <?= $card['icon'] ?>" style="color:#fff;font-size:.8rem"></i>
                             <span style="color:#fff;font-weight:700;font-size:.75rem"><?= $card['label'] ?></span>
                         </div>
-                        <label style="display:flex;align-items:center;justify-content:center;min-height:120px;cursor:pointer;background:repeating-conic-gradient(#1a1f2e 0% 25%, #131720 0% 50%) 50%/14px 14px;position:relative" id="brandPreview_<?= $key ?>">
-                            <input type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" style="display:none" onchange="brandUpload('<?= $key ?>',this)">
+                        <label style="display:flex;align-items:center;justify-content:center;min-height:120px;cursor:pointer;background:repeating-conic-gradient(#1a1f2e 0% 25%, #131720 0% 50%) 50%/14px 14px;position:relative" id="brandPreview_<?= $key ?>" title="Click to upload or replace <?= htmlspecialchars($card['label'], ENT_QUOTES, 'UTF-8') ?>">
+                            <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" style="display:none" onchange="brandUpload('<?= $key ?>',this)">
                             <div style="color:#7c8aa5;font-size:.7rem;text-align:center;padding:.5rem" id="brandEmpty_<?= $key ?>">
                                 <i class="fa-solid fa-cloud-arrow-up" style="font-size:1.8rem;display:block;margin-bottom:.35rem;opacity:.35"></i>
                                 Click to upload
@@ -1161,17 +1161,23 @@ if (!in_array($activeSection, $saAllowedSections, true)) {
                             <img id="brandImg_<?= $key ?>" style="max-width:100%;max-height:120px;object-fit:contain;display:none" alt="<?= $card['label'] ?>">
                         </label>
                         <div style="padding:.45rem .65rem;border-top:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:.4rem;min-height:28px">
-                            <button onclick="brandRemove('<?= $key ?>')" class="brand-rm" title="Remove" style="display:none" id="brandRm_<?= $key ?>"><i class="fa-solid fa-trash"></i></button>
+                            <button type="button" onclick="brandRemove('<?= $key ?>')" class="brand-rm" title="Remove uploaded image and restore default" style="display:none" id="brandRm_<?= $key ?>"><i class="fa-solid fa-trash"></i></button>
                             <span style="font-size:.6rem;color:#7c8aa5;flex:1" id="brandInfo_<?= $key ?>"></span>
                         </div>
                     </div>
                     <?php endforeach; ?>
                 </div>
                 
+                <?php
+                $saDefaultCardBg = defined('ID_CARD_BACKGROUND') ? ID_CARD_BACKGROUND : '/admin/id_cards/assets/backgrounds/id_card_bg.jpg';
+                $saLiveCardBg = class_exists('\App\Services\BrandingAssetService')
+                    ? \App\Services\BrandingAssetService::cardBackgroundUrl($conn)
+                    : $saDefaultCardBg;
+                ?>
                 <link rel="stylesheet" href="/admin/css/id_card_designer.css?v=20260823c">
-                <script>window.ID_DESIGNER={csrf:<?= json_encode($csrfToken) ?>,bg:<?= json_encode(defined('ID_CARD_BACKGROUND') ? ID_CARD_BACKGROUND : '/admin/id_cards/assets/backgrounds/id_card_bg.jpg') ?>};</script>
+                <script>window.ID_DESIGNER={csrf:<?= json_encode($csrfToken) ?>,bg:<?= json_encode($saLiveCardBg) ?>,defaultBg:<?= json_encode($saDefaultCardBg) ?>};</script>
                 <div id="idDesigner"></div>
-                <script src="/admin/js/id_card_designer.js?v=20260823c"></script>
+                <script src="/admin/js/id_card_designer.js?v=20261122b"></script>
 
             </section>
 
@@ -1507,11 +1513,11 @@ require __DIR__ . '/../components/bottom_nav.php';
         let _brandLoaded=false, _brandBusy=false;
 
         // ── Load branding assets from API ──
-        async function loadBranding(){
-            if(_brandBusy)return;
+        async function loadBranding(force){
+            if(_brandBusy && !force)return;
             _brandBusy=true;
             try{
-                const r=await fetch('/admin/api_branding.php?action=get_assets',{credentials:'same-origin'});
+                const r=await fetch('/admin/api_branding.php?action=get_assets&_t='+Date.now(),{credentials:'same-origin'});
                 if(!r.ok) throw new Error('HTTP '+r.status);
                 const txt=await r.text();
                 let d;
@@ -1535,23 +1541,22 @@ require __DIR__ . '/../components/bottom_nav.php';
                     const empty=document.getElementById('brandEmpty_'+key);
                     const rm=document.getElementById('brandRm_'+key);
                     const info=document.getElementById('brandInfo_'+key);
-                    const card=document.getElementById('brandCard_'+key);
                     if(!img)return;
 
-                    if(a.file_exists && a.web_url){
+                    if((a.file_exists || a.has_file) && a.web_url){
                         img.src=a.web_url; img.style.display='block';
                         img.onerror=function(){img.style.display='none'; if(empty)empty.style.display='block';};
                         if(empty)empty.style.display='none';
                         if(rm)rm.style.display=a.is_packaged?'none':'flex';
                         if(info){
-                            let t=a.original_name||'';
+                            let t=a.original_name||(a.is_packaged?'Default packaged image':'');
                             const kb=parseInt(a.file_size,10)||0;
                             if(kb>=1024)t+=(t?' · ':'')+Math.max(1,Math.round(kb/1024))+' KB';
                             info.textContent=t; info.style.color='#7c8aa5';
                         }
                         _setPreviewImg(key, a.web_url);
-                        if(key==='card_bg' && typeof window.reloadIdDesignerPreview==='function'){
-                            window.reloadIdDesignerPreview(a.web_url);
+                        if(key==='card_bg' && window.ID_DESIGNER && window.ID_DESIGNER.bg !== a.web_url){
+                            window.ID_DESIGNER.bg = a.web_url;
                         }
                     }else{
                         img.src=''; img.style.display='none';
@@ -1579,11 +1584,11 @@ require __DIR__ . '/../components/bottom_nav.php';
 
         // ── Upload asset ──
         async function brandUpload(key,input){
-            const file=input.files[0]; if(!file){return;}
-            // Client validation
-            if(file.size>5*1024*1024){_toast('File too large ('+Math.round(file.size/1024/1024*10)/10+'MB). Max 5MB.','err');input.value='';return;}
-            if(!file.type.match(/^image\/(png|jpe?g|gif|webp|svg\+xml)$/) && !file.name.match(/\.(png|jpe?g|gif|webp|svg)$/i)){
-                _toast('Invalid file type. Use PNG, JPG, GIF, WebP, or SVG.','err');input.value='';return;
+            const file=input.files && input.files[0]; if(!file){return;}
+            // Client validation (matches server allowlist: PNG, JPG, GIF, WebP only — no SVG)
+            if(file.size>5*1024*1024){_toast('File too large ('+Math.round(file.size/1024/1024*10)/10+' MB). Max 5 MB.','err');input.value='';return;}
+            if(!file.type.match(/^image\/(png|jpe?g|gif|webp)$/) && !file.name.match(/\.(png|jpe?g|gif|webp)$/i)){
+                _toast('Use a PNG, JPG, GIF, or WebP image (SVG is not supported).','err');input.value='';return;
             }
             // Instant local preview
             const localUrl=URL.createObjectURL(file);
@@ -1595,7 +1600,7 @@ require __DIR__ . '/../components/bottom_nav.php';
             if(empty)empty.style.display='none';
             if(card)card.style.borderColor='#3b82f6';
             if(info){info.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Uploading…';info.style.color='#60a5fa';}
-            // Also update live preview instantly
+            // Also update legacy preview slot if present
             _setPreviewImg(key, localUrl);
 
             const fd=new FormData();
@@ -1603,19 +1608,34 @@ require __DIR__ . '/../components/bottom_nav.php';
             try{
                 const r=await fetch('/admin/api_branding.php',{method:'POST',body:fd,credentials:'same-origin'});
                 const txt=await r.text();
-                let d;try{d=JSON.parse(txt);}catch(e){_toast('Upload failed — server error','err');console.error(txt.substring(0,300));return;}
-                if(d.status==='success'){
+                let d;
+                try{d=JSON.parse(txt);}catch(e){
+                    const hint=r.status===413?'File exceeds the server upload size limit.':('Upload failed — server error (HTTP '+r.status+').');
+                    _toast(hint,'err');
+                    if(card)card.style.borderColor='#ef4444';
+                    console.error('Branding upload non-JSON:',r.status,txt.substring(0,300));
+                    await loadBranding(true);
+                    return;
+                }
+                if(r.ok && d.status==='success'){
                     _toast(d.message||'Uploaded!','ok');
                     if(card){card.style.borderColor='#22c55e';setTimeout(()=>card.style.borderColor='transparent',2500);}
+                    // Refresh cards from server and reload ID Card Designer iframe for ALL branding assets
+                    await loadBranding(true);
+                    if(typeof window.reloadIdDesignerPreview==='function'){
+                        window.reloadIdDesignerPreview(key==='card_bg' ? (d.web_url||'') : null);
+                    }
                 }else{
-                    _toast(d.message||'Upload failed','err');
+                    _toast(d.message||('Upload failed (HTTP '+r.status+')'),'err');
                     if(card)card.style.borderColor='#ef4444';
+                    await loadBranding(true);
                 }
-                // Reload from server to get real paths
-                await loadBranding();
             }catch(e){
                 _toast('Upload failed — network error','err');
+                if(card)card.style.borderColor='#ef4444';
+                await loadBranding(true);
             }finally{
+                URL.revokeObjectURL(localUrl);
                 input.value='';
                 if(card)setTimeout(()=>{card.style.borderColor='transparent';},3000);
             }
@@ -1623,17 +1643,23 @@ require __DIR__ . '/../components/bottom_nav.php';
 
         // ── Remove asset ──
         async function brandRemove(key){
-            const dc=await dcAsk({tier:'medium',title:'Remove this image?',object:key,summary:'The image file is deleted from the server.',intent:'I want to remove this image',
-                consequences:['The image disappears from every page, report and ID card that uses it.','The default image (or nothing) is shown until you upload a new one.'],
+            const dc=await dcAsk({tier:'medium',title:'Remove this uploaded image?',object:key,summary:'The custom uploaded image is removed and the default packaged image (if any) is restored.',intent:'I want to remove this image',
+                consequences:['The custom image is deleted from the server.','Pages, reports, and ID cards revert to the default packaged image (or empty if none exists).'],
                 keeps:['Other branding settings stay.'],irreversible:true,phrase:'REMOVE IMAGE',confirmLabel:'Remove image'});
             if(!dc)return;
             const fd=new FormData();fd.append('action','delete_asset');fd.append('asset_key',key);fd.append('csrf_token',CSRF);
             try{
                 const r=await fetch('/admin/api_branding.php',{method:'POST',body:fd,credentials:'same-origin'});
                 const txt=await r.text();
-                let d;try{d=JSON.parse(txt);}catch(e){_toast('Server error','err');return;}
-                _toast(d.message||'Done',d.status==='success'?'ok':'err');
-                await loadBranding();
+                let d;try{d=JSON.parse(txt);}catch(e){_toast('Server error (HTTP '+r.status+')','err');return;}
+                _toast(d.message||'Done',(r.ok && d.status==='success')?'ok':'err');
+                await loadBranding(true);
+                if(r.ok && d.status==='success' && typeof window.reloadIdDesignerPreview==='function'){
+                    const nextBg = key==='card_bg'
+                        ? (d.restored_url || (window.ID_DESIGNER && window.ID_DESIGNER.defaultBg) || '')
+                        : null;
+                    window.reloadIdDesignerPreview(nextBg);
+                }
             }catch(e){_toast('Network error','err');}
         }
 

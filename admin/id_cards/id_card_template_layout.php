@@ -70,7 +70,9 @@ $footBackText = $idCardTxt('foot_back_text', defined('ID_CARD_DISCLAIMER_AM') ? 
         </div>
     </div>
     <div class="id-seal" data-idc="seal">
-        <img src="<?php echo htmlspecialchars($CONFIG['seal'], ENT_QUOTES, 'UTF-8'); ?>" alt="">
+        <?php if (!empty($CONFIG['seal'])): ?>
+        <img src="<?php echo htmlspecialchars($CONFIG['seal'], ENT_QUOTES, 'UTF-8'); ?>" alt="" onerror="this.style.display='none'">
+        <?php endif; ?>
     </div>
     <footer class="id-foot" data-idc="foot_front">
         <h2 data-idc-text="foot_front_text"><?php echo htmlspecialchars($footFrontText); ?></h2>

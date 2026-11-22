@@ -13,6 +13,7 @@ if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true
 
 // Generate CSRF token
 $csrfToken = generateCsrfToken();
+$schoolLogoUrl = function_exists('ssms_school_logo_url') ? ssms_school_logo_url() : SCHOOL_LOGO_PATH;
 ?>
 <!DOCTYPE html>
 <html lang="am">
@@ -20,7 +21,7 @@ $csrfToken = generateCsrfToken();
   <meta charset="UTF-8">
   <title><?= ADMIN_PANEL_TITLE ?> Login</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <link rel="icon" href="<?= SCHOOL_LOGO_PATH ?>">
+  <link rel="icon" href="<?= htmlspecialchars($schoolLogoUrl, ENT_QUOTES, 'UTF-8') ?>">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Ethiopic:wght@400;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
@@ -296,7 +297,7 @@ $csrfToken = generateCsrfToken();
     <div class="login-card">
       <div class="login-header">
         <div class="logo-badge">
-          <img src="<?= SCHOOL_LOGO_PATH ?>" alt="<?= SCHOOL_NAME_SHORT ?> Logo"
+          <img src="<?= htmlspecialchars($schoolLogoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="<?= SCHOOL_NAME_SHORT ?> Logo"
                onerror="this.style.display='none';this.parentElement.innerHTML='<span style=&quot;font-size:2.5rem;color:var(--maroon)&quot;><?= ADMIN_LOGO_ICON ?></span>';">
         </div>
         <h1 class="amharic"><?= SCHOOL_NAME_AMHARIC ?></h1>

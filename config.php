@@ -947,6 +947,25 @@ if (file_exists($_ayPath)) {
 }
 
 // ============================================================
+// BRANDING ASSETS (single source of truth for logo / seal URLs)
+// ============================================================
+require_once __DIR__ . '/admin/backend/services/BrandingAssetService.php';
+
+if (!function_exists('ssms_school_logo_url')) {
+    function ssms_school_logo_url(): string {
+        $db = (isset($GLOBALS['conn']) && $GLOBALS['conn'] instanceof mysqli) ? $GLOBALS['conn'] : null;
+        return \App\Services\BrandingAssetService::logoUrl($db);
+    }
+}
+
+if (!function_exists('ssms_school_seal_url')) {
+    function ssms_school_seal_url(bool $allowEmpty = false): string {
+        $db = (isset($GLOBALS['conn']) && $GLOBALS['conn'] instanceof mysqli) ? $GLOBALS['conn'] : null;
+        return \App\Services\BrandingAssetService::sealUrl($db, $allowEmpty);
+    }
+}
+
+// ============================================================
 // CENTRALIZED ACCESS CONTROL (must run AFTER auth helpers above)
 // ============================================================
 // This single guard enforces "who may open which admin page".

@@ -45,7 +45,7 @@ if (file_exists(__DIR__ . '/admin/backend/services/MemberCodeFormat.php')) {
 // lookup is throttled; reveals nothing about code existence).
 function renderUnavailableNotice($retryAfterSeconds) {
     $schoolName = defined('SCHOOL_NAME_AMHARIC') ? SCHOOL_NAME_AMHARIC : '';
-    $logoPath = defined('SCHOOL_LOGO_PATH') ? SCHOOL_LOGO_PATH : '';
+    $logoPath = function_exists('ssms_school_logo_url') ? ssms_school_logo_url() : (defined('SCHOOL_LOGO_PATH') ? SCHOOL_LOGO_PATH : '');
     $retryMinutes = max(1, (int)ceil($retryAfterSeconds / 60));
     echo '<!DOCTYPE html><html lang="am"><head><meta charset="UTF-8">'
         . '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
@@ -159,7 +159,7 @@ function getMemberLabel($type) {
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Ethiopic:wght@400;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="icon" href="<?= SCHOOL_LOGO_PATH ?>">
+    <link rel="icon" href="<?= htmlspecialchars(function_exists('ssms_school_logo_url') ? ssms_school_logo_url() : SCHOOL_LOGO_PATH, ENT_QUOTES, 'UTF-8') ?>">
     <style>
         :root {
             --maroon: <?= THEME_PRIMARY ?>;
@@ -205,7 +205,7 @@ function getMemberLabel($type) {
         <!-- Header -->
         <div class="header-maroon p-6 text-center">
             <div class="w-24 h-24 bg-white rounded-full mx-auto flex items-center justify-center shadow-lg mb-3 overflow-hidden border-4 gold-ring relative z-10" style="padding:5px">
-                <img src="<?= SCHOOL_LOGO_PATH ?>" 
+                <img src="<?= htmlspecialchars(function_exists('ssms_school_logo_url') ? ssms_school_logo_url() : SCHOOL_LOGO_PATH, ENT_QUOTES, 'UTF-8') ?>" 
                      alt="<?= SCHOOL_NAME_SHORT ?> Logo"
                      onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" 
                      class="w-full h-full object-contain">

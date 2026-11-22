@@ -57,6 +57,12 @@ uploads/teachers/*
 # provision admin/id_cards/assets/qr/ while generated PNGs stay untracked.
 admin/id_cards/assets/qr/*
 !admin/id_cards/assets/qr/.htaccess
+
+# --- Uploaded branding assets (logo, seal, signatures, ID card background) ---
+# Uploaded via Super Admin > Branding & Assets into admin/uploads/branding/
+# so custom uploads never overwrite git-tracked packaged defaults or block git pull.
+admin/uploads/branding/*
+!admin/uploads/branding/.htaccess
 # NOTE: the phpqrcode library's own frame cache
 # (admin/id_cards/libs/phpqrcode/cache/) is intentionally left tracked —
 # it is regenerable but harmless, and untracking it just adds noise.

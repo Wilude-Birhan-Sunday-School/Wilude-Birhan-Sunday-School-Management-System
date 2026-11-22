@@ -1,559 +1,741 @@
 <?php
 /**
- * ============================================================
- * Branding & Assets API — Logo, Signature, Stamp/Seal Management
- * ============================================================
- * Manages system-wide branding assets:
- * - School logo (used across all dashboards, reports, ID cards)
- * - Head teacher signature (ID cards)
- * - Director/Admin signature (ID cards)
- * - School seal/stamp (ID cards, certificates)
- * ============================================================
+ * Branding & Assets Management API — Super Admin Only
+ *
+ * Manages:
+ * - logo:      School logo (used across landing page, login, QR verification, reports, ID cards)
+ * - seal:      Official church/school seal (used on ID cards & certificates)
+ * - sig_head:  Head of Sunday School signature (used on ID cards & reports)
+ * - sig_admin: Parish administration signature (used on ID cards & reports)
+ * - card_bg:   ID card background artwork
+ *
+ * Uploaded files are stored in /admin/uploads/branding/ (untracked in Git and
+ * script-hardened via .htaccess) so custom uploads never overwrite packaged
+ * git-tracked defaults or cause git-pull conflicts on production.
  */
-header('Content-Type: application/json; charset=utf-8');
+
+if (ob_get_level() === 0) {
+    ob_start();
+}
+
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/backend/services/IdCardLayout.php';
+require_once __DIR__ . '/backend/services/BrandingAssetService.php';
 
-// ── Safety: verify DB connection is alive ──
-if (!$conn || $conn->connect_error) {
-    echo json_encode(['status' => 'error', 'message' => 'Database connection failed']);
-    exit;
-}
-
-if (empty($_SESSION['admin_id'])) {
-    http_response_code(401);
-    echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
-    exit;
-}
-
-$userRole = $_SESSION['admin_role'] ?? '';
-$allowedRoles = ['super_admin', 'school_admin'];
-
-if (!in_array($userRole, $allowedRoles)) {
-    http_response_code(403);
-    echo json_encode(['status' => 'error', 'message' => 'Access denied — only Super Admin and School Admin can manage branding']);
-    exit;
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $csrfToken = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-    if (!validateCsrf($csrfToken)) {
-        echo json_encode(['status' => 'error', 'message' => 'Security token expired. Please reload the page.']);
-        exit;
+function brandRespond(array $payload, int $httpStatus = 200): void {
+    while (ob_get_level() > 0) {
+        ob_end_clean();
     }
-}
-
-// ── Asset directories ──
-$baseDir = __DIR__ . '/id_cards/assets';
-$dirs = [
-    'logos'        => $baseDir . '/logos',
-    'seals'        => $baseDir . '/seals',
-    'signatures'   => $baseDir . '/signatures',
-    'backgrounds'  => $baseDir . '/backgrounds',
-];
-
-// Branding schema/defaults are deployment-managed by migrations 012/013.
-
-// ══════════════════════════════════════════════════════════════
-// HELPER: Safe query that returns empty result instead of crash
-// ══════════════════════════════════════════════════════════════
-function brandQuery($conn, $sql) {
-    try {
-        $result = $conn->query($sql);
-        if ($result === false) {
-            reportInternalError('Branding query failed', $conn->error);
-            return null;
-        }
-        return $result;
-    } catch (\Throwable $e) {
-        reportInternalError('Branding query failed', $e);
-        return null;
+    if (!headers_sent()) {
+        http_response_code($httpStatus);
+        header('Content-Type: application/json; charset=UTF-8');
+        header('Cache-Control: no-store, no-cache, must-revalidate');
     }
-    return $result;
+    echo json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
 /**
- * Find a branding image on disk. Tiny / missing files count as absent.
- * @return array{exists:bool,size:int,web:string,disk:string}
+ * Built-in branding slots seeded by sql/012_runtime_schema_baseline.sql.
+ * Used as a fallback catalog so uploads still work even if a deployment has
+ * not yet seeded all default rows in system_branding.
+ *
+ * @return array<string, array{asset_label:string, description:string, file_stem:string}>
  */
-function brandResolveAssetFile(string $webPath): array
-{
-    $empty = ['exists' => false, 'size' => 0, 'web' => '', 'disk' => ''];
-    $webPath = trim($webPath);
-    if ($webPath === '' || $webPath[0] !== '/') {
-        return $empty;
-    }
-    $candidates = [
-        ($_SERVER['DOCUMENT_ROOT'] ?? '') . $webPath,
-        dirname(__DIR__) . $webPath,
-        __DIR__ . '/..' . $webPath,
+function brandBuiltinCatalog(): array {
+    return [
+        'logo' => [
+            'asset_label' => 'School Logo',
+            'description' => 'Official Sunday School emblem (website, login, verification, reports, ID cards)',
+            'file_stem'   => 'school_logo',
+        ],
+        'seal' => [
+            'asset_label' => 'Official Seal / Stamp',
+            'description' => 'Official Sunday School stamp overlaid on ID cards and certificates',
+            'file_stem'   => 'school_seal',
+        ],
+        'sig_head' => [
+            'asset_label' => 'Head of School Signature',
+            'description' => 'Signature of the Sunday School Head (printed on ID cards)',
+            'file_stem'   => 'head_signature',
+        ],
+        'sig_admin' => [
+            'asset_label' => 'Parish Administration Signature',
+            'description' => 'Signature of the Parish Administration (printed on ID cards)',
+            'file_stem'   => 'director_signature',
+        ],
+        'card_bg' => [
+            'asset_label' => 'ID Card Background',
+            'description' => 'Background artwork for Member ID Cards (1011 x 638 px recommended)',
+            'file_stem'   => 'id_card_bg',
+        ],
     ];
-    foreach ($candidates as $disk) {
-        if ($disk && is_file($disk)) {
-            $size = (int)filesize($disk);
-            if ($size > 32) {
-                return ['exists' => true, 'size' => $size, 'web' => $webPath, 'disk' => $disk];
+}
+
+// Detect POST body truncation (upload larger than PHP post_max_size) BEFORE CSRF
+// so the user gets an accurate size error instead of a misleading CSRF error.
+if (
+    ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST'
+    && empty($_POST)
+    && empty($_FILES)
+    && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0
+) {
+    $postMax = ini_get('post_max_size') ?: '8M';
+    brandRespond([
+        'status'  => 'error',
+        'message' => "The uploaded file exceeds the server POST size limit ({$postMax}). Please choose an image under 5 MB.",
+    ], 413);
+}
+
+// Auth check — Super Admin ONLY
+if (empty($_SESSION['admin_logged_in']) || ($_SESSION['admin_role'] ?? '') !== 'super_admin') {
+    brandRespond(['status' => 'error', 'message' => 'Super Admin access required.'], 403);
+}
+
+$action = $_GET['action'] ?? $_POST['action'] ?? '';
+$adminId = (int)($_SESSION['admin_id'] ?? 0);
+
+// CSRF check on POST
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $csrf = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!verifyCsrfToken($csrf)) {
+        brandRespond(['status' => 'error', 'message' => 'Your session token expired. Please refresh the page and try again.'], 403);
+    }
+}
+
+// Schema is deployment-managed by sql/012_runtime_schema_baseline.sql.
+$docRoot = rtrim((string)($_SERVER['DOCUMENT_ROOT'] ?? dirname(__DIR__)), '/');
+
+/**
+ * Resolve a branding file_path (web path like /admin/uploads/branding/school_logo.png)
+ * to a real disk path. Rejects path traversal.
+ */
+function brandResolveAssetFile(string $webPath, string $docRoot): ?string {
+    $clean = \App\Services\BrandingAssetService::stripQuery($webPath);
+    if ($clean === '' || $clean[0] !== '/' || strpos($clean, '..') !== false || strpos($clean, "\0") !== false) {
+        return null;
+    }
+    foreach ([dirname(__DIR__) . $clean, $docRoot . $clean] as $disk) {
+        if (is_file($disk) && @filesize($disk) > 32) {
+            return $disk;
+        }
+    }
+    return null;
+}
+
+/**
+ * Find the first packaged (git-tracked) fallback asset on disk for a built-in key.
+ * Theme-aware via BrandingAssetService::packagedCandidates() (supports FKSS, WBSS, etc.).
+ *
+ * @return array{disk:string, web:string}|null
+ */
+function brandPackagedFallback(string $assetKey, string $docRoot): ?array {
+    foreach (\App\Services\BrandingAssetService::packagedCandidates($assetKey) as $web) {
+        $disk = brandResolveAssetFile($web, $docRoot);
+        if ($disk !== null) {
+            return ['disk' => $disk, 'web' => $web];
+        }
+    }
+    return null;
+}
+
+/**
+ * Only files inside our runtime upload directory (or non-packaged legacy custom
+ * subdirectories) may ever be unlinked/replaced by upload_asset or delete_asset.
+ * Packaged defaults under /themes/ or /admin/id_cards/assets/{logos,backgrounds}/
+ * are never touched on disk.
+ */
+function brandIsDeletableUpload(string $webPath): bool {
+    $clean = \App\Services\BrandingAssetService::stripQuery($webPath);
+    if ($clean === '' || $clean[0] !== '/' || strpos($clean, '..') !== false || strpos($clean, "\0") !== false) {
+        return false;
+    }
+    if (\App\Services\BrandingAssetService::isPackagedPath($clean)) {
+        return false;
+    }
+    foreach ([
+        '/admin/uploads/branding/',
+        '/admin/id_cards/assets/seals/',
+        '/admin/id_cards/assets/signatures/',
+        '/admin/id_cards/assets/custom/',
+    ] as $prefix) {
+        if (strpos($clean, $prefix) === 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// ============================================================
+// ACTION: GET ALL BRANDING ASSETS
+// ============================================================
+if ($action === 'get_assets') {
+    $catalog = brandBuiltinCatalog();
+    $rowsByKey = [];
+
+    try {
+        $res = $conn->query("SELECT * FROM system_branding WHERE asset_key NOT LIKE '\\_%' ORDER BY id ASC");
+        if ($res) {
+            while ($row = $res->fetch_assoc()) {
+                $rowsByKey[(string)$row['asset_key']] = $row;
+            }
+            $res->free();
+        }
+    } catch (Throwable $e) {
+        reportInternalError('branding_get_assets', $e);
+        brandRespond(['status' => 'error', 'message' => 'Could not read branding assets from the database.'], 500);
+    }
+
+    // Ensure every built-in slot is always represented in the UI, even on a
+    // partially seeded database, keeping built-ins in canonical order first.
+    $orderedRows = [];
+    foreach ($catalog as $k => $meta) {
+        if (isset($rowsByKey[$k])) {
+            $orderedRows[] = $rowsByKey[$k];
+            unset($rowsByKey[$k]);
+        } else {
+            $orderedRows[] = [
+                'id'            => 0,
+                'asset_key'     => $k,
+                'asset_label'   => $meta['asset_label'],
+                'description'   => $meta['description'],
+                'file_path'     => null,
+                'original_name' => null,
+                'file_size'     => 0,
+                'mime_type'     => null,
+                'updated_at'    => null,
+            ];
+        }
+    }
+    foreach ($rowsByKey as $extraRow) {
+        $orderedRows[] = $extraRow;
+    }
+
+    $assets = [];
+    foreach ($orderedRows as $row) {
+        $key = (string)$row['asset_key'];
+        $dbPath = \App\Services\BrandingAssetService::stripQuery((string)($row['file_path'] ?? ''));
+        $disk = $dbPath !== '' ? brandResolveAssetFile($dbPath, $docRoot) : null;
+
+        $row['file_exists'] = false;
+        $row['has_file'] = false;
+        $row['is_packaged'] = false;
+        $row['web_url'] = null;
+        $row['size_kb'] = 0;
+
+        if ($disk !== null) {
+            $size = (int)@filesize($disk);
+            $mtime = (int)@filemtime($disk);
+            $row['file_exists'] = true;
+            $row['has_file'] = true;
+            $row['is_packaged'] = \App\Services\BrandingAssetService::isPackagedPath($dbPath);
+            $row['file_size'] = $size;
+            $row['size_kb'] = round($size / 1024, 1);
+            if (empty($row['original_name'])) {
+                $row['original_name'] = $row['is_packaged'] ? 'Default packaged image' : basename($disk);
+            }
+            $row['web_url'] = $dbPath . ($mtime > 0 ? ('?v=' . $mtime) : '');
+        } else {
+            $fallback = brandPackagedFallback($key, $docRoot);
+            if ($fallback !== null) {
+                $size = (int)@filesize($fallback['disk']);
+                $mtime = (int)@filemtime($fallback['disk']);
+                $row['file_exists'] = true;
+                $row['has_file'] = true;
+                $row['is_packaged'] = true;
+                $row['file_size'] = $size;
+                $row['size_kb'] = round($size / 1024, 1);
+                if (empty($row['original_name'])) {
+                    $row['original_name'] = 'Default packaged image';
+                }
+                $row['web_url'] = $fallback['web'] . ($mtime > 0 ? ('?v=' . $mtime) : '');
+            }
+        }
+        $assets[] = $row;
+    }
+
+    $settings = \App\Services\IdCardLayout::load($conn);
+
+    brandRespond([
+        'status'   => 'success',
+        'assets'   => $assets,
+        'settings' => $settings,
+        'schema'   => \App\Services\IdCardLayout::designerSchema(),
+    ]);
+}
+
+// ============================================================
+// ACTION: UPLOAD / REPLACE AN ASSET
+// ============================================================
+if ($action === 'upload_asset' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $assetKey = trim((string)($_POST['asset_key'] ?? ''));
+    if ($assetKey === '' || $assetKey[0] === '_' || !preg_match('/^[a-z0-9_]{2,50}$/', $assetKey)) {
+        brandRespond(['status' => 'error', 'message' => 'Missing or invalid asset key.'], 400);
+    }
+
+    $catalog = brandBuiltinCatalog();
+
+    // Look up existing row (built-in keys are auto-created if not yet seeded).
+    $stmt = $conn->prepare("SELECT * FROM system_branding WHERE asset_key = ? LIMIT 1");
+    if (!$stmt) {
+        reportInternalError('branding_upload_lookup', $conn->error);
+        brandRespond(['status' => 'error', 'message' => 'Database error while checking branding slot.'], 500);
+    }
+    $stmt->bind_param('s', $assetKey);
+    $stmt->execute();
+    $asset = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$asset) {
+        if (!isset($catalog[$assetKey])) {
+            brandRespond(['status' => 'error', 'message' => 'Unknown asset key: ' . $assetKey], 404);
+        }
+        $ins = $conn->prepare(
+            "INSERT IGNORE INTO system_branding (asset_key, asset_label, description) VALUES (?, ?, ?)"
+        );
+        if ($ins) {
+            $lbl = $catalog[$assetKey]['asset_label'];
+            $desc = $catalog[$assetKey]['description'];
+            $ins->bind_param('sss', $assetKey, $lbl, $desc);
+            $ins->execute();
+            $ins->close();
+        }
+        $asset = [
+            'asset_key'   => $assetKey,
+            'asset_label' => $catalog[$assetKey]['asset_label'],
+            'description' => $catalog[$assetKey]['description'],
+            'file_path'   => null,
+        ];
+    }
+
+    // Check file upload presence & PHP upload error codes
+    if (!isset($_FILES['file'])) {
+        brandRespond(['status' => 'error', 'message' => 'No image file was received. Please select a PNG, JPG, GIF, or WebP file.'], 400);
+    }
+    $file = $_FILES['file'];
+    $errCode = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
+    if ($errCode !== UPLOAD_ERR_OK) {
+        $errMsgs = [
+            UPLOAD_ERR_INI_SIZE   => 'File exceeds the server upload limit (' . (ini_get('upload_max_filesize') ?: '2M') . '). Please use a smaller image.',
+            UPLOAD_ERR_FORM_SIZE  => 'File exceeds the 5 MB form size limit.',
+            UPLOAD_ERR_PARTIAL    => 'Upload was interrupted before completion. Please try again.',
+            UPLOAD_ERR_NO_FILE    => 'Please select an image file to upload.',
+            UPLOAD_ERR_NO_TMP_DIR => 'Server temporary upload folder is missing. Contact hosting support.',
+            UPLOAD_ERR_CANT_WRITE => 'Server could not write the uploaded file to temporary storage.',
+            UPLOAD_ERR_EXTENSION  => 'Upload was blocked by a server PHP extension.',
+        ];
+        brandRespond(['status' => 'error', 'message' => $errMsgs[$errCode] ?? ('Upload failed (code ' . $errCode . ').')], 400);
+    }
+
+    $tmpPath = (string)($file['tmp_name'] ?? '');
+    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
+        brandRespond(['status' => 'error', 'message' => 'Invalid file upload. Please try again.'], 400);
+    }
+
+    $actualSize = (int)@filesize($tmpPath);
+    if ($actualSize <= 0 || $actualSize > 5 * 1024 * 1024) {
+        brandRespond(['status' => 'error', 'message' => 'File must be between 1 byte and 5 MB.'], 400);
+    }
+
+    // Validate real image bytes and MIME type (no SVG — prevents stored XSS).
+    // Note: PHP 8.5 deprecates explicit finfo closing (it has been a no-op since
+    // PHP 8.1), so letting $finfo go out of scope via unset() releases it cleanly.
+    $allowedTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+    $extMap = [
+        'image/png'  => 'png',
+        'image/jpeg' => 'jpg',
+        'image/gif'  => 'gif',
+        'image/webp' => 'webp',
+    ];
+
+    $finfoMime = '';
+    if (function_exists('finfo_open')) {
+        $finfo = @finfo_open(FILEINFO_MIME_TYPE);
+        if ($finfo !== false) {
+            $detected = @finfo_file($finfo, $tmpPath);
+            if (is_string($detected)) {
+                $finfoMime = strtolower(trim($detected));
+            }
+            unset($finfo);
+        }
+    }
+
+    $imgInfo = @getimagesize($tmpPath);
+    if ($imgInfo === false || empty($imgInfo['mime'])) {
+        brandRespond(['status' => 'error', 'message' => 'Invalid or corrupted image file. Use a valid PNG, JPG, GIF, or WebP image.'], 400);
+    }
+
+    $imgMime = strtolower(trim((string)$imgInfo['mime']));
+    if ($imgMime === 'image/jpg') {
+        $imgMime = 'image/jpeg';
+    }
+    if ($finfoMime === 'image/jpg') {
+        $finfoMime = 'image/jpeg';
+    }
+
+    $mimeType = $finfoMime !== '' ? $finfoMime : $imgMime;
+    if (!in_array($mimeType, $allowedTypes, true) || $imgMime !== $mimeType) {
+        brandRespond(['status' => 'error', 'message' => 'Use a valid PNG, JPG, GIF, or WebP image. SVG files are not permitted for security.'], 400);
+    }
+
+    $width = (int)($imgInfo[0] ?? 0);
+    $height = (int)($imgInfo[1] ?? 0);
+    if ($width <= 0 || $height <= 0 || $width > 8000 || $height > 8000) {
+        brandRespond(['status' => 'error', 'message' => 'Image dimensions must be between 1x1 and 8000x8000 pixels.'], 400);
+    }
+
+    $ext = $extMap[$mimeType];
+    $fileStem = isset($catalog[$assetKey])
+        ? $catalog[$assetKey]['file_stem']
+        : preg_replace('/[^a-z0-9_]/', '', $assetKey);
+    if ($fileStem === '') {
+        brandRespond(['status' => 'error', 'message' => 'Invalid asset filename stem.'], 400);
+    }
+
+    // Store custom uploads in dedicated untracked directory /admin/uploads/branding/
+    // so packaged git-tracked defaults are never overwritten or lost on git pull.
+    $brandingBase = __DIR__ . '/uploads/branding';
+    $brandingWebPrefix = '/admin/uploads/branding';
+
+    if (!is_dir($brandingBase) && !@mkdir($brandingBase, 0755, true) && !is_dir($brandingBase)) {
+        $ref = reportInternalError('branding_upload_mkdir', 'Failed to create ' . $brandingBase);
+        brandRespond([
+            'status'    => 'error',
+            'error_ref' => 'SSMS:' . $ref,
+            'message'   => 'Upload storage folder could not be created. Please check directory permissions on admin/uploads/branding/.',
+        ], 500);
+    }
+
+    $realBase = realpath($brandingBase);
+    if ($realBase === false || !is_writable($realBase)) {
+        $ref = reportInternalError('branding_upload_unwritable', 'Unwritable dir ' . $brandingBase);
+        brandRespond([
+            'status'    => 'error',
+            'error_ref' => 'SSMS:' . $ref,
+            'message'   => 'Upload storage folder is not writable by the web server. Please check permissions on admin/uploads/branding/.',
+        ], 500);
+    }
+
+    $newFilename = $fileStem . '.' . $ext;
+    $destPath = $realBase . '/' . $newFilename;
+    $webPath = $brandingWebPrefix . '/' . $newFilename;
+    $origName = basename((string)($file['name'] ?? $newFilename));
+    if (strlen($origName) > 250) {
+        $origName = substr($origName, 0, 250);
+    }
+
+    // Collect any previous *uploaded* files for this slot (e.g., an older extension
+    // or the same filename being replaced) so we swap atomically with rollback
+    // safety — while NEVER touching packaged git-tracked defaults.
+    $replaceFiles = [];
+    foreach (['png', 'jpg', 'jpeg', 'gif', 'webp'] as $oldExt) {
+        $candidate = $realBase . '/' . $fileStem . '.' . $oldExt;
+        if (is_file($candidate)) {
+            $replaceFiles[$candidate] = $candidate;
+        }
+    }
+    $prevDbWeb = \App\Services\BrandingAssetService::stripQuery((string)($asset['file_path'] ?? ''));
+    if ($prevDbWeb !== '' && brandIsDeletableUpload($prevDbWeb)) {
+        $prevDisk = brandResolveAssetFile($prevDbWeb, $docRoot);
+        if ($prevDisk !== null && is_file($prevDisk)) {
+            $replaceFiles[$prevDisk] = $prevDisk;
+        }
+    }
+
+    $rollbackToken = bin2hex(random_bytes(6));
+    $stagedBackups = [];
+    $movedNew = false;
+
+    $restoreFiles = static function () use (&$movedNew, $destPath, &$stagedBackups): void {
+        if ($movedNew && is_file($destPath)) {
+            @unlink($destPath);
+            $movedNew = false;
+        }
+        foreach (array_reverse($stagedBackups) as $pair) {
+            if (is_file($pair['backup'])) {
+                @rename($pair['backup'], $pair['orig']);
+            }
+        }
+        $stagedBackups = [];
+    };
+
+    try {
+        foreach (array_values($replaceFiles) as $idx => $oldPath) {
+            $backupPath = $oldPath . '.rollback-' . $rollbackToken . '-' . $idx;
+            if (!@rename($oldPath, $backupPath)) {
+                throw new RuntimeException('Failed to stage previous branding file for atomic swap.');
+            }
+            $stagedBackups[] = ['orig' => $oldPath, 'backup' => $backupPath];
+        }
+
+        if (!move_uploaded_file($tmpPath, $destPath)) {
+            throw new RuntimeException('Failed to move uploaded branding file into place.');
+        }
+        @chmod($destPath, 0644);
+        $movedNew = true;
+
+        $conn->begin_transaction();
+        $stmt = $conn->prepare("
+            UPDATE system_branding
+            SET file_path = ?, original_name = ?, file_size = ?, mime_type = ?, updated_by = ?, updated_at = NOW()
+            WHERE asset_key = ?
+        ");
+        if (!$stmt) {
+            throw new RuntimeException('Failed to prepare system_branding update: ' . $conn->error);
+        }
+        $stmt->bind_param('ssisis', $webPath, $origName, $actualSize, $mimeType, $adminId, $assetKey);
+        if (!$stmt->execute()) {
+            $err = $stmt->error;
+            $stmt->close();
+            throw new RuntimeException('Failed to execute system_branding update: ' . $err);
+        }
+        $stmt->close();
+        $conn->commit();
+    } catch (Throwable $e) {
+        try {
+            $conn->rollback();
+        } catch (Throwable $rbErr) {
+            // No active transaction to roll back.
+        }
+        $restoreFiles();
+        $ref = reportInternalError('branding_upload_failed', $e);
+        brandRespond([
+            'status'    => 'error',
+            'error_ref' => 'SSMS:' . $ref,
+            'message'   => 'Could not save the uploaded image. Please try again.',
+        ], 500);
+    }
+
+    // Commit succeeded — remove staged rollback backups.
+    foreach ($stagedBackups as $pair) {
+        if (is_file($pair['backup'])) {
+            @unlink($pair['backup']);
+        }
+    }
+
+    \App\Services\BrandingAssetService::clearCache();
+
+    // Log activity (best-effort)
+    if (function_exists('logActivity')) {
+        try {
+            logActivity($conn, $adminId, 'branding_upload', "Uploaded branding asset: {$asset['asset_label']} ({$origName})");
+        } catch (Throwable $logErr) {
+            // Non-fatal
+        }
+    }
+
+    $mtime = (int)(@filemtime($destPath) ?: time());
+    brandRespond([
+        'status'      => 'success',
+        'message'     => ($asset['asset_label'] ?: 'Branding asset') . ' uploaded successfully!',
+        'asset_key'   => $assetKey,
+        'file_path'   => $webPath,
+        'web_url'     => $webPath . '?v=' . $mtime,
+        'size_kb'     => round($actualSize / 1024, 1),
+        'is_packaged' => false,
+    ]);
+}
+
+// ============================================================
+// ACTION: DELETE AN ASSET FILE (RESTORES PACKAGED DEFAULT IF ANY)
+// ============================================================
+if ($action === 'delete_asset' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $assetKey = trim((string)($_POST['asset_key'] ?? ''));
+    if ($assetKey === '' || $assetKey[0] === '_' || !preg_match('/^[a-z0-9_]{2,50}$/', $assetKey)) {
+        brandRespond(['status' => 'error', 'message' => 'Missing or invalid asset key.'], 400);
+    }
+
+    $stmt = $conn->prepare("SELECT * FROM system_branding WHERE asset_key = ? LIMIT 1");
+    $stmt->bind_param('s', $assetKey);
+    $stmt->execute();
+    $asset = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$asset) {
+        brandRespond(['status' => 'error', 'message' => 'Asset not found.'], 404);
+    }
+
+    $oldPath = \App\Services\BrandingAssetService::stripQuery((string)($asset['file_path'] ?? ''));
+    if ($oldPath !== '' && brandIsDeletableUpload($oldPath)) {
+        $oldDisk = brandResolveAssetFile($oldPath, $docRoot);
+        if ($oldDisk !== null && is_file($oldDisk)) {
+            @unlink($oldDisk);
+        }
+    }
+
+    // Also clean any leftover alternate-extension custom upload for built-in stems
+    // inside admin/uploads/branding/.
+    $catalog = brandBuiltinCatalog();
+    $brandingBase = realpath(__DIR__ . '/uploads/branding');
+    if ($brandingBase !== false) {
+        $stem = isset($catalog[$assetKey])
+            ? $catalog[$assetKey]['file_stem']
+            : preg_replace('/[^a-z0-9_]/', '', $assetKey);
+        if ($stem !== '') {
+            foreach (['png', 'jpg', 'jpeg', 'gif', 'webp'] as $ext) {
+                $candidate = $brandingBase . '/' . $stem . '.' . $ext;
+                if (is_file($candidate)) {
+                    @unlink($candidate);
+                }
             }
         }
     }
-    return $empty;
-}
 
-$action = $_REQUEST['action'] ?? '';
+    $stmt = $conn->prepare("
+        UPDATE system_branding
+        SET file_path = NULL, original_name = NULL, file_size = 0, mime_type = NULL, updated_by = ?, updated_at = NOW()
+        WHERE asset_key = ?
+    ");
+    $stmt->bind_param('is', $adminId, $assetKey);
+    $stmt->execute();
+    $stmt->close();
 
-switch ($action) {
+    \App\Services\BrandingAssetService::clearCache();
 
-    // ============================================================
-    // GET ALL BRANDING ASSETS
-    // ============================================================
-    case 'get_assets':
-        $result = brandQuery($conn, "SELECT * FROM system_branding WHERE asset_key != '_id_card_settings' ORDER BY id");
-        $assets = [];
-        $packagedDefaults = [
-            'logo' => [
-                ['disk' => __DIR__ . '/id_cards/assets/logos/school_logo.png', 'web' => '/admin/id_cards/assets/logos/school_logo.png'],
-                ['disk' => dirname(__DIR__) . '/themes/fkss/assets/logos/school_logo.png', 'web' => '/themes/fkss/assets/logos/school_logo.png'],
-            ],
-            'card_bg' => [
-                ['disk' => __DIR__ . '/id_cards/assets/backgrounds/id_card_bg.jpg', 'web' => '/admin/id_cards/assets/backgrounds/id_card_bg.jpg'],
-            ],
-        ];
-        if ($result) {
-            while ($row = $result->fetch_assoc()) {
-                $resolved = brandResolveAssetFile((string)($row['file_path'] ?? ''));
-                $isPackaged = false;
-                if (!$resolved['exists'] && isset($packagedDefaults[$row['asset_key']])) {
-                    foreach ($packagedDefaults[$row['asset_key']] as $pack) {
-                        if (is_file($pack['disk']) && filesize($pack['disk']) > 32) {
-                            $resolved = ['exists' => true, 'size' => filesize($pack['disk']), 'web' => $pack['web'], 'disk' => $pack['disk']];
-                            $isPackaged = true;
-                            break;
-                        }
-                    }
-                } elseif ($resolved['exists']) {
-                    foreach ($packagedDefaults[$row['asset_key']] ?? [] as $pack) {
-                        if ($resolved['web'] === $pack['web']) {
-                            $isPackaged = empty($row['uploaded_by']);
-                            break;
-                        }
-                    }
-                }
-                $row['file_exists'] = $resolved['exists'];
-                $row['file_size'] = $resolved['size'];
-                $row['is_packaged'] = $isPackaged;
-                $bust = ($resolved['disk'] && is_file($resolved['disk'])) ? filemtime($resolved['disk']) : time();
-                $row['web_url'] = $resolved['exists'] ? $resolved['web'] . '?v=' . $bust : null;
-                if ($resolved['exists'] && empty($row['original_name'])) {
-                    $row['original_name'] = basename($resolved['web']);
-                }
-                $assets[] = $row;
-            }
-        }
-        
-        $settings = \App\Services\IdCardLayout::load($conn);
-        $schema = \App\Services\IdCardLayout::designerSchema();
-
-        echo json_encode([
-            'status' => 'success',
-            'assets' => $assets,
-            'settings' => $settings,
-            'schema' => $schema,
-        ], JSON_UNESCAPED_UNICODE);
-        break;
-
-    // ============================================================
-    // UPLOAD / REPLACE ASSET
-    // ============================================================
-    case 'upload_asset':
-        $assetKey = trim($_POST['asset_key'] ?? '');
-        
-        // Validate asset key format (only alphanumeric + underscore)
-        if (!$assetKey || !preg_match('/^[a-z0-9_]{1,50}$/', $assetKey)) {
-            echo json_encode(['status' => 'error', 'message' => 'Invalid asset key']);
-            exit;
-        }
-        
-        // Get asset record
-        $stmt = $conn->prepare("SELECT * FROM system_branding WHERE asset_key = ?");
-        if (!$stmt) {
-            reportInternalError('Branding asset lookup prepare failed', $conn->error);
-            echo json_encode(['status' => 'error', 'message' => 'Branding storage is temporarily unavailable.']);
-            exit;
-        }
-        $stmt->bind_param("s", $assetKey);
-        $stmt->execute();
-        $asset = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-        
-        if (!$asset) {
-            echo json_encode(['status' => 'error', 'message' => 'Unknown asset key: ' . $assetKey]);
-            exit;
-        }
-        
-        // Validate file upload
-        if (empty($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-            $errors = [
-                UPLOAD_ERR_INI_SIZE   => 'File too large (server limit: ' . ini_get('upload_max_filesize') . ')',
-                UPLOAD_ERR_FORM_SIZE  => 'File too large (form limit)',
-                UPLOAD_ERR_PARTIAL    => 'Upload incomplete — please try again',
-                UPLOAD_ERR_NO_FILE    => 'No file selected',
-                UPLOAD_ERR_NO_TMP_DIR => 'Server config error: no temp directory',
-                UPLOAD_ERR_CANT_WRITE => 'Server error: cannot write to disk',
-            ];
-            $errCode = $_FILES['file']['error'] ?? UPLOAD_ERR_NO_FILE;
-            echo json_encode(['status' => 'error', 'message' => $errors[$errCode] ?? 'Upload error (code: ' . $errCode . ')']);
-            exit;
-        }
-        
-        $file = $_FILES['file'];
-        $tmpPath = (string)($file['tmp_name'] ?? '');
-        $actualSize = $tmpPath !== '' ? @filesize($tmpPath) : false;
-        $allowedTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
-        $maxSize = 5 * 1024 * 1024; // 5MB
-        if ($tmpPath === '' || !is_uploaded_file($tmpPath) || $actualSize === false || $actualSize <= 0) {
-            echo json_encode(['status' => 'error', 'message' => 'The uploaded image could not be verified.']);
-            exit;
-        }
-        
-        // Check MIME type using finfo (not the browser-reported type)
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = finfo_file($finfo, $tmpPath);
-        finfo_close($finfo);
-        
-        if (!in_array($mimeType, $allowedTypes, true) || @getimagesize($tmpPath) === false) {
-            echo json_encode(['status' => 'error', 'message' => 'Use a valid PNG, JPG, GIF, or WebP image.']);
-            exit;
-        }
-        
-        if ($actualSize > $maxSize) {
-            echo json_encode(['status' => 'error', 'message' => 'File too large (' . round($actualSize/1024/1024, 1) . 'MB). Maximum 5MB.']);
-            exit;
-        }
-        
-        // Determine file extension from MIME (more reliable than filename extension)
-        $mimeToExt = [
-            'image/png' => 'png', 'image/jpeg' => 'jpg', 'image/gif' => 'gif',
-            'image/webp' => 'webp'
-        ];
-        $ext = $mimeToExt[$mimeType] ?? 'png';
-        
-        // Determine target directory and filename based on asset key
-        $assetFileMap = [
-            'logo'      => ['dir' => 'logos',        'name' => 'school_logo'],
-            'seal'      => ['dir' => 'seals',        'name' => 'school_seal'],
-            'sig_head'  => ['dir' => 'signatures',   'name' => 'head_signature'],
-            'sig_admin' => ['dir' => 'signatures',   'name' => 'director_signature'],
-            'card_bg'   => ['dir' => 'backgrounds',  'name' => 'id_card_bg'],
-        ];
-        
-        if (isset($assetFileMap[$assetKey])) {
-            $targetDir = $dirs[$assetFileMap[$assetKey]['dir']];
-            $targetFile = $assetFileMap[$assetKey]['name'] . '.' . $ext;
-        } else {
-            // Custom asset — use sanitized key as filename
-            $targetDir = $dirs['logos'];
-            $targetFile = preg_replace('/[^a-z0-9_]/', '', $assetKey) . '.' . $ext;
-        }
-        
-        if (!is_dir($targetDir) && !mkdir($targetDir, 0755, true) && !is_dir($targetDir)) {
-            echo json_encode(['status' => 'error', 'message' => 'Upload storage is unavailable.']);
-            exit;
-        }
-        $targetPath = $targetDir . '/' . $targetFile;
-        $subDir = basename($targetDir); // 'logos', 'seals', or 'signatures'
-        $webPath = '/admin/id_cards/assets/' . $subDir . '/' . $targetFile;
-        
-        // Stage the upload under a non-executable random name. The database and
-        // visible asset are switched together; failures restore the old file.
-        if (!is_writable($targetDir)) {
-            echo json_encode(['status' => 'error', 'message' => 'Upload storage is unavailable.']);
-            exit;
-        }
-        $tempPath = $targetDir . '/.' . bin2hex(random_bytes(16)) . '.tmp';
-        if (!move_uploaded_file($tmpPath, $tempPath)) {
-            echo json_encode(['status' => 'error', 'message' => 'Unable to stage the uploaded image.']);
-            exit;
-        }
-        @chmod($tempPath, 0600);
-
-        $stmt = $conn->prepare("UPDATE system_branding
-            SET file_path = ?, original_name = ?, mime_type = ?, file_size = ?, uploaded_by = ?, uploaded_at = NOW()
-            WHERE asset_key = ?");
-        if (!$stmt) {
-            @unlink($tempPath);
-            reportInternalError('Branding asset update prepare failed', $conn->error);
-            echo json_encode(['status' => 'error', 'message' => 'Unable to save the branding asset.']);
-            exit;
-        }
-
-        $originalName = basename(str_replace('\\', '/', (string)($file['name'] ?? 'image')));
-        $originalName = mb_substr(preg_replace('/[\x00-\x1F\x7F]+/u', '', $originalName), 0, 255);
-        $fileSize = (int)$actualSize;
-        $uploader = (int)($_SESSION['admin_id'] ?? 0);
-        $stmt->bind_param("sssiis", $webPath, $originalName, $mimeType, $fileSize, $uploader, $assetKey);
-
-        $backups = [];
-        $activated = false;
+    if (function_exists('logActivity')) {
         try {
-            $conn->begin_transaction();
-            if (!$stmt->execute()) {
-                throw new RuntimeException($stmt->error ?: 'branding update failed');
-            }
+            logActivity($conn, $adminId, 'branding_delete', "Removed custom branding asset: {$asset['asset_label']}");
+        } catch (Throwable $logErr) {
+            // Non-fatal
+        }
+    }
 
-            $replaceFiles = [$targetPath];
-            $oldResolved = brandResolveAssetFile((string)($asset['file_path'] ?? ''));
-            $assetRoot = realpath($baseDir);
-            if ($oldResolved['exists'] && $assetRoot !== false) {
-                $oldReal = realpath($oldResolved['disk']);
-                if ($oldReal !== false && strpos($oldReal, $assetRoot . DIRECTORY_SEPARATOR) === 0) {
-                    $replaceFiles[] = $oldReal;
-                }
-            }
-            foreach (array_unique($replaceFiles) as $replaceFile) {
-                if (!is_file($replaceFile)) continue;
-                $backup = $replaceFile . '.rollback-' . bin2hex(random_bytes(6));
-                if (!rename($replaceFile, $backup)) {
-                    throw new RuntimeException('could not stage existing branding file');
-                }
-                $backups[$replaceFile] = $backup;
-            }
+    $fallback = brandPackagedFallback($assetKey, $docRoot);
+    $restoredUrl = null;
+    if ($fallback !== null) {
+        $mtime = (int)@filemtime($fallback['disk']);
+        $restoredUrl = $fallback['web'] . ($mtime > 0 ? ('?v=' . $mtime) : '');
+    }
 
-            if (!rename($tempPath, $targetPath)) {
-                throw new RuntimeException('could not activate branding file');
-            }
-            $activated = true;
-            @chmod($targetPath, 0644);
-            if (!$conn->commit()) {
-                throw new RuntimeException('could not commit branding update');
-            }
-            foreach ($backups as $backup) @unlink($backup);
+    $msg = $restoredUrl !== null
+        ? ($asset['asset_label'] . ' reset to the default packaged image.')
+        : ($asset['asset_label'] . ' removed.');
 
-            echo json_encode([
-                'status' => 'success',
-                'message' => $asset['asset_label'] . ' uploaded successfully!',
-                'file_path' => $webPath,
-                'web_url' => $webPath . '?v=' . time()
-            ]);
-        } catch (Throwable $error) {
-            try { $conn->rollback(); } catch (Throwable $ignored) {}
-            if ($activated && is_file($targetPath)) @unlink($targetPath);
-            foreach ($backups as $original => $backup) {
-                if (is_file($backup)) @rename($backup, $original);
-            }
-            if (is_file($tempPath)) @unlink($tempPath);
-            reportInternalError('Branding asset activation failed', $error);
-            echo json_encode(['status' => 'error', 'message' => 'Unable to activate the branding image.']);
-        }
-        $stmt->close();
-        break;
-
-    // ============================================================
-    // DELETE ASSET (Reset to empty)
-    // ============================================================
-    case 'delete_asset':
-        $assetKey = trim($_POST['asset_key'] ?? '');
-        
-        if (!$assetKey || !preg_match('/^[a-z0-9_]{1,50}$/', $assetKey)) {
-            echo json_encode(['status' => 'error', 'message' => 'Invalid asset key']);
-            exit;
-        }
-        
-        // Get current file path
-        $stmt = $conn->prepare("SELECT file_path, asset_label FROM system_branding WHERE asset_key = ?");
-        if (!$stmt) {
-            echo json_encode(['status' => 'error', 'message' => 'Database error']);
-            exit;
-        }
-        $stmt->bind_param("s", $assetKey);
-        $stmt->execute();
-        $asset = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-        
-        if (!$asset) {
-            echo json_encode(['status' => 'error', 'message' => 'Unknown asset']);
-            exit;
-        }
-        
-        // Delete uploaded file from disk — never remove the packaged school logo / church art
-        $packagedKeep = [
-            '/admin/id_cards/assets/backgrounds/id_card_bg.jpg',
-            '/admin/id_cards/assets/logos/school_logo.png',
-            '/themes/fkss/assets/logos/school_logo.png',
-        ];
-        if (!empty($asset['file_path']) && !in_array($asset['file_path'], $packagedKeep, true)) {
-            $filePath = ($_SERVER['DOCUMENT_ROOT'] ?? dirname(__DIR__)) . $asset['file_path'];
-            if (file_exists($filePath)) {
-                @unlink($filePath);
-            }
-        }
-        
-        // Clear database record (keep the row, just null the file fields)
-        $stmt = $conn->prepare("UPDATE system_branding 
-            SET file_path = NULL, original_name = NULL, mime_type = NULL, file_size = 0, uploaded_by = NULL
-            WHERE asset_key = ?");
-        if ($stmt) {
-            $stmt->bind_param("s", $assetKey);
-            $stmt->execute();
-            $stmt->close();
-        }
-        
-        echo json_encode(['status' => 'success', 'message' => ($asset['asset_label'] ?? 'Asset') . ' removed']);
-        break;
-
-    // ============================================================
-    // UPDATE LABEL (rename asset slot)
-    // ============================================================
-    case 'update_label':
-        $assetKey = trim($_POST['asset_key'] ?? '');
-        $newLabel = trim($_POST['label'] ?? '');
-        
-        if (!$assetKey || !$newLabel) {
-            echo json_encode(['status' => 'error', 'message' => 'Key and label required']);
-            exit;
-        }
-        
-        // Sanitize label (max 100 chars, strip tags)
-        $newLabel = mb_substr(strip_tags($newLabel), 0, 100);
-        
-        $stmt = $conn->prepare("UPDATE system_branding SET asset_label = ? WHERE asset_key = ?");
-        if (!$stmt) {
-            echo json_encode(['status' => 'error', 'message' => 'Database error']);
-            exit;
-        }
-        $stmt->bind_param("ss", $newLabel, $assetKey);
-        
-        if ($stmt->execute() && $stmt->affected_rows >= 0) {
-            echo json_encode(['status' => 'success', 'message' => 'Label updated']);
-        } else {
-            reportInternalError('Branding label update failed', $stmt->error);
-            echo json_encode(['status' => 'error', 'message' => 'Unable to update the label.']);
-        }
-        $stmt->close();
-        break;
-
-    // ============================================================
-    // ADD CUSTOM ASSET SLOT
-    // ============================================================
-    case 'add_asset':
-        $assetKey = preg_replace('/[^a-z0-9_]/', '', strtolower(trim($_POST['asset_key'] ?? '')));
-        $assetLabel = mb_substr(strip_tags(trim($_POST['asset_label'] ?? '')), 0, 100);
-        
-        if (!$assetKey || !$assetLabel) {
-            echo json_encode(['status' => 'error', 'message' => 'Key and label required']);
-            exit;
-        }
-        
-        if (strlen($assetKey) > 50) {
-            echo json_encode(['status' => 'error', 'message' => 'Key too long (max 50 chars)']);
-            exit;
-        }
-        
-        // Prevent reserved keys
-        $reserved = ['logo', 'seal', 'sig_head', 'sig_admin', 'card_bg', '_id_card_settings'];
-        if (in_array($assetKey, $reserved)) {
-            echo json_encode(['status' => 'error', 'message' => 'That key is reserved']);
-            exit;
-        }
-        
-        $stmt = $conn->prepare("INSERT INTO system_branding (asset_key, asset_label) VALUES (?, ?)");
-        if (!$stmt) {
-            echo json_encode(['status' => 'error', 'message' => 'Database error']);
-            exit;
-        }
-        $stmt->bind_param("ss", $assetKey, $assetLabel);
-        
-        if ($stmt->execute()) {
-            echo json_encode(['status' => 'success', 'message' => 'New asset slot "' . $assetLabel . '" added']);
-        } else {
-            if ($conn->errno === 1062) {
-                echo json_encode(['status' => 'error', 'message' => 'An asset with that key already exists']);
-            } else {
-                reportInternalError('Branding asset slot insert failed', $stmt->error);
-                echo json_encode(['status' => 'error', 'message' => 'Unable to add the asset slot.']);
-            }
-        }
-        $stmt->close();
-        break;
-
-    // ============================================================
-    // REMOVE CUSTOM ASSET SLOT
-    // ============================================================
-    case 'remove_asset_slot':
-        $assetKey = trim($_POST['asset_key'] ?? '');
-        $protected = ['logo', 'seal', 'sig_head', 'sig_admin', 'card_bg', '_id_card_settings'];
-        
-        if (!$assetKey) {
-            echo json_encode(['status' => 'error', 'message' => 'Asset key required']);
-            exit;
-        }
-        
-        if (in_array($assetKey, $protected)) {
-            echo json_encode(['status' => 'error', 'message' => 'Cannot remove system default assets']);
-            exit;
-        }
-        
-        // Delete file from disk first
-        $stmt = $conn->prepare("SELECT file_path FROM system_branding WHERE asset_key = ?");
-        if ($stmt) {
-            $stmt->bind_param("s", $assetKey);
-            $stmt->execute();
-            $asset = $stmt->get_result()->fetch_assoc();
-            $stmt->close();
-            
-            if ($asset && !empty($asset['file_path'])) {
-                $fp = ($_SERVER['DOCUMENT_ROOT'] ?? dirname(__DIR__, 2)) . $asset['file_path'];
-                if (file_exists($fp)) @unlink($fp);
-            }
-        }
-        
-        // Delete the DB row
-        $stmt = $conn->prepare("DELETE FROM system_branding WHERE asset_key = ? AND asset_key NOT IN ('logo','seal','sig_head','sig_admin','_id_card_settings')");
-        if ($stmt) {
-            $stmt->bind_param("s", $assetKey);
-            $stmt->execute();
-            $stmt->close();
-        }
-        
-        echo json_encode(['status' => 'success', 'message' => 'Asset slot removed']);
-        break;
-
-    // ============================================================
-    // SAVE ID CARD DISPLAY SETTINGS (size, opacity)
-    // ============================================================
-    case 'save_settings':
-        $rawSettings = trim($_POST['settings'] ?? '{}');
-        
-        // Validate and sanitize the JSON
-        $decoded = json_decode($rawSettings, true);
-        if (!is_array($decoded)) {
-            echo json_encode(['status' => 'error', 'message' => 'Invalid settings format']);
-            exit;
-        }
-        
-        $clean = \App\Services\IdCardLayout::sanitize($decoded);
-        $safeJson = json_encode($clean, JSON_UNESCAPED_SLASHES);
-        
-        // Upsert the settings row
-        $conn->query("INSERT IGNORE INTO system_branding (asset_key, asset_label) 
-            VALUES ('_id_card_settings', 'ID Card Display Settings')");
-        
-        $stmt = $conn->prepare("UPDATE system_branding SET original_name = ? WHERE asset_key = '_id_card_settings'");
-        if ($stmt) {
-            $stmt->bind_param("s", $safeJson);
-            if ($stmt->execute()) {
-                echo json_encode(['status' => 'success', 'message' => 'Saved. Every member ID card will use this layout.']);
-            } else {
-                reportInternalError('ID card layout save failed', $stmt->error);
-                echo json_encode(['status' => 'error', 'message' => 'Unable to save the ID card layout.']);
-            }
-            $stmt->close();
-        } else {
-            echo json_encode(['status' => 'error', 'message' => 'Database error']);
-        }
-        break;
-
-    default:
-        echo json_encode(['status' => 'error', 'message' => 'Unknown action: ' . htmlspecialchars($action)]);
+    brandRespond([
+        'status'       => 'success',
+        'message'      => $msg,
+        'asset_key'    => $assetKey,
+        'restored_url' => $restoredUrl,
+    ]);
 }
 
-$conn->close();
+// ============================================================
+// ACTION: UPDATE ASSET LABEL/DESCRIPTION
+// ============================================================
+if ($action === 'update_label' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $assetKey = trim((string)($_POST['asset_key'] ?? ''));
+    $label = trim((string)($_POST['asset_label'] ?? ''));
+    $desc = trim((string)($_POST['description'] ?? ''));
+
+    if ($assetKey === '' || $label === '') {
+        brandRespond(['status' => 'error', 'message' => 'Asset key and label are required.'], 400);
+    }
+
+    $stmt = $conn->prepare("UPDATE system_branding SET asset_label = ?, description = ?, updated_by = ? WHERE asset_key = ?");
+    $stmt->bind_param('ssis', $label, $desc, $adminId, $assetKey);
+    $stmt->execute();
+    $stmt->close();
+
+    brandRespond(['status' => 'success', 'message' => 'Updated successfully.']);
+}
+
+// ============================================================
+// ACTION: ADD CUSTOM ASSET SLOT
+// ============================================================
+if ($action === 'add_asset' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $label = trim((string)($_POST['asset_label'] ?? ''));
+    $desc = trim((string)($_POST['description'] ?? ''));
+    $key = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '_', $label));
+    $key = trim($key, '_');
+
+    if ($label === '' || strlen($key) < 2) {
+        brandRespond(['status' => 'error', 'message' => 'Please enter a valid asset name.'], 400);
+    }
+    if (strlen($key) > 45) {
+        $key = substr($key, 0, 45);
+    }
+
+    $chk = $conn->prepare("SELECT id FROM system_branding WHERE asset_key = ? LIMIT 1");
+    $chk->bind_param('s', $key);
+    $chk->execute();
+    if ($chk->get_result()->num_rows > 0) {
+        $chk->close();
+        brandRespond(['status' => 'error', 'message' => 'An asset with this name already exists.'], 409);
+    }
+    $chk->close();
+
+    $stmt = $conn->prepare("INSERT INTO system_branding (asset_key, asset_label, description, updated_by) VALUES (?, ?, ?, ?)");
+    $stmt->bind_param('sssi', $key, $label, $desc, $adminId);
+    $stmt->execute();
+    $stmt->close();
+
+    brandRespond(['status' => 'success', 'message' => 'Asset slot created.', 'asset_key' => $key]);
+}
+
+// ============================================================
+// ACTION: DELETE CUSTOM ASSET SLOT (cannot delete built-in 5)
+// ============================================================
+if ($action === 'remove_asset_slot' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $assetKey = trim((string)($_POST['asset_key'] ?? ''));
+    $builtIn = array_keys(brandBuiltinCatalog());
+    if (in_array($assetKey, $builtIn, true)) {
+        brandRespond(['status' => 'error', 'message' => 'Cannot remove built-in system assets.'], 400);
+    }
+
+    $stmt = $conn->prepare("SELECT file_path FROM system_branding WHERE asset_key = ? LIMIT 1");
+    $stmt->bind_param('s', $assetKey);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if ($row && !empty($row['file_path']) && brandIsDeletableUpload((string)$row['file_path'])) {
+        $disk = brandResolveAssetFile((string)$row['file_path'], $docRoot);
+        if ($disk !== null && is_file($disk)) {
+            @unlink($disk);
+        }
+    }
+
+    $stmt = $conn->prepare("DELETE FROM system_branding WHERE asset_key = ?");
+    $stmt->bind_param('s', $assetKey);
+    $stmt->execute();
+    $stmt->close();
+
+    brandRespond(['status' => 'success', 'message' => 'Custom asset removed.']);
+}
+
+// ============================================================
+// ACTION: SAVE ID CARD LAYOUT & DISPLAY SETTINGS
+// ============================================================
+if ($action === 'save_settings' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $raw = $_POST['settings'] ?? '';
+    $decoded = is_string($raw) ? json_decode($raw, true) : null;
+    if (!is_array($decoded)) {
+        $decoded = $_POST;
+    }
+
+    $merged = \App\Services\IdCardLayout::sanitize(
+        array_merge(\App\Services\IdCardLayout::load($conn), $decoded)
+    );
+    $json = json_encode($merged, JSON_UNESCAPED_UNICODE);
+
+    $stmt = $conn->prepare(
+        "INSERT INTO system_branding (asset_key, asset_label, original_name, updated_by, updated_at)
+         VALUES ('_id_card_settings', 'ID Card Layout', ?, ?, NOW())
+         ON DUPLICATE KEY UPDATE original_name = VALUES(original_name), updated_by = VALUES(updated_by), updated_at = NOW()"
+    );
+    $stmt->bind_param('si', $json, $adminId);
+    $stmt->execute();
+    $stmt->close();
+
+    if (function_exists('logActivity')) {
+        try {
+            logActivity($conn, $adminId, 'branding_settings', 'Updated ID card layout settings');
+        } catch (Throwable $logErr) {
+            // Non-fatal
+        }
+    }
+
+    brandRespond(['status' => 'success', 'message' => 'ID card layout saved.', 'settings' => $merged]);
+}
+
+brandRespond(['status' => 'error', 'message' => 'Unknown action.'], 400);

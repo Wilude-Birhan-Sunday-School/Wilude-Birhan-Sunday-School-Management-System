@@ -12,6 +12,7 @@ if (!empty($_SESSION['admin_logged_in'])) {
 
 $csrfToken = function_exists('generateCsrfToken') ? generateCsrfToken() : '';
 $theme = defined('ACTIVE_THEME') ? ACTIVE_THEME : 'wbss';
+$schoolLogoUrl = function_exists('ssms_school_logo_url') ? ssms_school_logo_url() : ('/themes/' . $theme . '/assets/logos/school_logo.png');
 ?>
 <!DOCTYPE html>
 <html lang="<?= defined('SITE_LANG') ? SITE_LANG : 'en' ?>">
@@ -26,7 +27,7 @@ $theme = defined('ACTIVE_THEME') ? ACTIVE_THEME : 'wbss';
 <body class="school-login-page">
     <div class="school-login-wrapper">
         <div class="school-login-card">
-            <img src="/themes/<?= $theme ?>/assets/logos/school_logo.png" 
+            <img src="<?= htmlspecialchars($schoolLogoUrl, ENT_QUOTES, 'UTF-8') ?>" 
                  class="school-login-logo" alt="Logo" 
                  onerror="this.style.display='none'">
             <h1 class="school-login-title"><?= e(defined('SCHOOL_NAME_SHORT') ? SCHOOL_NAME_SHORT : 'Login') ?></h1>

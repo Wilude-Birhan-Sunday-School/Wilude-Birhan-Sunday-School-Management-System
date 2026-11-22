@@ -401,6 +401,9 @@ class IdCardLayout
         $fallback = defined('ID_CARD_BACKGROUND')
             ? ID_CARD_BACKGROUND
             : '/admin/id_cards/assets/backgrounds/id_card_bg.jpg';
+        if (class_exists(__NAMESPACE__ . '\\BrandingAssetService')) {
+            return BrandingAssetService::assetUrl($conn, 'card_bg', $fallback, true);
+        }
         try {
             $stmt = $conn->prepare("SELECT file_path FROM system_branding WHERE asset_key = 'card_bg' LIMIT 1");
             if (!$stmt) {
@@ -411,9 +414,15 @@ class IdCardLayout
             $stmt->close();
             if ($row && !empty($row['file_path'])) {
                 $path = (string)$row['file_path'];
-                $disk = dirname(__DIR__, 2) . $path;
-                if (is_file($disk) || is_file(($_SERVER['DOCUMENT_ROOT'] ?? '') . $path)) {
-                    return $path;
+                $disk = dirname(__DIR__, 3) . $path;
+                $docDisk = rtrim((string)($_SERVER['DOCUMENT_ROOT'] ?? ''), '/') . $path;
+                if (is_file($disk)) {
+                    $mtime = @filemtime($disk);
+                    return $path . ($mtime ? ('?v=' . $mtime) : '');
+                }
+                if ($docDisk !== $path && is_file($docDisk)) {
+                    $mtime = @filemtime($docDisk);
+                    return $path . ($mtime ? ('?v=' . $mtime) : '');
                 }
             }
         } catch (\Throwable $e) {

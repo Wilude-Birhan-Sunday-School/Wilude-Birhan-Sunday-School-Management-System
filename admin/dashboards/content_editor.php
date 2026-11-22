@@ -22,6 +22,7 @@ $fullName = $_SESSION['admin_full_name'] ?? $_SESSION['admin_username'] ?? 'Edit
 $username = $_SESSION['admin_username'] ?? '';
 $csrfToken = generateCsrfToken();
 $initials = strtoupper(substr($fullName, 0, 1));
+$schoolLogoUrl = function_exists('ssms_school_logo_url') ? ssms_school_logo_url() : SCHOOL_LOGO_PATH;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -30,7 +31,7 @@ $initials = strtoupper(substr($fullName, 0, 1));
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="csrf-token" content="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
 <title>Content Manager — <?= SCHOOL_NAME_SHORT ?></title>
-<link rel="icon" href="<?= SCHOOL_LOGO_PATH ?>">
+<link rel="icon" href="<?= htmlspecialchars($schoolLogoUrl, ENT_QUOTES, 'UTF-8') ?>">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Ethiopic:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -182,7 +183,7 @@ body{background:var(--bg);color:var(--text);min-height:100vh}
 
 <div class="topbar">
   <div class="topbar-brand">
-    <div class="topbar-logo"><img src="<?= SCHOOL_LOGO_PATH ?>" alt="logo" onerror="this.parentElement.innerHTML='<span style=&quot;color:var(--maroon)&quot;><?= ADMIN_LOGO_ICON ?></span>'"></div>
+    <div class="topbar-logo"><img src="<?= htmlspecialchars($schoolLogoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="logo" onerror="this.parentElement.innerHTML='<span style=&quot;color:var(--maroon)&quot;><?= ADMIN_LOGO_ICON ?></span>'"></div>
     <div>
       <div class="topbar-title">Content Manager</div>
       <div class="topbar-sub"><?= SCHOOL_NAME_SHORT ?> · Public Website</div>

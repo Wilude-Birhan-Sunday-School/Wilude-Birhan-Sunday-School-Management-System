@@ -292,8 +292,9 @@ function site_head(array $page): void
 <meta name="twitter:title" content="<?= e($title) ?>">
 <meta name="twitter:description" content="<?= e($description) ?>">
 <meta name="twitter:image" content="<?= e($ogImage) ?>">
-<link rel="icon" href="<?= e(site_page(THEME_BASE_PATH . '/assets/logos/icon-192.png')) ?>">
-<link rel="apple-touch-icon" href="<?= e(site_page(THEME_BASE_PATH . '/assets/logos/icon-192.png')) ?>">
+<?php $siteLogoUrl = function_exists('ssms_school_logo_url') ? ssms_school_logo_url() : SCHOOL_LOGO_PATH; ?>
+<link rel="icon" href="<?= e(site_page($siteLogoUrl)) ?>">
+<link rel="apple-touch-icon" href="<?= e(site_page($siteLogoUrl)) ?>">
 <script>document.documentElement.classList.add('js');</script>
 <link rel="stylesheet" href="<?= e(site_asset('/css/wbss-site.css')) ?>">
 <link rel="stylesheet" href="<?= e(site_asset('/css/wbss-motion.css')) ?>">
@@ -317,7 +318,7 @@ function site_json_ld(array $page): string
         'alternateName' => [SCHOOL_NAME_AMHARIC, SCHOOL_NAME_SHORT],
         'description' => t($content['home']['lead']),
         'url' => 'https://' . SITE_DOMAIN . '/',
-        'logo' => 'https://' . SITE_DOMAIN . SCHOOL_LOGO_PATH,
+        'logo' => 'https://' . SITE_DOMAIN . (function_exists('ssms_school_logo_url') ? ssms_school_logo_url() : SCHOOL_LOGO_PATH),
         'parentOrganization' => [
             '@type' => 'Church',
             'name' => PARISH_NAME_EN,
@@ -415,7 +416,7 @@ function site_header(array $page): void
 <header class="site-header" id="site-header" data-header>
     <div class="wrap site-header__inner">
         <a class="brand" href="<?= e(site_page('/')) ?>" aria-label="<?= e(site_school_name() . ' — ' . ui('home_aria')) ?>">
-            <img class="brand__mark" src="<?= e(site_page(SCHOOL_LOGO_PATH)) ?>" alt="" width="52" height="52" decoding="async">
+            <img class="brand__mark" src="<?= e(site_page(function_exists('ssms_school_logo_url') ? ssms_school_logo_url() : SCHOOL_LOGO_PATH)) ?>" alt="" width="52" height="52" decoding="async">
             <span class="brand__text">
                 <span class="brand__name"<?= site_lang_is_am() ? ' lang="am"' : '' ?>><?= e(site_lang_is_am() ? SCHOOL_NAME_SHORT_AM : SCHOOL_NAME_SHORT) ?></span>
                 <span class="brand__sub"><?= e(site_lang_is_am() ? SCHOOL_TYPE_AM : (SCHOOL_TRANSLATION_EN . ' ' . SCHOOL_TYPE)) ?></span>
@@ -549,7 +550,7 @@ function site_footer(): void
     <div class="wrap site-footer__grid" <?= reveal('up') ?>>
         <div class="site-footer__brand">
             <a class="brand brand--footer" href="<?= e(site_page('/')) ?>">
-                <img class="brand__mark" src="<?= e(site_page(SCHOOL_LOGO_PATH)) ?>" alt="" width="56" height="56" decoding="async">
+                <img class="brand__mark" src="<?= e(site_page(function_exists('ssms_school_logo_url') ? ssms_school_logo_url() : SCHOOL_LOGO_PATH)) ?>" alt="" width="56" height="56" decoding="async">
                 <span class="brand__text">
                     <span class="brand__name"<?= site_lang_is_am() ? ' lang="am"' : '' ?>><?= e(site_school_name()) ?></span>
                     <span class="brand__sub"><?= e(site_parish_name()) ?></span>

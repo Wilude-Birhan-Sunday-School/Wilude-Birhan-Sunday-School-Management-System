@@ -28,58 +28,19 @@ $member = $stmt->get_result()->fetch_assoc();
 if (!$member) die("Member not found");
 
 // ASSETS — Load from system_branding table (managed via Super Admin > Branding)
+// with cache-busting ?v=mtime and theme-aware packaged fallbacks.
 $CONFIG = [
-    'logo'      => '/admin/id_cards/assets/logos/school_logo.png',
-    'seal'      => '',
-    'sig_head'  => '',
-    'sig_admin' => '',
+    'logo'      => \App\Services\BrandingAssetService::assetUrl($conn, 'logo', '', true),
+    'seal'      => \App\Services\BrandingAssetService::assetUrl($conn, 'seal', '', true),
+    'sig_head'  => \App\Services\BrandingAssetService::assetUrl($conn, 'sig_head', '', true),
+    'sig_admin' => \App\Services\BrandingAssetService::assetUrl($conn, 'sig_admin', '', true),
 ];
-$assetOnDisk = static function (string $web): bool {
-    if ($web === '' || $web[0] !== '/') {
-        return false;
-    }
-    $root = rtrim((string)($_SERVER['DOCUMENT_ROOT'] ?? dirname(__DIR__, 2)), '/');
-    foreach ([$root . $web, dirname(__DIR__, 2) . $web] as $disk) {
-        if (is_file($disk) && filesize($disk) > 32) {
-            return true;
-        }
-    }
-    return false;
-};
 $DISPLAY = [
     'logo_size' => 100, 'logo_opacity' => 100,
     'seal_size' => 150, 'seal_opacity' => 85,
     'sig_head_size' => 140, 'sig_head_opacity' => 90,
     'sig_admin_size' => 140, 'sig_admin_opacity' => 90,
 ];
-
-// Branding storage is deployment-managed by migration 012. Defaults remain
-// available if a transient query fails.
-if ($conn && !$conn->connect_error) {
-    try {
-        $br = $conn->query("SELECT asset_key, file_path, original_name FROM system_branding");
-        if ($br) {
-            while ($row = $br->fetch_assoc()) {
-                if ($row['asset_key'] === '_id_card_settings' && !empty($row['original_name'])) {
-                    $saved = json_decode($row['original_name'], true);
-                    if (is_array($saved)) {
-                        $allowedKeys = ['logo_size','logo_opacity','seal_size','seal_opacity',
-                                        'sig_head_size','sig_head_opacity','sig_admin_size','sig_admin_opacity'];
-                        foreach ($saved as $k => $v) {
-                            if (in_array($k, $allowedKeys, true) && is_numeric($v)) {
-                                $DISPLAY[$k] = max(0, min(1000, (int)$v));
-                            }
-                        }
-                    }
-                } elseif (isset($CONFIG[$row['asset_key']]) && !empty($row['file_path']) && $assetOnDisk($row['file_path'])) {
-                    $CONFIG[$row['asset_key']] = $row['file_path'];
-                }
-            }
-        }
-    } catch (Throwable $error) {
-        error_log('ID card branding lookup failed.');
-    }
-}
 
 $layout = \App\Services\IdCardLayout::load($conn);
 $idCardBg = \App\Services\IdCardLayout::background($conn);

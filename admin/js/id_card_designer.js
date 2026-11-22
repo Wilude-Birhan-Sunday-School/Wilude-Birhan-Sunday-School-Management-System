@@ -285,7 +285,11 @@
 
   window.bootIdDesigner = load;
   window.reloadIdDesignerPreview = function (bg) {
-    if (bg) cfg.bg = bg;
+    if (typeof bg === 'string' && bg !== '') {
+      cfg.bg = bg;
+    } else if (bg === '') {
+      cfg.bg = cfg.defaultBg || '/admin/id_cards/assets/backgrounds/id_card_bg.jpg';
+    }
     if (frame) setFrame();
   };
 })();
