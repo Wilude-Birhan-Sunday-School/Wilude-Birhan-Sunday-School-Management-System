@@ -53,7 +53,10 @@ uploads/teachers/*
 !uploads/teachers/README.txt
 
 # --- Generated QR codes (member card images) ---
-admin/id_cards/assets/qr/
+# Keep the directory and its .htaccess tracked so fresh clones/pulls always
+# provision admin/id_cards/assets/qr/ while generated PNGs stay untracked.
+admin/id_cards/assets/qr/*
+!admin/id_cards/assets/qr/.htaccess
 # NOTE: the phpqrcode library's own frame cache
 # (admin/id_cards/libs/phpqrcode/cache/) is intentionally left tracked —
 # it is regenerable but harmless, and untracking it just adds noise.

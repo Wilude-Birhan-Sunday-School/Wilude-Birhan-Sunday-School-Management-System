@@ -54,6 +54,12 @@ foreach ($extensions as [$ext, $breaks]) {
     $check('ext-' . $ext, extension_loaded($ext), $breaks);
 }
 
+$check(
+    'gd-png (imagepng)',
+    function_exists('imagepng'),
+    'ID-card QR generation requires GD compiled with PNG support.'
+);
+
 // Optional: reported, never release-blocking. The member search engine
 // (ADR-0022) degrades to plain MySQL when pdo_sqlite is unavailable.
 foreach (['pdo_sqlite'] as $ext) {

@@ -1,13 +1,6 @@
 <?php
 // FILE: /admin/id_cards/view_id_card.php
 
-// TEMPORARY DEBUG: add &debug=1 to the URL to see the actual error
-if (!empty($_GET['debug'])) {
-    error_reporting(E_ALL);
-    ini_set('display_errors', 1);
-    ini_set('display_startup_errors', 1);
-}
-
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/libs/eth_date_helper.php';
 require_once __DIR__ . '/../backend/services/IdCardLayout.php';
@@ -17,15 +10,15 @@ require_once __DIR__ . '/../backend/services/IdCardLayout.php';
 // could sweep ?member_id=1..N. Authenticated admin session is mandatory,
 // mirroring the dashboard router convention.
 if (!isLoggedIn()) {
-    header('Location: ../index.php');
+    header('Location: ' . ssms_app_url('admin/index.php'));
     exit;
 }
 
 $member_id = isset($_GET['member_id']) ? intval($_GET['member_id']) : 0;
 $backDashboard = match ((string)($_SESSION['admin_role'] ?? '')) {
-    'super_admin' => '../dashboards/super-admin.php',
-    'school_admin' => '../dashboards/school_admin.php',
-    default => '../dashboards/hr-dept.php',
+    'super_admin' => ssms_app_url('admin/dashboards/super-admin.php'),
+    'school_admin' => ssms_app_url('admin/dashboards/school_admin.php'),
+    default => ssms_app_url('admin/dashboards/hr-dept.php'),
 };
 $stmt = $conn->prepare("SELECT * FROM members WHERE id = ?");
 $stmt->bind_param("i", $member_id);
@@ -174,13 +167,17 @@ if (!empty($member['student_photo_path'])) {
     }
 }
 
-// Fix QR Code Path (same logic as photo path above)
-// DB stores: /admin/id_cards/assets/qr/qr_{MEMBER_CODE_FORMAT}XXXX.png (absolute web path)
-// Template needs: relative path from id_cards/ folder OR absolute URL
+// Fix QR Code Path and self-heal using the canonical qr_member_{id}.png filename
+// shared with generate_id_card.php and IdentityCodeService::regenerateQr().
+$canonicalQrFile = 'qr_member_' . (int)$member_id . '.png';
+$canonicalQrRel = 'assets/qr/' . $canonicalQrFile;
+$canonicalQrWeb = '/admin/id_cards/' . $canonicalQrRel;
+$canonicalQrDisk = __DIR__ . '/' . $canonicalQrRel;
+$resolvedQrDisk = null;
+$resolvedQrRel = '';
+
 if (!empty($member['qr_code_path'])) {
-    $qp = ltrim($member['qr_code_path'], '/');
-    
-    // If path starts with 'admin/id_cards/', make it relative (we ARE in id_cards/)
+    $qp = ltrim((string)$member['qr_code_path'], '/');
     if (strpos($qp, 'admin/id_cards/') === 0) {
         $qp = substr($qp, strlen('admin/id_cards/'));
     } elseif (strpos($qp, 'admin/') === 0) {
@@ -188,44 +185,74 @@ if (!empty($member['qr_code_path'])) {
     } else {
         $qp = '../' . $qp;
     }
-    
-    $member['qr_code_path'] = $qp;
-    
-    // BULLETPROOF: Check if the QR file actually exists on disk
-    // If NOT, try to regenerate it right now
-    $qr_absolute_check = __DIR__ . '/' . $qp;
-    if (!file_exists($qr_absolute_check)) {
-        // Try to regenerate QR code on-the-fly
-        require_once __DIR__ . '/libs/qr_loader.php';
-        if (class_exists('QRcode')) {
-            $qr_dir = __DIR__ . '/assets/qr/';
-            if (!is_dir($qr_dir)) mkdir($qr_dir, 0755, true); // 0755, never world-writable
-            $qr_content = rtrim((string)SITE_URL, '/') . '/member.php?code=' . rawurlencode($member['member_code']);
-            $qr_file = $qr_dir . 'qr_' . $member['member_code'] . '.png';
-            QRcode::png($qr_content, $qr_file, QR_ECLEVEL_L, 4, 2);
-            $member['qr_code_path'] = 'assets/qr/qr_' . $member['member_code'] . '.png';
+    $candidateDisk = __DIR__ . '/' . $qp;
+    if (is_file($candidateDisk) && filesize($candidateDisk) >= 32) {
+        $resolvedQrDisk = $candidateDisk;
+        $resolvedQrRel = $qp;
+    }
+}
+
+if ($resolvedQrDisk === null && is_file($canonicalQrDisk) && filesize($canonicalQrDisk) >= 32) {
+    $resolvedQrDisk = $canonicalQrDisk;
+    $resolvedQrRel = $canonicalQrRel;
+    if (($member['qr_code_path'] ?? '') !== $canonicalQrWeb) {
+        $syncStmt = $conn->prepare('UPDATE members SET qr_code_path = ? WHERE id = ?');
+        if ($syncStmt) {
+            $syncStmt->bind_param('si', $canonicalQrWeb, $member_id);
+            $syncStmt->execute();
+            $syncStmt->close();
         }
     }
+}
+
+if ($resolvedQrDisk === null && !empty($member['member_code'])) {
+    require_once __DIR__ . '/libs/qr_loader.php';
+    if (class_exists('QRcode') && extension_loaded('gd') && function_exists('imagepng')) {
+        $qr_dir = __DIR__ . '/assets/qr';
+        if (!is_dir($qr_dir)) {
+            @mkdir($qr_dir, 0755, true); // 0755, never world-writable
+        }
+        if (is_dir($qr_dir) && is_writable($qr_dir)) {
+            $qr_content = rtrim((string)SITE_URL, '/') . '/member.php?code=' . rawurlencode((string)$member['member_code']);
+            $tmpQr = tempnam($qr_dir, '.qr-');
+            if ($tmpQr !== false) {
+                try {
+                    QRcode::png($qr_content, $tmpQr, QR_ECLEVEL_L, 4, 2);
+                    if (is_file($tmpQr) && filesize($tmpQr) >= 32) {
+                        @chmod($tmpQr, 0644);
+                        if (@rename($tmpQr, $canonicalQrDisk) || @copy($tmpQr, $canonicalQrDisk)) {
+                            $resolvedQrDisk = $canonicalQrDisk;
+                            $resolvedQrRel = $canonicalQrRel;
+                            $update_stmt = $conn->prepare('UPDATE members SET qr_code_path = ? WHERE id = ?');
+                            if ($update_stmt) {
+                                $update_stmt->bind_param('si', $canonicalQrWeb, $member_id);
+                                $update_stmt->execute();
+                                $update_stmt->close();
+                            }
+                        }
+                    }
+                } catch (Throwable $qrError) {
+                    error_log('ID-card viewer QR self-heal failed: ' . $qrError->getMessage());
+                } finally {
+                    if (is_file($tmpQr)) {
+                        @unlink($tmpQr);
+                    }
+                }
+            }
+        } else {
+            error_log('ID-card viewer QR directory unavailable: ' . $qr_dir);
+        }
+    }
+}
+
+if ($resolvedQrDisk !== null && $resolvedQrRel !== '') {
+    $qrVer = (int)@filemtime($resolvedQrDisk);
+    $qrWebUrl = str_starts_with($resolvedQrRel, '../')
+        ? ssms_app_url('admin/' . ltrim(substr($resolvedQrRel, 3), '/'))
+        : ssms_app_url('admin/id_cards/' . ltrim($resolvedQrRel, '/'));
+    $member['qr_code_path'] = $qrWebUrl . ($qrVer > 0 ? ('?v=' . $qrVer) : '');
 } else {
-    // QR path is empty in DB — member card was never generated properly
-    // Try to generate QR now if library exists
-    if (!empty($member['member_code'])) {
-        require_once __DIR__ . '/libs/qr_loader.php';
-        if (class_exists('QRcode')) {
-            $qr_dir = __DIR__ . '/assets/qr/';
-            if (!is_dir($qr_dir)) mkdir($qr_dir, 0755, true); // 0755, never world-writable
-            $qr_content = rtrim((string)SITE_URL, '/') . '/member.php?code=' . rawurlencode($member['member_code']);
-            $qr_file = $qr_dir . 'qr_' . $member['member_code'] . '.png';
-            QRcode::png($qr_content, $qr_file, QR_ECLEVEL_L, 4, 2);
-            $member['qr_code_path'] = 'assets/qr/qr_' . $member['member_code'] . '.png';
-            
-            // Also update DB so it's saved for next time
-            $db_path = '/admin/id_cards/assets/qr/qr_' . $member['member_code'] . '.png';
-            $update_stmt = $conn->prepare("UPDATE members SET qr_code_path = ? WHERE id = ?");
-            $update_stmt->bind_param("si", $db_path, $member_id);
-            $update_stmt->execute();
-        }
-    }
+    $member['qr_code_path'] = '';
 }
 
 // Map DB columns to Template variables

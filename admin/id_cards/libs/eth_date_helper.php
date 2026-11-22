@@ -5,9 +5,10 @@ function toEthiopianDate($gregorianDate) {
     if (!$gregorianDate) return "---";
     
     $timestamp = strtotime($gregorianDate);
-    $gYear = date('Y', $timestamp);
-    $gMonth = date('n', $timestamp);
-    $gDay = date('j', $timestamp);
+    if ($timestamp === false) return "---";
+    $gYear = (int)date('Y', $timestamp);
+    $gMonth = (int)date('n', $timestamp);
+    $gDay = (int)date('j', $timestamp);
 
     // Simple conversion logic (approximate but effective for display)
     // For exact liturgical dates, a more complex library is needed, 
@@ -19,25 +20,17 @@ function toEthiopianDate($gregorianDate) {
         9 => 'ግንቦት', 10 => 'ሰኔ', 11 => 'ሐምሌ', 12 => 'ነሐሴ', 13 => 'ጳጉሜ'
     ];
 
-    // Magic number offset for Ethiopian Calendar
-    // This is a simplified algorithm.
-    $ethYear = $gYear - 8;
-    
-    // Logic to switch year after Sept 11
-    // (This is a basic implementation suitable for ID cards)
-    if ($gMonth < 9 || ($gMonth == 9 && $gDay < 11)) {
-        $ethYear -= 1;
-    }
-
-    // Calculate Month and Day roughly
-    // To keep it robust without 100 lines of math, we will use the 
-    // "Gregorian Date - 7/8 years" rule for the year, and PHP's timestamp 
-    // to format the day/month names in Amharic manually if needed, 
-    // BUT requested is "Ethiopian Calendar".
-    
-    // Let's use a standard conversion offset for display accuracy:
+    // Standard Gregorian-to-JDN conversion with pure-PHP fallback so hosts
+    // without ext-calendar never crash when rendering ID cards.
     $jd_offset = 1723856;
-    $jdn = cal_to_jd(CAL_GREGORIAN, $gMonth, $gDay, $gYear);
+    if (function_exists('cal_to_jd') && defined('CAL_GREGORIAN')) {
+        $jdn = cal_to_jd(CAL_GREGORIAN, $gMonth, $gDay, $gYear);
+    } else {
+        $a = intdiv(14 - $gMonth, 12);
+        $y = $gYear + 4800 - $a;
+        $m = $gMonth + 12 * $a - 3;
+        $jdn = $gDay + intdiv(153 * $m + 2, 5) + 365 * $y + intdiv($y, 4) - intdiv($y, 100) + intdiv($y, 400) - 32045;
+    }
     $r = ($jdn - $jd_offset) % 1461;
     $n = ($r % 365) + 365 * intval($r / 1460);
     

@@ -137,6 +137,48 @@ class IdCardSubsystemHardeningTests(unittest.TestCase):
         self.assertNotIn("require_once '../config.php'", self.view)
         self.assertNotIn("require_once 'libs/eth_date_helper.php'", self.view)
 
+    def test_qr_directory_is_tracked_and_script_hardened(self):
+        htaccess = ROOT / "admin/id_cards/assets/qr/.htaccess"
+        self.assertTrue(htaccess.is_file(), "admin/id_cards/assets/qr/.htaccess must be tracked")
+        ht_text = htaccess.read_text(encoding="utf-8")
+        self.assertIn("Options -ExecCGI -Indexes", ht_text)
+        self.assertIn("Require all denied", ht_text)
+        gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
+        self.assertIn("admin/id_cards/assets/qr/*", gitignore)
+        self.assertIn("!admin/id_cards/assets/qr/.htaccess", gitignore)
+        self.assertNotIn("\nadmin/id_cards/assets/qr/\n", gitignore)
+
+    def test_qr_loader_prefers_single_file_and_verifies_class_defined(self):
+        single_pos = self.loader.find("phpqrcode/phpqrcode.php")
+        multi_pos = self.loader.find("phpqrcode/qrlib.php")
+        self.assertGreater(single_pos, 0)
+        self.assertGreater(multi_pos, single_pos)
+        self.assertIn("if (class_exists('QRcode', false))", self.loader)
+
+    def test_generator_runtime_guards_and_diagnostics(self):
+        self.assertIn("extension_loaded('gd')", self.generate)
+        self.assertIn("function_exists('imagepng')", self.generate)
+        self.assertIn("$pdo instanceof PDO", self.generate)
+        self.assertIn("IdentityCodeService::", self.generate)
+        self.assertNotIn("MEMBER_CODE_FORMAT", self.generate)
+        self.assertNotIn("$_POST['debug']", self.generate)
+        self.assertNotIn("$_GET['debug']", self.view)
+        self.assertIn("get_class($error)", self.generate)
+        self.assertIn("missing directory:", self.generate)
+        self.assertIn("directory not writable:", self.generate)
+
+    def test_viewer_and_identity_service_share_canonical_qr_filename(self):
+        self.assertIn("'qr_member_' . (int)$member_id . '.png'", self.view)
+        self.assertNotIn("qr_' . $member['member_code']", self.view)
+        self.assertIn("?v=", self.view)
+        identity = (ROOT / "admin/backend/services/IdentityCodeService.php").read_text(encoding="utf-8")
+        self.assertIn("libs/qr_loader.php", identity)
+        self.assertIn("is_writable($dir)", identity)
+        self.assertIn("finally {", identity)
+        eth = (ROOT / "admin/id_cards/libs/eth_date_helper.php").read_text(encoding="utf-8")
+        self.assertIn("function_exists('cal_to_jd')", eth)
+        self.assertIn("intdiv(", eth)
+
     def test_php_syntax(self):
         php = shutil.which("php")
         if php is None:

@@ -283,24 +283,32 @@ final class IdentityCodeService
     public static function regenerateQr(\mysqli $conn, int $memberId): bool
     {
         $statement = $conn->prepare(
-            'SELECT member_code FROM members WHERE id = ? LIMIT 1'
+            'SELECT member_code, id_card_status, qr_code_path FROM members WHERE id = ? LIMIT 1'
         );
         if (!$statement) {
             return false;
         }
         $statement->bind_param('i', $memberId);
         $statement->execute();
-        $code = (string)($statement->get_result()->fetch_assoc()['member_code'] ?? '');
+        $row = $statement->get_result()->fetch_assoc();
         $statement->close();
-        if ($code === '' || !class_exists('\\QRcode')) {
+        $code = (string)($row['member_code'] ?? '');
+        if ($code === '') {
+            return false;
+        }
+
+        require_once __DIR__ . '/../../id_cards/libs/qr_loader.php';
+        if (!class_exists('\\QRcode') || !extension_loaded('gd') || !function_exists('imagepng')) {
             return false;
         }
 
         $dir = __DIR__ . '/../../id_cards/assets/qr';
-        if (!is_dir($dir)) {
+        if (!is_dir($dir) || !is_writable($dir)) {
             return false;
         }
-        $path = $dir . '/qr_member_' . $memberId . '.png';
+        $filename = 'qr_member_' . $memberId . '.png';
+        $path = $dir . '/' . $filename;
+        $webPath = '/admin/id_cards/assets/qr/' . $filename;
         $tmp = tempnam($dir, '.qr-');
         if ($tmp === false) {
             return false;
@@ -321,11 +329,24 @@ final class IdentityCodeService
             if (!@rename($tmp, $path) && !@copy($tmp, $path)) {
                 return false;
             }
-            @unlink($tmp);
+            if (is_file($path) && (
+                ($row['id_card_status'] ?? '') === 'generated'
+                || trim((string)($row['qr_code_path'] ?? '')) !== ''
+            ) && ($row['qr_code_path'] ?? '') !== $webPath) {
+                $sync = $conn->prepare('UPDATE members SET qr_code_path = ? WHERE id = ?');
+                if ($sync) {
+                    $sync->bind_param('si', $webPath, $memberId);
+                    $sync->execute();
+                    $sync->close();
+                }
+            }
             return is_file($path);
         } catch (\Throwable $error) {
-            @unlink($tmp);
             return false;
+        } finally {
+            if (is_file($tmp)) {
+                @unlink($tmp);
+            }
         }
     }
 }
