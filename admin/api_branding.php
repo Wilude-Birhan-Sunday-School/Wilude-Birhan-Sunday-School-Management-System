@@ -1,6 +1,6 @@
 <?php
 /**
- * Branding & Assets Management API — Super Admin Only
+ * Branding & Assets Management API — Super Admin & School Admin
  *
  * Manages:
  * - logo:      School logo (used across landing page, login, QR verification, reports, ID cards)
@@ -12,6 +12,10 @@
  * Uploaded files are stored in /admin/uploads/branding/ (untracked in Git and
  * script-hardened via .htaccess) so custom uploads never overwrite packaged
  * git-tracked defaults or cause git-pull conflicts on production.
+ *
+ * Schema contract (sql/012_runtime_schema_baseline.sql `system_branding`):
+ *   id, asset_key, asset_label, file_path, original_name, mime_type,
+ *   file_size, uploaded_by, uploaded_at, updated_at
  */
 
 if (ob_get_level() === 0) {
@@ -36,40 +40,39 @@ function brandRespond(array $payload, int $httpStatus = 200): void {
 }
 
 /**
- * Built-in branding slots seeded by sql/012_runtime_schema_baseline.sql.
- * Used as a fallback catalog so uploads still work even if a deployment has
- * not yet seeded all default rows in system_branding.
+ * Built-in branding slots seeded by sql/012_runtime_schema_baseline.sql and
+ * sql/013_application_schema_completion.sql.
  *
- * @return array<string, array{asset_label:string, description:string, file_stem:string}>
+ * @return array<string, array{asset_label:string, file_stem:string}>
  */
 function brandBuiltinCatalog(): array {
     return [
         'logo' => [
             'asset_label' => 'School Logo',
-            'description' => 'Official Sunday School emblem (website, login, verification, reports, ID cards)',
             'file_stem'   => 'school_logo',
         ],
         'seal' => [
-            'asset_label' => 'Official Seal / Stamp',
-            'description' => 'Official Sunday School stamp overlaid on ID cards and certificates',
+            'asset_label' => 'School Seal / Stamp',
             'file_stem'   => 'school_seal',
         ],
         'sig_head' => [
-            'asset_label' => 'Head of School Signature',
-            'description' => 'Signature of the Sunday School Head (printed on ID cards)',
+            'asset_label' => 'Head Teacher Signature',
             'file_stem'   => 'head_signature',
         ],
         'sig_admin' => [
-            'asset_label' => 'Parish Administration Signature',
-            'description' => 'Signature of the Parish Administration (printed on ID cards)',
+            'asset_label' => 'Director / Admin Signature',
             'file_stem'   => 'director_signature',
         ],
         'card_bg' => [
             'asset_label' => 'ID Card Background',
-            'description' => 'Background artwork for Member ID Cards (1011 x 638 px recommended)',
             'file_stem'   => 'id_card_bg',
         ],
     ];
+}
+
+// Verify DB connection is alive
+if (!isset($conn) || !($conn instanceof mysqli) || $conn->connect_error) {
+    brandRespond(['status' => 'error', 'message' => 'Database connection failed. Please try again.'], 503);
 }
 
 // Detect POST body truncation (upload larger than PHP post_max_size) BEFORE CSRF
@@ -87,19 +90,24 @@ if (
     ], 413);
 }
 
-// Auth check — Super Admin ONLY
-if (empty($_SESSION['admin_logged_in']) || ($_SESSION['admin_role'] ?? '') !== 'super_admin') {
-    brandRespond(['status' => 'error', 'message' => 'Super Admin access required.'], 403);
+// Auth check — matches admin/access_control.php ('super_admin', 'school_admin')
+if (empty($_SESSION['admin_id'])) {
+    brandRespond(['status' => 'error', 'message' => 'Unauthorized. Please log in again.'], 401);
 }
 
-$action = $_GET['action'] ?? $_POST['action'] ?? '';
+$userRole = (string)($_SESSION['admin_role'] ?? '');
+if (!in_array($userRole, ['super_admin', 'school_admin'], true)) {
+    brandRespond(['status' => 'error', 'message' => 'Access denied — only Super Admin and School Admin can manage branding.'], 403);
+}
+
+$action = (string)($_GET['action'] ?? $_POST['action'] ?? '');
 $adminId = (int)($_SESSION['admin_id'] ?? 0);
 
-// CSRF check on POST
+// CSRF check on POST (uses config.php's validateCsrf())
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-    $csrf = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-    if (!verifyCsrfToken($csrf)) {
-        brandRespond(['status' => 'error', 'message' => 'Your session token expired. Please refresh the page and try again.'], 403);
+    $csrf = (string)($_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+    if (!validateCsrf($csrf)) {
+        brandRespond(['status' => 'error', 'message' => 'Security token expired. Please reload the page and try again.'], 403);
     }
 }
 
@@ -198,11 +206,12 @@ if ($action === 'get_assets') {
                 'id'            => 0,
                 'asset_key'     => $k,
                 'asset_label'   => $meta['asset_label'],
-                'description'   => $meta['description'],
                 'file_path'     => null,
                 'original_name' => null,
                 'file_size'     => 0,
                 'mime_type'     => null,
+                'uploaded_by'   => null,
+                'uploaded_at'   => null,
                 'updated_at'    => null,
             ];
         }
@@ -291,19 +300,17 @@ if ($action === 'upload_asset' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POS
             brandRespond(['status' => 'error', 'message' => 'Unknown asset key: ' . $assetKey], 404);
         }
         $ins = $conn->prepare(
-            "INSERT IGNORE INTO system_branding (asset_key, asset_label, description) VALUES (?, ?, ?)"
+            "INSERT IGNORE INTO system_branding (asset_key, asset_label) VALUES (?, ?)"
         );
         if ($ins) {
             $lbl = $catalog[$assetKey]['asset_label'];
-            $desc = $catalog[$assetKey]['description'];
-            $ins->bind_param('sss', $assetKey, $lbl, $desc);
+            $ins->bind_param('ss', $assetKey, $lbl);
             $ins->execute();
             $ins->close();
         }
         $asset = [
             'asset_key'   => $assetKey,
             'asset_label' => $catalog[$assetKey]['asset_label'],
-            'description' => $catalog[$assetKey]['description'],
             'file_path'   => null,
         ];
     }
@@ -407,6 +414,9 @@ if ($action === 'upload_asset' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POS
     }
 
     $realBase = realpath($brandingBase);
+    if ($realBase !== false && !is_writable($realBase)) {
+        @chmod($realBase, 0755);
+    }
     if ($realBase === false || !is_writable($realBase)) {
         $ref = reportInternalError('branding_upload_unwritable', 'Unwritable dir ' . $brandingBase);
         brandRespond([
@@ -477,13 +487,13 @@ if ($action === 'upload_asset' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POS
         $conn->begin_transaction();
         $stmt = $conn->prepare("
             UPDATE system_branding
-            SET file_path = ?, original_name = ?, file_size = ?, mime_type = ?, updated_by = ?, updated_at = NOW()
+            SET file_path = ?, original_name = ?, mime_type = ?, file_size = ?, uploaded_by = ?, uploaded_at = NOW()
             WHERE asset_key = ?
         ");
         if (!$stmt) {
             throw new RuntimeException('Failed to prepare system_branding update: ' . $conn->error);
         }
-        $stmt->bind_param('ssisis', $webPath, $origName, $actualSize, $mimeType, $adminId, $assetKey);
+        $stmt->bind_param('sssiis', $webPath, $origName, $mimeType, $actualSize, $adminId, $assetKey);
         if (!$stmt->execute()) {
             $err = $stmt->error;
             $stmt->close();
@@ -502,7 +512,7 @@ if ($action === 'upload_asset' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POS
         brandRespond([
             'status'    => 'error',
             'error_ref' => 'SSMS:' . $ref,
-            'message'   => 'Could not save the uploaded image. Please try again.',
+            'message'   => 'Could not save the uploaded image (ref SSMS:' . $ref . '). Please try again.',
         ], 500);
     }
 
@@ -514,15 +524,6 @@ if ($action === 'upload_asset' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POS
     }
 
     \App\Services\BrandingAssetService::clearCache();
-
-    // Log activity (best-effort)
-    if (function_exists('logActivity')) {
-        try {
-            logActivity($conn, $adminId, 'branding_upload', "Uploaded branding asset: {$asset['asset_label']} ({$origName})");
-        } catch (Throwable $logErr) {
-            // Non-fatal
-        }
-    }
 
     $mtime = (int)(@filemtime($destPath) ?: time());
     brandRespond([
@@ -546,6 +547,10 @@ if ($action === 'delete_asset' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POS
     }
 
     $stmt = $conn->prepare("SELECT * FROM system_branding WHERE asset_key = ? LIMIT 1");
+    if (!$stmt) {
+        reportInternalError('branding_delete_lookup', $conn->error);
+        brandRespond(['status' => 'error', 'message' => 'Database error while looking up asset.'], 500);
+    }
     $stmt->bind_param('s', $assetKey);
     $stmt->execute();
     $asset = $stmt->get_result()->fetch_assoc();
@@ -583,22 +588,18 @@ if ($action === 'delete_asset' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POS
 
     $stmt = $conn->prepare("
         UPDATE system_branding
-        SET file_path = NULL, original_name = NULL, file_size = 0, mime_type = NULL, updated_by = ?, updated_at = NOW()
+        SET file_path = NULL, original_name = NULL, mime_type = NULL, file_size = 0, uploaded_by = NULL
         WHERE asset_key = ?
     ");
-    $stmt->bind_param('is', $adminId, $assetKey);
+    if (!$stmt) {
+        reportInternalError('branding_delete_update', $conn->error);
+        brandRespond(['status' => 'error', 'message' => 'Database error while removing asset.'], 500);
+    }
+    $stmt->bind_param('s', $assetKey);
     $stmt->execute();
     $stmt->close();
 
     \App\Services\BrandingAssetService::clearCache();
-
-    if (function_exists('logActivity')) {
-        try {
-            logActivity($conn, $adminId, 'branding_delete', "Removed custom branding asset: {$asset['asset_label']}");
-        } catch (Throwable $logErr) {
-            // Non-fatal
-        }
-    }
 
     $fallback = brandPackagedFallback($assetKey, $docRoot);
     $restoredUrl = null;
@@ -620,39 +621,49 @@ if ($action === 'delete_asset' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POS
 }
 
 // ============================================================
-// ACTION: UPDATE ASSET LABEL/DESCRIPTION
+// ACTION: UPDATE ASSET LABEL
 // ============================================================
 if ($action === 'update_label' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $assetKey = trim((string)($_POST['asset_key'] ?? ''));
-    $label = trim((string)($_POST['asset_label'] ?? ''));
-    $desc = trim((string)($_POST['description'] ?? ''));
+    $label = trim((string)($_POST['label'] ?? $_POST['asset_label'] ?? ''));
 
     if ($assetKey === '' || $label === '') {
         brandRespond(['status' => 'error', 'message' => 'Asset key and label are required.'], 400);
     }
 
-    $stmt = $conn->prepare("UPDATE system_branding SET asset_label = ?, description = ?, updated_by = ? WHERE asset_key = ?");
-    $stmt->bind_param('ssis', $label, $desc, $adminId, $assetKey);
+    $label = mb_substr(strip_tags($label), 0, 100);
+    $stmt = $conn->prepare("UPDATE system_branding SET asset_label = ? WHERE asset_key = ?");
+    if (!$stmt) {
+        reportInternalError('branding_update_label', $conn->error);
+        brandRespond(['status' => 'error', 'message' => 'Database error while updating label.'], 500);
+    }
+    $stmt->bind_param('ss', $label, $assetKey);
     $stmt->execute();
     $stmt->close();
 
-    brandRespond(['status' => 'success', 'message' => 'Updated successfully.']);
+    brandRespond(['status' => 'success', 'message' => 'Label updated.']);
 }
 
 // ============================================================
 // ACTION: ADD CUSTOM ASSET SLOT
 // ============================================================
 if ($action === 'add_asset' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-    $label = trim((string)($_POST['asset_label'] ?? ''));
-    $desc = trim((string)($_POST['description'] ?? ''));
-    $key = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '_', $label));
-    $key = trim($key, '_');
+    $label = mb_substr(strip_tags(trim((string)($_POST['asset_label'] ?? ''))), 0, 100);
+    $rawKey = trim((string)($_POST['asset_key'] ?? ''));
+    $key = $rawKey !== ''
+        ? preg_replace('/[^a-z0-9_]/', '', strtolower($rawKey))
+        : trim(strtolower(preg_replace('/[^a-zA-Z0-9]+/', '_', $label)), '_');
 
     if ($label === '' || strlen($key) < 2) {
         brandRespond(['status' => 'error', 'message' => 'Please enter a valid asset name.'], 400);
     }
-    if (strlen($key) > 45) {
-        $key = substr($key, 0, 45);
+    if (strlen($key) > 50) {
+        $key = substr($key, 0, 50);
+    }
+
+    $reserved = ['logo', 'seal', 'sig_head', 'sig_admin', 'card_bg', '_id_card_settings'];
+    if (in_array($key, $reserved, true) || $key[0] === '_') {
+        brandRespond(['status' => 'error', 'message' => 'That asset key is reserved.'], 400);
     }
 
     $chk = $conn->prepare("SELECT id FROM system_branding WHERE asset_key = ? LIMIT 1");
@@ -660,12 +671,16 @@ if ($action === 'add_asset' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST')
     $chk->execute();
     if ($chk->get_result()->num_rows > 0) {
         $chk->close();
-        brandRespond(['status' => 'error', 'message' => 'An asset with this name already exists.'], 409);
+        brandRespond(['status' => 'error', 'message' => 'An asset with this key already exists.'], 409);
     }
     $chk->close();
 
-    $stmt = $conn->prepare("INSERT INTO system_branding (asset_key, asset_label, description, updated_by) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param('sssi', $key, $label, $desc, $adminId);
+    $stmt = $conn->prepare("INSERT INTO system_branding (asset_key, asset_label) VALUES (?, ?)");
+    if (!$stmt) {
+        reportInternalError('branding_add_asset', $conn->error);
+        brandRespond(['status' => 'error', 'message' => 'Database error while creating asset slot.'], 500);
+    }
+    $stmt->bind_param('ss', $key, $label);
     $stmt->execute();
     $stmt->close();
 
@@ -677,28 +692,32 @@ if ($action === 'add_asset' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST')
 // ============================================================
 if ($action === 'remove_asset_slot' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $assetKey = trim((string)($_POST['asset_key'] ?? ''));
-    $builtIn = array_keys(brandBuiltinCatalog());
-    if (in_array($assetKey, $builtIn, true)) {
+    $builtIn = array_merge(array_keys(brandBuiltinCatalog()), ['_id_card_settings']);
+    if ($assetKey === '' || in_array($assetKey, $builtIn, true)) {
         brandRespond(['status' => 'error', 'message' => 'Cannot remove built-in system assets.'], 400);
     }
 
     $stmt = $conn->prepare("SELECT file_path FROM system_branding WHERE asset_key = ? LIMIT 1");
-    $stmt->bind_param('s', $assetKey);
-    $stmt->execute();
-    $row = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
+    if ($stmt) {
+        $stmt->bind_param('s', $assetKey);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
 
-    if ($row && !empty($row['file_path']) && brandIsDeletableUpload((string)$row['file_path'])) {
-        $disk = brandResolveAssetFile((string)$row['file_path'], $docRoot);
-        if ($disk !== null && is_file($disk)) {
-            @unlink($disk);
+        if ($row && !empty($row['file_path']) && brandIsDeletableUpload((string)$row['file_path'])) {
+            $disk = brandResolveAssetFile((string)$row['file_path'], $docRoot);
+            if ($disk !== null && is_file($disk)) {
+                @unlink($disk);
+            }
         }
     }
 
-    $stmt = $conn->prepare("DELETE FROM system_branding WHERE asset_key = ?");
-    $stmt->bind_param('s', $assetKey);
-    $stmt->execute();
-    $stmt->close();
+    $stmt = $conn->prepare("DELETE FROM system_branding WHERE asset_key = ? AND asset_key NOT IN ('logo','seal','sig_head','sig_admin','card_bg','_id_card_settings')");
+    if ($stmt) {
+        $stmt->bind_param('s', $assetKey);
+        $stmt->execute();
+        $stmt->close();
+    }
 
     brandRespond(['status' => 'success', 'message' => 'Custom asset removed.']);
 }
@@ -716,26 +735,28 @@ if ($action === 'save_settings' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'PO
     $merged = \App\Services\IdCardLayout::sanitize(
         array_merge(\App\Services\IdCardLayout::load($conn), $decoded)
     );
-    $json = json_encode($merged, JSON_UNESCAPED_UNICODE);
+    $json = json_encode($merged, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
-    $stmt = $conn->prepare(
-        "INSERT INTO system_branding (asset_key, asset_label, original_name, updated_by, updated_at)
-         VALUES ('_id_card_settings', 'ID Card Layout', ?, ?, NOW())
-         ON DUPLICATE KEY UPDATE original_name = VALUES(original_name), updated_by = VALUES(updated_by), updated_at = NOW()"
-    );
-    $stmt->bind_param('si', $json, $adminId);
-    $stmt->execute();
+    $conn->query("INSERT IGNORE INTO system_branding (asset_key, asset_label) VALUES ('_id_card_settings', 'ID Card Display Settings')");
+    $stmt = $conn->prepare("UPDATE system_branding SET original_name = ? WHERE asset_key = '_id_card_settings'");
+    if (!$stmt) {
+        reportInternalError('branding_save_settings_prepare', $conn->error);
+        brandRespond(['status' => 'error', 'message' => 'Unable to save ID card layout.'], 500);
+    }
+    $stmt->bind_param('s', $json);
+    if (!$stmt->execute()) {
+        $err = $stmt->error;
+        $stmt->close();
+        reportInternalError('branding_save_settings_exec', $err);
+        brandRespond(['status' => 'error', 'message' => 'Unable to save ID card layout.'], 500);
+    }
     $stmt->close();
 
-    if (function_exists('logActivity')) {
-        try {
-            logActivity($conn, $adminId, 'branding_settings', 'Updated ID card layout settings');
-        } catch (Throwable $logErr) {
-            // Non-fatal
-        }
-    }
-
-    brandRespond(['status' => 'success', 'message' => 'ID card layout saved.', 'settings' => $merged]);
+    brandRespond([
+        'status'   => 'success',
+        'message'  => 'Saved. Every member ID card will use this layout.',
+        'settings' => $merged,
+    ]);
 }
 
 brandRespond(['status' => 'error', 'message' => 'Unknown action.'], 400);

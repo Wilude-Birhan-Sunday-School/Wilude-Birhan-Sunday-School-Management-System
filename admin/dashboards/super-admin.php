@@ -1513,7 +1513,7 @@ require __DIR__ . '/../components/bottom_nav.php';
         let _brandLoaded=false, _brandBusy=false;
 
         // ── Load branding assets from API ──
-        async function loadBranding(force){
+        async function loadBranding(force, preserveError){
             if(_brandBusy && !force)return;
             _brandBusy=true;
             try{
@@ -1524,15 +1524,17 @@ require __DIR__ . '/../components/bottom_nav.php';
                 try{d=JSON.parse(txt);}catch(e){
                     console.error('Branding API non-JSON:',txt.substring(0,300));
                     _showBrandError('Branding API returned an invalid response. Ask the deployment administrator to verify the versioned SQL migrations.');
-                    _brandBusy=false;return;
+                    return;
                 }
                 if(d.status==='error'){
                     _showBrandError(d.message+(d.debug?' <code style="display:block;font-size:.65rem;color:#94a3b8;margin-top:.2rem">'+d.debug+'</code>':''));
-                    _brandBusy=false;return;
+                    return;
                 }
-                // Hide error banner on success
-                const eb=document.getElementById('brandErrorBanner');
-                if(eb)eb.style.display='none';
+                // Hide error banner on success (unless preserving a recent upload/delete error)
+                if(!preserveError){
+                    const eb=document.getElementById('brandErrorBanner');
+                    if(eb)eb.style.display='none';
+                }
 
                 // Update each asset card
                 (d.assets||[]).forEach(a=>{
@@ -1578,17 +1580,22 @@ require __DIR__ . '/../components/bottom_nav.php';
             }catch(e){
                 console.error('loadBranding error:',e);
                 if(!_brandLoaded) _showBrandError('Could not load branding assets: '+e.message);
+            }finally{
+                _brandBusy=false;
             }
-            _brandBusy=false;
         }
 
         // ── Upload asset ──
         async function brandUpload(key,input){
             const file=input.files && input.files[0]; if(!file){return;}
             // Client validation (matches server allowlist: PNG, JPG, GIF, WebP only — no SVG)
-            if(file.size>5*1024*1024){_toast('File too large ('+Math.round(file.size/1024/1024*10)/10+' MB). Max 5 MB.','err');input.value='';return;}
+            if(file.size>5*1024*1024){
+                const msg='File too large ('+Math.round(file.size/1024/1024*10)/10+' MB). Max 5 MB.';
+                _toast(msg,'err'); _showBrandError(msg); input.value=''; return;
+            }
             if(!file.type.match(/^image\/(png|jpe?g|gif|webp)$/) && !file.name.match(/\.(png|jpe?g|gif|webp)$/i)){
-                _toast('Use a PNG, JPG, GIF, or WebP image (SVG is not supported).','err');input.value='';return;
+                const msg='Use a PNG, JPG, GIF, or WebP image (SVG is not supported).';
+                _toast(msg,'err'); _showBrandError(msg); input.value=''; return;
             }
             // Instant local preview
             const localUrl=URL.createObjectURL(file);
@@ -1612,28 +1619,35 @@ require __DIR__ . '/../components/bottom_nav.php';
                 try{d=JSON.parse(txt);}catch(e){
                     const hint=r.status===413?'File exceeds the server upload size limit.':('Upload failed — server error (HTTP '+r.status+').');
                     _toast(hint,'err');
+                    _showBrandError(hint);
                     if(card)card.style.borderColor='#ef4444';
                     console.error('Branding upload non-JSON:',r.status,txt.substring(0,300));
-                    await loadBranding(true);
+                    await loadBranding(true, true);
                     return;
                 }
                 if(r.ok && d.status==='success'){
+                    const eb=document.getElementById('brandErrorBanner');
+                    if(eb)eb.style.display='none';
                     _toast(d.message||'Uploaded!','ok');
                     if(card){card.style.borderColor='#22c55e';setTimeout(()=>card.style.borderColor='transparent',2500);}
                     // Refresh cards from server and reload ID Card Designer iframe for ALL branding assets
-                    await loadBranding(true);
+                    await loadBranding(true, false);
                     if(typeof window.reloadIdDesignerPreview==='function'){
                         window.reloadIdDesignerPreview(key==='card_bg' ? (d.web_url||'') : null);
                     }
                 }else{
-                    _toast(d.message||('Upload failed (HTTP '+r.status+')'),'err');
+                    const msg=d.message||('Upload failed (HTTP '+r.status+')');
+                    _toast(msg,'err');
+                    _showBrandError(msg);
                     if(card)card.style.borderColor='#ef4444';
-                    await loadBranding(true);
+                    await loadBranding(true, true);
                 }
             }catch(e){
-                _toast('Upload failed — network error','err');
+                const msg='Upload failed — network error';
+                _toast(msg,'err');
+                _showBrandError(msg);
                 if(card)card.style.borderColor='#ef4444';
-                await loadBranding(true);
+                await loadBranding(true, true);
             }finally{
                 URL.revokeObjectURL(localUrl);
                 input.value='';

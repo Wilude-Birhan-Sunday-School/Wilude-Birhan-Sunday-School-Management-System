@@ -62,6 +62,28 @@ class BrandingLogoPipelineTests(unittest.TestCase):
         # Must return both file_exists (legacy UI) and web_url with cache-buster
         self.assertIn("$row['file_exists'] = true;", src)
         self.assertIn("'?v=' . $mtime", src)
+        # CSRF helper MUST be config.php's validateCsrf(), never undefined verifyCsrfToken()
+        self.assertIn("validateCsrf(", src)
+        self.assertNotIn("verifyCsrfToken(", src)
+        # Role gate must match admin/access_control.php (super_admin + school_admin)
+        self.assertIn("'super_admin'", src)
+        self.assertIn("'school_admin'", src)
+
+    def test_api_branding_sql_matches_system_branding_schema(self):
+        schema = (ROOT / "sql/012_runtime_schema_baseline.sql").read_text(encoding="utf-8")
+        # Confirm baseline schema columns
+        self.assertIn("`uploaded_by`", schema)
+        self.assertIn("`uploaded_at`", schema)
+
+        src = (ROOT / "admin/api_branding.php").read_text(encoding="utf-8")
+        # Regression guard: system_branding has uploaded_by / uploaded_at,
+        # NOT updated_by or description. Referencing either causes SQL failure
+        # and rolls back every logo upload / layout save.
+        self.assertNotIn("updated_by", src)
+        self.assertNotIn("description", src)
+        self.assertIn("uploaded_by", src)
+        self.assertIn("uploaded_at", src)
+        self.assertIn("bind_param('sssiis'", src)
 
     def test_branding_asset_service_contract_and_no_ddl(self):
         service = ROOT / "admin/backend/services/BrandingAssetService.php"
@@ -119,7 +141,8 @@ class BrandingLogoPipelineTests(unittest.TestCase):
         # Must refresh ID Card Designer preview after uploading/removing any branding asset
         self.assertIn("window.reloadIdDesignerPreview(key==='card_bg'", src)
         self.assertIn("URL.revokeObjectURL(localUrl)", src)
-        self.assertIn("await loadBranding(true)", src)
+        self.assertIn("await loadBranding(true, false)", src)
+        self.assertIn("await loadBranding(true, true)", src)
 
     def test_id_card_template_guards_empty_seal(self):
         src = (ROOT / "admin/id_cards/id_card_template_layout.php").read_text(encoding="utf-8")
